@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biomassa Chaparini - Sistema de Gestão de Frota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginPage">
+  <div class="login-left"></div>
+  <div class="login-right">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD/wAARCAD8APwDACIAAREBAhEB/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMAAAERAhEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASiiql5fW9hD5tw+yPOM7SefwpSkoq72BJt2RboNZI8SaSf+Xsf98t/hT117THO0Xkf61kq9N7SX3lulUX2X9x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" class="login-logo" alt="Biomassa Chaparini">
+    <div class="login-title">SISTEMA DE GESTÃO DE FROTA</div>
+    <div class="login-sub">BIOMASSA CHAPARINI</div>
+    <div class="login-form">
+      <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário" onkeypress="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label>Senha</label><div style="position:relative"><input type="password" id="loginPass" placeholder="Digite sua senha" onkeypress="if(event.key==='Enter')doLogin()" style="padding-right:40px;width:100%"><span onclick="togglePass('loginPass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span></div></div>
+      <button class="btn btn-primary" onclick="doLogin()">ENTRAR</button>
+      <div class="login-error" id="loginError">Usuário ou senha incorretos</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TROCA DE SENHA (PRIMEIRO ACESSO) ===== -->
+<div id="changePassOverlay">
+  <div id="changePassBox">
+    <h2>🔐 Primeiro Acesso</h2>
+    <p>Crie uma nova senha para continuar.</p>
+    <div class="form-group"><label>Nova Senha</label><div style="position:relative"><input type="password" id="newPass1" placeholder="Digite a nova senha" style="padding-right:40px;width:100%"><span onclick="togglePass('newPass1',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span></div></div>
+    <div class="form-group"><label>Confirmar Senha</label><div style="position:relative"><input type="password" id="newPass2" placeholder="Confirme a nova senha" onkeypress="if(event.key==='Enter')doChangePass()" style="padding-right:40px;width:100%"><span onclick="togglePass('newPass2',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span></div></div>
+    <button class="btn btn-primary" onclick="doChangePass()" style="width:100%">ALTERAR SENHA</button>
+    <div id="changePassError"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL EDITAR REGISTRO ===== -->
+<div id="editOverlay">
+  <div id="editBox">
+    <h2>✏️ Editar Lançamento</h2>
+    <div class="edit-sub" id="editSub">—</div>
+    <div class="edit-grid" id="editGrid"></div>
+    <div class="edit-actions">
+      <button class="btn-secondary" onclick="closeEditModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CONFIRMAR EXCLUSÃO ===== -->
+<div id="confirmOverlay">
+  <div id="confirmBox">
+    <div class="confirm-icon">⚠️</div>
+    <h3>Excluir lançamento?</h3>
+    <p>Esta ação <strong>não pode ser desfeita</strong>. A linha será removida permanentemente da planilha.</p>
+    <div class="confirm-details" id="confirmDetails"></div>
+    <div class="confirm-actions">
+      <button class="btn-secondary" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn-danger" onclick="confirmDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL MÁQUINA (novo/editar) ===== -->
+<div class="modal-overlay" id="maqModalOverlay" onclick="if(event.target===this)closeMaqModal()">
+  <div class="modal">
+    <h2 id="maqModalTitle">🚜 Nova Máquina</h2>
+    <div class="maq-grid" id="maqModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqSalvarBtn" onclick="salvarMaquina()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR MÁQUINA ===== -->
+<div class="modal-overlay" id="maqDelOverlay" onclick="if(event.target===this)closeMaqDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir máquina?</h3>
+    <div id="maqDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqDelete()">Cancelar</button>
+      <button class="btn-danger" id="maqDelBtn" onclick="confirmMaqDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL TRANSFERÊNCIA (novo/editar) ===== -->
+<div class="modal-overlay" id="maqLocModalOverlay" onclick="if(event.target===this)closeMaqLocalModal()">
+  <div class="modal">
+    <h2 id="maqLocModalTitle">🌲 Registrar Transferência</h2>
+    <div class="maq-audit" id="maqLocAudit" style="display:none"></div>
+    <div class="maq-grid" id="maqLocModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqLocalModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqLocSalvarBtn" onclick="salvarLocalizacao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR TRANSFERÊNCIA ===== -->
+<div class="modal-overlay" id="maqLocDelOverlay" onclick="if(event.target===this)closeMaqLocalDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir registro?</h3>
+    <div id="maqLocDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqLocalDelete()">Cancelar</button>
+      <button class="btn-danger" id="maqLocDelBtn" onclick="confirmMaqLocalDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ABASTECIMENTO (novo/editar) ===== -->
+<div class="modal-overlay" id="maqAbastModalOverlay" onclick="if(event.target===this)closeMaqAbastModal()">
+  <div class="modal">
+    <h2 id="maqAbModalTitle">⛽ Novo Abastecimento</h2>
+    <div class="maq-audit" id="maqAbAudit" style="display:none"></div>
+    <div class="maq-grid" id="maqAbModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">A floresta é automática (pela data e localização da máquina). Use "Floresta (opcional)" só em exceção.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeMaqAbastModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqAbSalvarBtn" onclick="salvarAbastecimento()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR ABASTECIMENTO ===== -->
+<div class="modal-overlay" id="maqAbDelOverlay" onclick="if(event.target===this)closeMaqAbastDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir abastecimento?</h3>
+    <div id="maqAbDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqAbastDelete()">Cancelar</button>
+      <button class="btn-danger" id="maqAbDelBtn" onclick="confirmMaqAbastDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL MANUTENÇÃO (novo/editar) ===== -->
+<div class="modal-overlay" id="maqMtModalOverlay" onclick="if(event.target===this)closeMaqManutModal()">
+  <div class="modal">
+    <h2 id="maqMtModalTitle">🔧 Nova Manutenção</h2>
+    <div class="maq-audit" id="maqMtAudit" style="display:none"></div>
+    <div class="maq-grid" id="maqMtModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">O total é a soma de peças + mão de obra + terceiros. A floresta é automática (pela data).</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeMaqManutModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqMtSalvarBtn" onclick="salvarManutMaq()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR MANUTENÇÃO ===== -->
+<div class="modal-overlay" id="maqMtDelOverlay" onclick="if(event.target===this)closeMaqManutDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir manutenção?</h3>
+    <div id="maqMtDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeMaqManutDelete()">Cancelar</button>
+      <button class="btn-danger" id="maqMtDelBtn" onclick="confirmMaqManutDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL TANQUE (novo/editar) ===== -->
+<div class="modal-overlay" id="tanqueModalOverlay" onclick="if(event.target===this)closeTanqueModal()">
+  <div class="modal">
+    <h2 id="tanqueModalTitle">🛢️ Novo Tanque</h2>
+    <div class="maq-grid" id="tanqueModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeTanqueModal()">Cancelar</button>
+      <button class="btn btn-primary" id="tanqueSalvarBtn" onclick="salvarTanque()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR TANQUE ===== -->
+<div class="modal-overlay" id="tanqueDelOverlay" onclick="if(event.target===this)closeTanqueDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir tanque?</h3>
+    <div id="tanqueDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeTanqueDelete()">Cancelar</button>
+      <button class="btn-danger" id="tanqueDelBtn" onclick="confirmTanqueDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ENTRADA (novo/editar) ===== -->
+<div class="modal-overlay" id="entradaModalOverlay" onclick="if(event.target===this)closeEntradaModal()">
+  <div class="modal">
+    <h2 id="entradaModalTitle">🛒 Nova Entrada</h2>
+    <div id="entradaAudit" style="font-size:12px;color:var(--text2);margin-bottom:10px;display:none"></div>
+    <div class="maq-grid" id="entradaModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeEntradaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="entradaSalvarBtn" onclick="salvarEntrada()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR ENTRADA ===== -->
+<div class="modal-overlay" id="entradaDelOverlay" onclick="if(event.target===this)closeEntradaDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir entrada?</h3>
+    <div id="entradaDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeEntradaDelete()">Cancelar</button>
+      <button class="btn-danger" id="entradaDelBtn" onclick="confirmEntradaDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ALERTA SALDO BAIXO (Comboio) ===== -->
+<div class="modal-overlay" id="comboioAlertOverlay">
+  <div class="modal" style="max-width:440px">
+    <div id="comboioAlertBody"></div>
+    <div style="display:flex;justify-content:center;margin-top:18px">
+      <button class="btn btn-primary" onclick="dismissComboioAlert()" style="min-width:120px">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="appPage">
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD/wAARCAD8APwDACIAAREBAhEB/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMAAAERAhEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASiiql5fW9hD5tw+yPOM7SefwpSkoq72BJt2RboNZI8SaSf+Xsf98t/hT117THO0Xkf61kq9N7SX3lulUX2X9x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" alt="Logo">
+        <span>BIOMASSA CHAPARINI</span>
+      </div>
+      <div class="nav-scroll">
+      <div class="nav-item active" data-page="cadastro" onclick="navigateTo('cadastro')"><span class="icon">📝</span><span>Cadastro</span></div>
+      <div class="nav-item" data-page="producao" onclick="navigateTo('producao')"><span class="icon">📊</span><span>Produção</span></div>
+      <div class="nav-item" data-page="financeiro" onclick="navigateTo('financeiro')"><span class="icon">💰</span><span>Financeiro</span></div>
+      <div class="nav-item" data-page="manutencao" onclick="navigateTo('manutencao')"><span class="icon">🔧</span><span>Manutenção</span></div>
+      <div class="nav-item" data-page="consumo" onclick="navigateTo('consumo')"><span class="icon">⛽</span><span>Consumo</span></div>
+      <div class="nav-item" data-page="tempoespera" onclick="navigateTo('tempoespera')"><span class="icon">⏱️</span><span>Tempo de Espera</span></div>
+      <div class="nav-item" data-page="mapa" onclick="navigateTo('mapa')"><span class="icon">🗺️</span><span>Mapa</span></div>
+      <div class="nav-item" data-page="relatorio" onclick="navigateTo('relatorio')"><span class="icon">📄</span><span>Relatório</span></div>
+      <div class="nav-item" data-page="maquinarios" onclick="navigateTo('maquinarios')"><span class="icon">🌲</span><span>Maquinários</span></div>
+      <div class="nav-item" data-page="comboio" onclick="navigateTo('comboio')"><span class="icon">🛢️</span><span>Comboio</span></div>
+      <div class="nav-item freq-visible" data-page="frequencia" onclick="navigateTo('frequencia')" style="display:none"><span class="icon">📅</span><span>Frequência</span></div>
+      <div class="nav-item diretor-only" data-page="historico" onclick="navigateTo('historico')" style="display:none"><span class="icon">📋</span><span>Histórico</span></div>
+      <div class="nav-item admin-only" data-page="usuarios" onclick="navigateTo('usuarios')" style="display:none"><span class="icon">👥</span><span>Usuários</span></div>
+      </div>
+      <div class="nav-spacer"></div>
+      <div class="user-badge" id="userBadge"></div>
+      <div class="nav-item" onclick="doLogout()"><span class="icon">🚪</span><span>Sair</span></div>
+    </div>
+    <div class="main-content">
+
+      <!-- CADASTRO PAGE -->
+      <div class="page active" id="pageCadastro">
+        <div class="page-header">
+          <h1 class="page-title">📝 Cadastro</h1>
+          <button class="btn btn-secondary btn-sm" id="btnImport" onclick="showImportModal()" style="display:none">📥 Importar Planilha</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this,'tabProdFin')">Produção / Financeiro</div>
+          <div class="tab" onclick="switchTab(this,'tabManutReal')">Manutenção Realizada</div>
+          <div class="tab" onclick="switchTab(this,'tabManutProg')">Manutenção Programada</div>
+          <div class="tab" onclick="switchTab(this,'tabLocais')" id="tabLocaisBtn" style="display:none">Cadastro de Locais</div>
+          <div class="tab" onclick="switchTab(this,'tabMotoristas')" id="tabMotoristasBtn" style="display:none">Motoristas</div>
+          <div class="tab" onclick="switchTab(this,'tabCaminhoes')" id="tabCaminhoesBtn" style="display:none">Caminhões</div>
+        </div>
+
+        <div class="tab-content active" id="tabProdFin">
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-section-title">🚚 Viagem</div>
+              <div class="form-row">
+                <div class="form-group"><label>Motorista *</label><select id="fMotorista"></select></div>
+                <div class="form-group"><label>Data *</label><input type="date" id="fData"></div>
+                <div class="form-group"><label>Situação</label><select id="fSituacao"><option value="">Selecione</option><option>ATIVO</option><option>INATIVO</option></select></div>
+                <div class="form-group"><label>Entrega</label><input type="text" inputmode="decimal" id="fEntrega" placeholder="ex: 1"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Local de Carga</label><select id="fLocalCarga"></select></div>
+                <div class="form-group"><label>Local de Descarga</label><select id="fLocalDescarga" onchange="updateUnidade()"></select></div>
+                <div class="form-group"><label>Nota Fiscal</label><input type="text" inputmode="decimal" id="fNota" placeholder="ex: 12345"></div>
+                <div class="form-group"><label>Quantidade <span id="unidadeLabel">(TON)</span></label><input type="text" inputmode="decimal" id="fQuantidade" placeholder="ex: 25,50"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Placa *</label><select id="fPlaca"></select></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">⏱️ Tempos</div>
+              <div class="form-row">
+                <div class="form-group"><label>Chegada Floresta</label><input type="time" id="fChegFloresta" onchange="calcTempoFloresta()"></div>
+                <div class="form-group"><label>Saída Floresta</label><input type="time" id="fSaidaFloresta" onchange="calcTempoFloresta()"></div>
+                <div class="form-group"><label>Tempo na Floresta</label><input type="text" id="fTempoFloresta" class="calculated" readonly></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Chegada Cliente</label><input type="time" id="fChegCliente" onchange="calcTempoCliente()"></div>
+                <div class="form-group"><label>Saída Cliente</label><input type="time" id="fSaidaCliente" onchange="calcTempoCliente()"></div>
+                <div class="form-group"><label>Tempo no Cliente</label><input type="text" id="fTempoCliente" class="calculated" readonly></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">⛽ Abastecimento</div>
+              <div class="form-row">
+                <div class="form-group"><label>Local Abastecimento</label><select id="fLocalAbast" onchange="_cadAbPrecoAuto()"></select></div>
+                <div class="form-group"><label>KM</label><input type="text" inputmode="decimal" id="fKM" placeholder="ex: 230.565,60"></div>
+                <div class="form-group"><label>Qtde Litros</label><input type="text" inputmode="decimal" id="fLitros" onchange="calcValorTotal()" placeholder="ex: 150,50"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Valor Unitário (R$)</label><input type="text" inputmode="decimal" id="fValorUnit" onchange="calcValorTotal()" placeholder="ex: 6,50"></div>
+                <div class="form-group"><label>Valor Total (R$)</label><input type="text" id="fValorTotal" class="calculated" readonly></div>
+                <div class="form-group"><label>Arla Valor (R$)</label><input type="text" inputmode="decimal" id="fArla" placeholder="ex: 150,00"></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">💸 Despesas</div>
+              <div class="form-row">
+                <div class="form-group"><label>Classe Despesa</label><select id="fClasseDesp"></select></div>
+                <div class="form-group"><label>Descrição Despesa</label><input type="text" id="fDescrDesp"></div>
+                <div class="form-group"><label>Local Despesa</label><input type="text" id="fLocalDesp"></div>
+                <div class="form-group"><label>Valor Despesa (R$)</label><input type="text" inputmode="decimal" id="fValorDesp" placeholder="ex: 500,00"></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-row">
+                <div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="fObs" rows="2"></textarea></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarCadastro()">💾 SALVAR REGISTRO</button>
+              <button class="btn btn-secondary" onclick="limparFormCadastro()">🗑️ LIMPAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tabManutReal">
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-section-title">🔧 Registrar Manutenção Realizada</div>
+              <div class="form-row">
+                <div class="form-group"><label>Placa *</label><select id="fmPlaca"></select></div>
+                <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo"></select></div>
+                <div class="form-group"><label>Data da Manutenção *</label><input type="date" id="fmData"></div>
+                <div class="form-group"><label>KM na Manutenção *</label><input type="number" id="fmKM"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="fmObs" rows="2"></textarea></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarManutRealizada()">💾 SALVAR</button>
+              <button class="btn btn-secondary" onclick="limparFormManutReal()">🗑️ LIMPAR</button>
+            </div>
+          </div>
+          <div class="table-container"><div class="table-header"><h3>Histórico de Manutenções Realizadas</h3></div><div class="table-scroll" id="tblManutRealContainer"></div></div>
+        </div>
+
+        <div class="tab-content" id="tabManutProg">
+          <div class="table-container">
+            <div class="table-header"><h3>Manutenções Programadas</h3><button class="btn btn-sm btn-secondary" onclick="addManutProg()">+ Adicionar Tipo</button></div>
+            <div class="table-scroll" id="tblManutProgContainer"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tabLocais">
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-section-title">📍 Cadastrar Novo Local</div>
+              <div class="form-row">
+                <div class="form-group"><label>Nome *</label><input type="text" id="flNome" placeholder="Ex: FAZ. NOVA ESPERANÇA"></div>
+                <div class="form-group"><label>Tipo *</label><select id="flTipo"><option value="">Selecione</option><option value="carga">Carga</option><option value="descarga">Descarga</option><option value="abastecimento">Abastecimento</option><option value="despesa">Despesa</option></select></div>
+                <div class="form-group"><label>Unidade Medida</label><select id="flUnidade"><option value="">Selecione</option><option value="TON">TON</option><option value="M3">M³</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Endereço</label><input type="text" id="flEndereco" placeholder="Ex: Rod. TO-010, KM 45"></div>
+                <div class="form-group"><label>Município</label><input type="text" id="flMunicipio" placeholder="Ex: Palmas"></div>
+                <div class="form-group"><label>Estado</label><input type="text" id="flEstado" placeholder="Ex: TO" maxlength="2"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Latitude</label><input type="number" id="flLat" step="any" placeholder="Ex: -10.184376"></div>
+                <div class="form-group"><label>Longitude</label><input type="number" id="flLng" step="any" placeholder="Ex: -48.301049"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarLocal()">💾 SALVAR LOCAL</button>
+              <button class="btn btn-secondary" onclick="limparFormLocal()">🗑️ LIMPAR</button>
+            </div>
+          </div>
+          <div class="table-container"><div class="table-header"><h3>Locais Cadastrados</h3></div><div class="table-scroll" id="tblLocaisContainer"></div></div>
+        </div>
+
+        <!-- MOTORISTAS TAB -->
+        <div class="tab-content" id="tabMotoristas">
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-section-title">👤 Cadastrar Motorista</div>
+              <div class="form-row">
+                <div class="form-group"><label>Nome *</label><input type="text" id="fmtNome" placeholder="Nome completo"></div>
+                <div class="form-group"><label>CPF</label><input type="text" id="fmtCPF" placeholder="000.000.000-00" maxlength="14"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>CNH</label><input type="text" id="fmtCNH" placeholder="Número da CNH"></div>
+                <div class="form-group"><label>Validade CNH</label><input type="date" id="fmtValidCNH"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Data de Admissão</label><input type="date" id="fmtAdmissao"></div>
+                <div class="form-group"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarMotorista()">💾 SALVAR MOTORISTA</button>
+              <button class="btn btn-secondary" onclick="limparFormMotorista()">🗑️ LIMPAR</button>
+            </div>
+          </div>
+          <div id="motSyncBox" class="form-card" style="display:none;margin-bottom:14px;background:var(--surface2)">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+              <div style="font-size:13px;color:var(--text2)">Motoristas antigos da <b>Base de Dados</b> sem ficha aqui? Crie a ficha deles (só o nome, nascem ativos). Seguro de repetir.</div>
+              <button class="btn btn-secondary" onclick="sincronizarMotoristasDaBase()" id="motSyncBtn">🔄 Importar motoristas da Base de Dados</button>
+            </div>
+            <div id="motSyncInfo" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
+          </div>
+          <div class="table-container"><div class="table-header"><h3>Motoristas Cadastrados</h3></div><div class="table-scroll" id="tblMotoristasContainer"></div></div>
+        </div>
+
+        <!-- CAMINHOES TAB -->
+        <div class="tab-content" id="tabCaminhoes">
+          <div class="form-card">
+            <div class="form-section">
+              <div class="form-section-title">🚛 Cadastrar Caminhão</div>
+              <div class="form-row">
+                <div class="form-group"><label>Placa *</label><input type="text" id="fcmPlaca" placeholder="Ex: ABC1D23" maxlength="7" style="text-transform:uppercase"></div>
+                <div class="form-group"><label>Marca</label><input type="text" id="fcmMarca" placeholder="Ex: Volvo"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Modelo</label><input type="text" id="fcmModelo" placeholder="Ex: FH 540"></div>
+                <div class="form-group"><label>Ano</label><input type="number" id="fcmAno" placeholder="Ex: 2023" min="1990" max="2030"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="salvarCaminhao()">💾 SALVAR CAMINHÃO</button>
+              <button class="btn btn-secondary" onclick="limparFormCaminhao()">🗑️ LIMPAR</button>
+            </div>
+          </div>
+          <div class="table-container"><div class="table-header"><h3>Caminhões Cadastrados</h3></div><div class="table-scroll" id="tblCaminhoesContainer"></div></div>
+        </div>
+      </div>
+
+      <!-- PRODUCAO PAGE -->
+      <div class="page" id="pageProducao">
+        <div class="page-header"><h1 class="page-title">📊 Produção</h1></div>
+        <div class="filters" id="filtersProd"></div>
+        <div class="kpi-row" id="kpiProd"></div>
+        <div class="charts-grid" id="chartsProd"></div>
+        <div class="table-container" id="tblProd"></div>
+      </div>
+
+      <!-- FINANCEIRO PAGE -->
+      <div class="page" id="pageFinanceiro">
+        <div class="page-header"><h1 class="page-title">💰 Financeiro</h1></div>
+        <div class="filters" id="filtersFin"></div>
+        <div class="kpi-row" id="kpiFin"></div>
+        <div class="charts-grid" id="chartsFin"></div>
+        <div class="table-container" id="tblFin"></div>
+      </div>
+
+      <!-- MANUTENCAO PAGE -->
+      <div class="page" id="pageManutencao">
+        <div class="page-header"><h1 class="page-title">🔧 Manutenção</h1></div>
+        <div class="manut-filter-bar" id="filtersManut"></div>
+        <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
+        <div class="kpi-row" id="kpiManut"></div>
+        <div class="manut-main-grid">
+          <div class="manut-panel" id="manutMatrizPanel">
+            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
+            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+          </div>
+          <div class="manut-panel" id="manutKmPanel">
+            <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
+            <div id="manutKmList"></div>
+          </div>
+        </div>
+        <div class="manut-bottom-grid">
+          <div class="manut-panel" id="manutHistPanel">
+            <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
+            <div id="manutHistList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSUMO PAGE -->
+      <div class="page" id="pageConsumo">
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <h1 class="page-title">⛽ Consumo</h1>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="exportConsumoPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+        </div>
+        <div class="filters" id="filtersConsumo"></div>
+
+        <!-- Tabela Consumo Médio -->
+        <div class="table-container" style="margin-bottom:20px">
+          <div class="table-header"><h3>🚚 Consumo Médio por Placa</h3><span class="chart-badge" id="cnsPlacaCount">0 placas</span></div>
+          <div id="cnsPlacaList" style="max-height:340px;overflow-y:auto;border-top:1px solid var(--border)"></div>
+        </div>
+
+        <!-- Tops 3 lado a lado -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:20px" id="cnsTopsRow">
+          <div class="table-container" style="margin:0">
+            <div class="table-header"><h3>🏆 Top 3 — Melhor Consumo</h3></div>
+            <div id="cnsTopConsumo" style="padding:12px"></div>
+          </div>
+          <div class="table-container" style="margin:0">
+            <div class="table-header"><h3>📦 Top 3 — Mais Descargas</h3></div>
+            <div id="cnsTopDescargas" style="padding:12px"></div>
+          </div>
+        </div>
+
+        <!-- Top 5 mais eficientes -->
+        <div class="table-container" style="margin-bottom:20px">
+          <div class="table-header"><h3>🏁 Top 5 — Mais Eficientes</h3></div>
+          <div style="padding:8px 14px 0;font-size:11px;color:var(--text2)">Soma da posição no ranking de consumo + posição no ranking de descargas. <strong>Quanto menor, melhor.</strong></div>
+          <div id="cnsTopEficientes"></div>
+        </div>
+
+        <!-- Tabela detalhada de abastecimentos -->
+        <div class="table-container">
+          <div class="table-header"><h3>📋 Abastecimentos e KM</h3><span class="chart-badge" id="cnsAbastCount">0 registros</span></div>
+          <div id="cnsAbastList"></div>
+        </div>
+      </div>
+
+      <!-- TEMPO ESPERA PAGE -->
+      <div class="page" id="pageTempoEspera">
+        <div class="page-header"><h1 class="page-title">⏱️ Tempo de Espera</h1></div>
+        <div class="filters" id="filtersTempo"></div>
+        <div class="kpi-row" id="kpiTempo"></div>
+        <div class="charts-grid" id="chartsTempo"></div>
+        <div class="table-container" id="tblTempo"></div>
+      </div>
+
+      <!-- MAPA PAGE -->
+      <div class="page" id="pageMapa">
+        <div class="page-header"><h1 class="page-title">🗺️ Mapa de Rotas</h1></div>
+        <div class="filters" id="filtersMapa"></div>
+        <div class="kpi-row" id="kpiMapa"></div>
+        <div id="mapContainer" style="height:600px;border-radius:16px;overflow:hidden;border:1px solid var(--border);margin-bottom:16px;background:var(--surface)"></div>
+        <div class="table-container" id="tblMapa"></div>
+      </div>
+
+      <!-- RELATORIO PAGE -->
+      <div class="page" id="pageRelatorio">
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <h1 class="page-title">📄 Relatório</h1>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="exportRelatorioPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+        </div>
+        <div class="filters" id="filtersRelatorio"></div>
+        <div class="table-container">
+          <div class="table-header"><h3>📊 Relatório Geral por Motorista</h3><span class="chart-badge" id="relCount">0 motoristas</span></div>
+          <div class="table-scroll" id="relTableContainer"></div>
+        </div>
+      </div>
+
+      <!-- HISTORICO PAGE (admin only) -->
+      <div class="page" id="pageHistorico">
+        <div class="page-header"><h1 class="page-title">📋 Histórico de Lançamentos</h1></div>
+        <div class="filters" id="filtersHistorico"></div>
+        <div class="table-container" id="tblHistorico"></div>
+      </div>
+
+      <!-- USUARIOS PAGE (admin only) -->
+      <div class="page" id="pageUsuarios">
+        <div class="page-header">
+          <h1 class="page-title">👥 Gerenciar Usuários</h1>
+          <button class="btn btn-primary btn-sm" onclick="showAddUserForm()">➕ Novo Usuário</button>
+        </div>
+        <div id="addUserForm" style="display:none" class="form-card" >
+          <div class="form-section">
+            <div class="form-section-title">Novo Usuário</div>
+            <div class="form-row">
+              <div class="form-group"><label>Usuário *</label><input type="text" id="nuUser" placeholder="login (sem espaços)"></div>
+              <div class="form-group"><label>Nome Completo *</label><input type="text" id="nuNome" placeholder="Nome exibido"></div>
+              <div class="form-group"><label>Senha Inicial *</label><input type="text" id="nuSenha" placeholder="Senha temporária"></div>
+              <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option></select></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:8px">
+              <button class="btn btn-primary btn-sm" onclick="salvarNovoUsuario()">💾 Salvar</button>
+              <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addUserForm').style.display='none'">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <div class="table-container" id="tblUsuarios"></div>
+      </div>
+
+      <!-- MAQUINARIOS PAGE -->
+      <div class="page" id="pageMaquinarios">
+        <div class="page-header"><h1 class="page-title">🌲 Maquinários</h1></div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this,'tabMaquinas')">Máquinas</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqAbast')">Abastecimento</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqManut')">Manutenção</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqLocal')">Localização</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqCusto')">Custo por Floresta</div>
+        </div>
+
+        <div class="tab-content active" id="tabMaquinas">
+          <div class="filters">
+            <select id="maqFiltroTipo" onchange="renderMaquinasTable()"><option value="">Todos os tipos</option></select>
+            <select id="maqFiltroStatus" onchange="renderMaquinasTable()"><option value="">Todos os status</option><option>Ativa</option><option>Manutenção</option><option>Inativa</option></select>
+            <select id="maqFiltroFloresta" onchange="renderMaquinasTable()"><option value="">Todas as florestas</option></select>
+            <button class="btn btn-primary btn-sm" id="maqAddBtn" onclick="openMaqModal()" style="display:none">➕ Nova máquina</button>
+            <button class="btn btn-secondary" onclick="exportMaquinasPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>🚜 Máquinas cadastradas</h3><span class="chart-badge" id="maqCount">0 máquinas</span></div>
+            <div class="table-scroll" id="maqTableContainer"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tabMaqAbast">
+          <div class="filters">
+            <input id="maqAbIni" type="date" onchange="renderMaqAbastTable()" title="Data início">
+            <input id="maqAbFim" type="date" onchange="renderMaqAbastTable()" title="Data fim">
+            <select id="maqAbFiltroFloresta" onchange="renderMaqAbastTable()"><option value="">Todas as florestas</option></select>
+            <select id="maqAbFiltroMaq" onchange="renderMaqAbastTable()"><option value="">Todas as máquinas</option></select>
+            <button class="btn btn-primary btn-sm" id="maqAbAddBtn" onclick="openMaqAbastModal()" style="display:none">➕ Novo abastecimento</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>⛽ Abastecimentos</h3><span class="chart-badge" id="maqAbCount">0 registros</span></div>
+            <div class="table-scroll" id="maqAbTableContainer"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tabMaqManut">
+          <div class="filters">
+            <input id="maqMtIni" type="date" onchange="renderMaqManutTable()" title="Data início">
+            <input id="maqMtFim" type="date" onchange="renderMaqManutTable()" title="Data fim">
+            <select id="maqMtFiltroFloresta" onchange="renderMaqManutTable()"><option value="">Todas as florestas</option></select>
+            <select id="maqMtFiltroMaq" onchange="renderMaqManutTable()"><option value="">Todas as máquinas</option></select>
+            <select id="maqMtFiltroTipo" onchange="renderMaqManutTable()"><option value="">Todos os tipos</option><option>Preventiva</option><option>Corretiva</option></select>
+            <button class="btn btn-primary btn-sm" id="maqMtAddBtn" onclick="openMaqManutModal()" style="display:none">➕ Registrar manutenção</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>🔧 Manutenções e consertos</h3><span class="chart-badge" id="maqMtCount">0 registros</span></div>
+            <div class="table-scroll" id="maqMtTableContainer"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tabMaqLocal">
+          <div class="filters">
+            <select id="maqLocFiltroMaq" onchange="renderMaqLocalTable()"><option value="">Todas as máquinas</option></select>
+            <select id="maqLocFiltroFloresta" onchange="renderMaqLocalTable()"><option value="">Todas as florestas</option></select>
+            <button class="btn btn-primary btn-sm" id="maqLocAddBtn" onclick="openMaqLocalModal()" style="display:none">➕ Registrar transferência</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>🌲 Histórico de localização</h3><span class="chart-badge" id="maqLocCount">0 registros</span></div>
+            <div class="table-scroll" id="maqLocTableContainer"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tabMaqCusto">
+          <div class="filters">
+            <input id="maqCuIni" type="date" onchange="renderMaqCusto()" title="Data início">
+            <input id="maqCuFim" type="date" onchange="renderMaqCusto()" title="Data fim">
+            <select id="maqCuFloresta" onchange="renderMaqCusto()"><option value="">Todas as florestas</option></select>
+            <select id="maqCuMaq" onchange="renderMaqCusto()"><option value="">Todas as máquinas</option></select>
+            <select id="maqCuTipo" onchange="renderMaqCusto()"><option value="">Todos os custos</option><option>Abastecimento</option><option>Manutenção</option></select>
+            <button class="btn btn-secondary" onclick="exportMaqCustoPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+          <div class="kpi-row" id="maqCuKpis"></div>
+          <div id="maqCuCharts"></div>
+          <div class="table-container" style="margin-top:18px">
+            <div class="table-header"><h3>💰 Resumo por floresta</h3><span class="chart-badge" id="maqCuResumoCount"></span></div>
+            <div class="table-scroll" id="maqCuResumo"></div>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>📋 Detalhado — lançamento por lançamento</h3><span class="chart-badge" id="maqCuDetCount"></span></div>
+            <div class="table-scroll" id="maqCuDetalhe"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMBOIO PAGE -->
+      <div class="page" id="pageComboio">
+        <div class="page-header"><h1 class="page-title">🛢️ Comboio</h1></div>
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this,'tabComboioSaldos')">Saldos</div>
+          <div class="tab" onclick="switchTab(this,'tabComboioEntradas')">Entradas</div>
+          <div class="tab" onclick="switchTab(this,'tabComboioSaidas')">Saídas</div>
+          <div class="tab" onclick="switchTab(this,'tabComboioTanques')">Tanques</div>
+        </div>
+
+        <div class="tab-content active" id="tabComboioSaldos">
+          <div id="comboioSaldosContainer"></div>
+        </div>
+        <div class="tab-content" id="tabComboioEntradas">
+          <div class="filters">
+            <input id="cbEnIni" type="date" onchange="renderComboioEntradas()" title="Data início">
+            <input id="cbEnFim" type="date" onchange="renderComboioEntradas()" title="Data fim">
+            <select id="cbEnPosto" onchange="renderComboioEntradas()"><option value="">Todos os postos</option></select>
+            <select id="cbEnForn" onchange="renderComboioEntradas()"><option value="">Todos os fornecedores</option></select>
+            <button class="btn-secondary btn-sm" onclick="clearComboioEntradasFiltro()">Limpar</button>
+            <button class="btn btn-primary btn-sm" id="cbEnAddBtn" onclick="openEntradaModal()" style="display:none">➕ Nova entrada</button>
+            <button class="btn btn-secondary" onclick="exportEntradasPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>🛒 Entradas (compras de diesel)</h3><span class="chart-badge" id="cbEnCount">0 registros</span></div>
+            <div class="table-scroll" id="cbEnTableContainer"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tabComboioSaidas">
+          <div class="filters">
+            <input id="cbSaIni" type="date" onchange="renderComboioSaidas()" title="Data início">
+            <input id="cbSaFim" type="date" onchange="renderComboioSaidas()" title="Data fim">
+            <select id="cbSaPosto" onchange="renderComboioSaidas()"><option value="">Todos os postos</option></select>
+            <select id="cbSaOrigem" onchange="renderComboioSaidas()"><option value="">Máquinas e Caminhões</option><option>Máquina</option><option>Caminhão</option></select>
+            <button class="btn-secondary btn-sm" onclick="clearComboioSaidasFiltro()">Limpar</button>
+            <button class="btn btn-secondary" onclick="exportSaidasPDF()" style="font-size:12px">📄 Exportar PDF</button>
+          </div>
+          <div class="table-container">
+            <div class="table-header"><h3>⛽ Saídas (abastecimentos a partir dos tanques)</h3><span class="chart-badge" id="cbSaCount">0 registros</span></div>
+            <div class="table-scroll" id="cbSaTableContainer"></div>
+          </div>
+        </div>
+        <div class="tab-content" id="tabComboioTanques">
+          <div id="comboioTanquesContainer"></div>
+        </div>
+      </div>
+
+      <div class="page" id="pageFrequencia">
+        <div class="page-header"><h1 class="page-title">📅 Frequência</h1></div>
+        <div class="form-card" style="margin-bottom:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+            <div class="form-group" style="min-width:120px"><label>Mês</label>
+              <select id="freqMes">
+                <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+                <option value="03">Março</option><option value="04">Abril</option>
+                <option value="05">Maio</option><option value="06">Junho</option>
+                <option value="07">Julho</option><option value="08">Agosto</option>
+                <option value="09">Setembro</option><option value="10">Outubro</option>
+                <option value="11">Novembro</option><option value="12">Dezembro</option>
+              </select>
+            </div>
+            <div class="form-group" style="min-width:110px"><label>Ano</label>
+              <select id="freqAno"></select>
+            </div>
+            <button class="btn btn-secondary" onclick="freqPreencherMesT()">✅ Preencher mês com T</button>
+            <button class="btn btn-secondary" onclick="freqLimparMes()">🧹 Limpar mês</button>
+            <button class="btn btn-primary" onclick="freqSalvarMes()" id="freqBtnSalvar">💾 Salvar mês</button>
+            <button class="btn btn-secondary" onclick="freqExportGradePDF()">📄 Exportar PDF</button>
+          </div>
+          <div id="freqLegenda" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;font-size:12px"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>Grade de Frequência</h3><span class="chart-badge" id="freqInfoBadge">—</span></div>
+          <div class="table-scroll" id="freqGridContainer" style="overflow:auto;max-height:65vh"></div>
+        </div>
+
+        <div class="table-container" style="margin-top:16px">
+          <div class="table-header" style="flex-wrap:wrap;gap:8px">
+            <h3>⚠️ Cruzamento — frequência × entregas</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="freqCruzMot" onchange="freqRenderCruzamento()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px"><option value="">Todos os motoristas</option></select>
+              <span class="chart-badge" id="freqCruzBadge">—</span>
+              <button class="btn btn-secondary" onclick="freqGerarCruzamento()" style="font-size:12px">🔍 Gerar</button>
+              <button class="btn btn-secondary" onclick="freqExportCruzamentoPDF()" style="font-size:12px">📄 Exportar PDF</button>
+            </div>
+          </div>
+          <div style="padding:6px 2px 10px;font-size:12px;color:var(--text2)">Usa o mês/ano selecionado acima. Entrega = registro com Local de Descarga e Quantidade &gt; 0.</div>
+          <div id="freqCruzContainer"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>📥 Importar Planilha</h2>
+    <p style="color:var(--text2);margin-bottom:16px">Selecione um arquivo .xlsx com as abas CADASTRO, MANUT_REALIZADA e MANUT_PROGRAMADA</p>
+    <div class="form-group"><input type="file" id="importFile" accept=".xlsx,.xls" style="padding:8px"></div>
+    <div class="progress-bar" id="importProgress" style="display:none"><div class="progress-fill" id="importProgressFill"></div></div>
+    <div id="importStats" style="font-size:14px;color:var(--text2)"></div>
+    <div style="display:flex;gap:12px;margin-top:16px">
+      <button class="btn btn-primary" onclick="doImport()">IMPORTAR</button>
+      <button class="btn btn-secondary" onclick="closeImportModal()">CANCELAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeDetailModal()">
+  <div class="modal" style="max-width:750px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 id="detailTitle" style="font-family:Outfit,sans-serif;font-size:18px"></h2>
+      <button onclick="closeDetailModal()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div id="detailSubtitle" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script src="js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/maq-maquinas.js"></script>
+<script src="js/maq-localizacao.js"></script>
+<script src="js/maq-abastecimento.js"></script>
+<script src="js/maq-manutencao.js"></script>
+<script src="js/maq-custo.js"></script>
+<script src="js/app-init.js"></script>
+<script src="js/cadastro.js"></script>
+<script src="js/filters-common.js"></script>
+<script src="js/producao.js"></script>
+<script src="js/financeiro.js"></script>
+<script src="js/manutencao.js"></script>
+<script src="js/consumo.js"></script>
+<script src="js/relatorio.js"></script>
+<script src="js/tempo-espera.js"></script>
+<script src="js/historico.js"></script>
+<script src="js/motoristas.js"></script>
+<script src="js/frequencia.js"></script>
+<script src="js/caminhoes.js"></script>
+<script src="js/usuarios.js"></script>
+<script src="js/mapa.js"></script>
+<script src="js/import.js"></script>
+<script src="js/chart-defaults.js"></script>
+<script src="js/mascaras.js"></script>
+<script src="js/comboio.js"></script>
+</body>
+</html>
