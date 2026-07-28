@@ -19,7 +19,8 @@ function buildHistorico(){
     {id:'fhPla',label:'Placa',options:uPla,onChange:buildHistorico},
     {id:'fhMes',label:'Mês',options:uMon,optionLabels:uMon.map(getMonthLabel),onChange:buildHistorico},
     {type:'dateRange',idIni:'fhDtIni',idFim:'fhDtFim',onChange:buildHistorico}
-  ],null,function(){clearFilters(['fhUser','fhMot','fhPla','fhMes','fhDtIni','fhDtFim'],buildHistorico);});
+  ],null,function(){clearFilters(['fhUser','fhMot','fhPla','fhMes','fhDtIni','fhDtFim','fhNota'],buildHistorico);});
+  var fNota=document.getElementById('fhNota')?document.getElementById('fhNota').value.trim():'';
   var fU=document.getElementById('fhUser')?document.getElementById('fhUser').value:'';
   var fM=document.getElementById('fhMot')?document.getElementById('fhMot').value:'';
   var fPla=document.getElementById('fhPla')?document.getElementById('fhPla').value:'';
@@ -28,6 +29,7 @@ function buildHistorico(){
   var fDtFim=document.getElementById('fhDtFim')?document.getElementById('fhDtFim').value:'';
   var hasRangeH=!!(fDtIni||fDtFim);
   var rows=DB.cadastro.filter(function(r){
+    if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
     if(fU&&r.USUARIO!==fU) return false;
     if(fM&&r.MOTORISTA!==fM) return false;
     if(fPla){

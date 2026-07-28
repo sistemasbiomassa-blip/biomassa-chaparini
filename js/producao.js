@@ -32,8 +32,9 @@ function buildProducao(){
     {id:'fpSemana',label:'Semana',options:uSemP,optionLabels:uSemP.map(getWeekDisplay),onChange:buildProducao,linkedMonthId:'fpMes',allWeeks:uSemP},
     {id:'fpUnid',label:'Unidade',options:['TON','M³'],onChange:buildProducao},
     {type:'dateRange',idIni:'fpDtIni',idFim:'fpDtFim',onChange:buildProducao}
-  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim'],buildProducao); });
+  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); });
 
+  var fNota=document.getElementById('fpNota')?document.getElementById('fpNota').value.trim():'';
   var fM=document.getElementById('fpMot')?document.getElementById('fpMot').value:'';
   var fP=document.getElementById('fpPlaca')?document.getElementById('fpPlaca').value:'';
   var fC=document.getElementById('fpCarga')?document.getElementById('fpCarga').value:'';
@@ -47,6 +48,7 @@ function buildProducao(){
   var hasRange = !!(fDtIni||fDtFim);
 
   var data=DB.cadastro.filter(function(r){
+    if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
     if(fM&&r.MOTORISTA!==fM) return false;
     if(fP&&r.PLACA!==fP) return false;
     if(fC&&r['LOCAL CARGA']!==fC) return false;

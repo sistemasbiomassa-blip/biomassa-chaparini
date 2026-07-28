@@ -464,6 +464,18 @@ tbody tr:hover{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ===== MODAL LANÇAMENTO DUPLICADO (PLACA + DATA) ===== -->
+<div class="modal-overlay" id="dupCadastroOverlay" onclick="if(event.target===this)closeDupCadastroModal()">
+  <div class="modal" style="max-width:480px">
+    <h2>⚠️ Lançamento já existe</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Já existe lançamento para esta placa nesta data. É continuação da mesma viagem ou uma viagem nova?</p>
+    <div id="dupCadastroList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="dupCadastroNovaViagem()">🆕 Nova Viagem</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL MÁQUINA (novo/editar) ===== -->
 <div class="modal-overlay" id="maqModalOverlay" onclick="if(event.target===this)closeMaqModal()">
   <div class="modal">
@@ -680,7 +692,7 @@ tbody tr:hover{background:var(--surface2)}
               <div class="form-section-title">🚚 Viagem</div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista *</label><select id="fMotorista"></select></div>
-                <div class="form-group"><label>Data *</label><input type="date" id="fData"></div>
+                <div class="form-group"><label>Data *</label><input type="date" id="fData" onchange="checkDuplicadoCadastro()"></div>
                 <div class="form-group"><label>Situação</label><select id="fSituacao"><option value="">Selecione</option><option>ATIVO</option><option>INATIVO</option></select></div>
                 <div class="form-group"><label>Entrega</label><input type="text" inputmode="decimal" id="fEntrega" placeholder="ex: 1"></div>
               </div>
@@ -691,7 +703,7 @@ tbody tr:hover{background:var(--surface2)}
                 <div class="form-group"><label>Quantidade <span id="unidadeLabel">(TON)</span></label><input type="text" inputmode="decimal" id="fQuantidade" placeholder="ex: 25,50"></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Placa *</label><select id="fPlaca"></select></div>
+                <div class="form-group"><label>Placa *</label><select id="fPlaca" onchange="checkDuplicadoCadastro()"></select></div>
               </div>
             </div>
             <div class="form-section">
@@ -856,6 +868,9 @@ tbody tr:hover{background:var(--surface2)}
       <!-- PRODUCAO PAGE -->
       <div class="page" id="pageProducao">
         <div class="page-header"><h1 class="page-title">📊 Produção</h1></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <input type="text" inputmode="numeric" id="fpNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildProducao()">
+        </div>
         <div class="filters" id="filtersProd"></div>
         <div class="kpi-row" id="kpiProd"></div>
         <div class="charts-grid" id="chartsProd"></div>
@@ -973,6 +988,9 @@ tbody tr:hover{background:var(--surface2)}
       <!-- HISTORICO PAGE (admin only) -->
       <div class="page" id="pageHistorico">
         <div class="page-header"><h1 class="page-title">📋 Histórico de Lançamentos</h1></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <input type="text" inputmode="numeric" id="fhNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildHistorico()">
+        </div>
         <div class="filters" id="filtersHistorico"></div>
         <div class="table-container" id="tblHistorico"></div>
       </div>
@@ -1352,20 +1370,20 @@ var EDIT_FIELDS=[
   {key:'LOCAL CARGA', label:'Local Carga', type:'select', src:'localCarga'},
   {key:'LOCAL DESCARGA', label:'Local Descarga', type:'select', src:'localDescarga'},
   {key:'NOTA', label:'Nota', type:'number'},
-  {key:'QUANTIDADE', label:'Quantidade', type:'number', step:'0.01'},
+  {key:'QUANTIDADE', label:'Quantidade', type:'moneynum', mask:'quantidade'},
   {key:'CHEGADA FLORESTA', label:'Chegada Floresta', type:'time'},
   {key:'SAIDA FLORESTA', label:'Saída Floresta', type:'time'},
   {key:'CHEGADA CLIENTE', label:'Chegada Cliente', type:'time'},
   {key:'SAIDA CLIENTE', label:'Saída Cliente', type:'time'},
   {key:'LOCAL ABASTECIMENTO', label:'Posto', type:'select', src:'localAbast'},
-  {key:'KM', label:'KM', type:'number'},
-  {key:'QTDADE LITROS', label:'Litros', type:'number', step:'0.01'},
-  {key:'VALOR UNITARIO', label:'Vlr Unit. Combust.', type:'number', step:'0.01'},
-  {key:'ARLA VALOR', label:'Vlr ARLA', type:'number', step:'0.01'},
+  {key:'KM', label:'KM', type:'moneynum', mask:'km'},
+  {key:'QTDADE LITROS', label:'Litros', type:'moneynum', mask:'litros'},
+  {key:'VALOR UNITARIO', label:'Vlr Unit. Combust.', type:'moneynum', mask:'valorUnit'},
+  {key:'ARLA VALOR', label:'Vlr ARLA', type:'moneynum', mask:'arla'},
   {key:'CLASSE DESPESA', label:'Classe Despesa', type:'select', src:'classeDesp'},
   {key:'DESCR. DESPESA', label:'Descr. Despesa', type:'text'},
   {key:'LOCAL DESPESA', label:'Local Despesa', type:'text'},
-  {key:'VALOR DESPESA', label:'Vlr Despesa', type:'number', step:'0.01'},
+  {key:'VALOR DESPESA', label:'Vlr Despesa', type:'moneynum', mask:'valorDesp'},
   {key:'OBSERVAÇÃO', label:'Observação', type:'textarea'}
 ];
 
@@ -1421,13 +1439,42 @@ function openEditModal(key){
       html+='<input type="time" id="'+id+'" value="'+tval+'">';
     } else if(f.type==='number'){
       html+='<input type="number" id="'+id+'" '+(f.step?'step="'+f.step+'"':'')+' value="'+(val===''?'':val)+'">';
+    } else if(f.type==='moneynum'){
+      var mval=(val===''||val==null)?'':fmt(val,2);
+      html+='<input type="text" inputmode="decimal" id="'+id+'" value="'+mval+'">';
     } else {
       html+='<input type="text" id="'+id+'" value="'+String(val).replace(/"/g,'&quot;')+'">';
     }
     html+='</div>';
   });
   grid.innerHTML=html;
+  _aplicarMascarasEdit();
   document.getElementById('editOverlay').classList.add('show');
+}
+
+// Aplica as mesmas máscaras numéricas do Cadastro (js/mascaras.js) aos campos do modal de Editar
+function _aplicarMascarasEdit(){
+  clonarEMascarar('ed_KM',             LIMITES_CAMPOS.km,        2);
+  clonarEMascarar('ed_QTDADE_LITROS',  LIMITES_CAMPOS.litros,    2);
+  clonarEMascarar('ed_VALOR_UNITARIO', LIMITES_CAMPOS.valorUnit, 2);
+  clonarEMascarar('ed_ARLA_VALOR',     LIMITES_CAMPOS.arla,      2);
+  clonarEMascarar('ed_VALOR_DESPESA',  LIMITES_CAMPOS.valorDesp, 2);
+  _aplicarMascaraQuantidadeEdit(false);
+  var locSel=document.getElementById('ed_LOCAL_DESCARGA');
+  if(locSel) locSel.addEventListener('change', function(){ _aplicarMascaraQuantidadeEdit(true); });
+}
+
+// limpar=true quando o Local de Descarga muda depois do modal já aberto (mesmo comportamento do Cadastro:
+// como o limite de dígitos muda entre TON e M³, o valor antigo é descartado em vez de reformatado)
+function _aplicarMascaraQuantidadeEdit(limpar){
+  var fQ=document.getElementById('ed_QUANTIDADE');
+  if(!fQ) return;
+  if(limpar) fQ.value='';
+  var locSel=document.getElementById('ed_LOCAL_DESCARGA');
+  var local=locSel?locSel.value:'';
+  var isM3=BASE.clientesM3.includes(local);
+  var maxInt=isM3?LIMITES_CAMPOS.quantidadeM3:LIMITES_CAMPOS.quantidadeTON;
+  clonarEMascarar('ed_QUANTIDADE', maxInt, 2);
 }
 
 function closeEditModal(){
@@ -1446,7 +1493,7 @@ function saveEdit(){
     var el=document.getElementById(id);
     if(!el) return;
     var v=el.value;
-    if(f.type==='number'){
+    if(f.type==='number'||f.type==='moneynum'){
       updates[f.key]=v===''?null:num(v);
     } else {
       updates[f.key]=v===''?null:v;
@@ -1462,6 +1509,42 @@ function saveEdit(){
   if(!updates['MOTORISTA'] || !updates['DATA']){
     showToast('Motorista e Data são obrigatórios',true);
     return;
+  }
+  // KM e Litros obrigatórios juntos (mesma regra do Cadastro, sem a validação sequencial por mês)
+  if(updates['KM'] && !updates['QTDADE LITROS']){ showToast('⚠️ Se informar KM, informe também Qtde Litros!', true); return; }
+  if(updates['QTDADE LITROS'] && !updates['KM']){ showToast('⚠️ Se informar Litros, informe também o KM!', true); return; }
+  // KM contra histórico da placa por DATA (mesma regra "inteligente" do Cadastro, ignorando o próprio registro)
+  if(updates['KM'] && updates['PLACA'] && updates['DATA']){
+    var kmValEdit = updates['KM'];
+    var dtEdit = updates['DATA'];
+    var mesAtualEdit = dtEdit.substring(0,7);
+    var registrosMesEdit = DB.cadastro.filter(function(other){
+      return other!==r &&
+             _normPlacaCad(other.PLACA) === _normPlacaCad(updates['PLACA']) &&
+             other.KM && num(other.KM) > 0 &&
+             other.DATA && other.DATA.substring(0,7) === mesAtualEdit;
+    });
+    var anterioresEdit = registrosMesEdit.filter(function(o){ return o.DATA <= dtEdit; }).map(function(o){ return num(o.KM); });
+    var posterioresEdit = registrosMesEdit.filter(function(o){ return o.DATA > dtEdit; });
+    if(anterioresEdit.length > 0){
+      var ultimoKMEdit = Math.max.apply(null, anterioresEdit);
+      if(kmValEdit <= ultimoKMEdit){
+        showToast('⚠️ KM inválido! O último KM desta placa até esta data é ' + numBR(ultimoKMEdit,2) + '. Informe um valor maior.', true);
+        return;
+      }
+      if(kmValEdit > ultimoKMEdit + 2500){
+        showToast('⚠️ KM inválido! O valor ' + numBR(kmValEdit,2) + ' ultrapassa o limite de 2.500 km acima do último registrado até esta data (' + numBR(ultimoKMEdit,2) + ').', true);
+        return;
+      }
+    }
+    if(posterioresEdit.length > 0){
+      var proximoKMEdit = Math.min.apply(null, posterioresEdit.map(function(o){ return num(o.KM); }));
+      if(kmValEdit >= proximoKMEdit){
+        var proximoRegEdit = posterioresEdit.filter(function(o){ return num(o.KM) === proximoKMEdit; })[0];
+        showToast('⚠️ KM inválido! Já existe um lançamento posterior (' + formatDateBR(proximoRegEdit.DATA) + ') com KM ' + numBR(proximoKMEdit,2) + '. Informe um valor menor.', true);
+        return;
+      }
+    }
   }
   // Nota Fiscal duplicada (global, só quando preenchida, ignorando o próprio registro)
   if(updates['NOTA']){
@@ -3079,6 +3162,55 @@ function _cadAbPrecoAuto(){
   if(preco!=null){ pre.value=fmt(preco,2); calcValorTotal(); }
 }
 
+// ==================== DUPLICIDADE PLACA + DATA ====================
+var _dupCadastroDismissKey=null;
+var _dupCadastroPendingKey=null;
+
+function _normPlacaCad(p){ return String(p||'').toUpperCase().replace(/\s+/g,''); }
+
+function checkDuplicadoCadastro(){
+  var placa=document.getElementById('fPlaca').value;
+  var dt=document.getElementById('fData').value;
+  if(!placa||!dt) return;
+  var key=_normPlacaCad(placa)+'|'+dt;
+  if(_dupCadastroDismissKey===key) return;
+  var matches=DB.cadastro.filter(function(r){
+    return _normPlacaCad(r.PLACA)===_normPlacaCad(placa) && r.DATA===dt;
+  });
+  if(!matches.length) return;
+  _dupCadastroPendingKey=key;
+  var html='';
+  matches.forEach(function(r){
+    var resumo=[];
+    if(r['CHEGADA FLORESTA']) resumo.push('Cheg. Floresta '+r['CHEGADA FLORESTA']);
+    if(r['SAIDA FLORESTA']) resumo.push('Saída Floresta '+r['SAIDA FLORESTA']);
+    if(r['CHEGADA CLIENTE']) resumo.push('Cheg. Cliente '+r['CHEGADA CLIENTE']);
+    if(r['SAIDA CLIENTE']) resumo.push('Saída Cliente '+r['SAIDA CLIENTE']);
+    if(r['QUANTIDADE']) resumo.push('Qtd '+fmt(r['QUANTIDADE']));
+    html+='<div style="border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">';
+    html+='<div style="font-size:12px;line-height:1.5"><strong>'+(r.MOTORISTA||'-')+'</strong><br>'+(resumo.length?resumo.join(' • '):'sem horários preenchidos')+'</div>';
+    html+='<button class="btn btn-primary btn-sm" onclick="dupCadastroComplementar(\''+rowKeyAttr(r)+'\')">Complementar</button>';
+    html+='</div>';
+  });
+  document.getElementById('dupCadastroList').innerHTML=html;
+  document.getElementById('dupCadastroOverlay').classList.add('show');
+}
+
+function closeDupCadastroModal(){
+  document.getElementById('dupCadastroOverlay').classList.remove('show');
+}
+
+function dupCadastroNovaViagem(){
+  _dupCadastroDismissKey=_dupCadastroPendingKey;
+  closeDupCadastroModal();
+}
+
+function dupCadastroComplementar(key){
+  closeDupCadastroModal();
+  limparFormCadastro();
+  openEditModal(key);
+}
+
 // ==================== SAVE ====================
 function salvarCadastro(){
   var mot=document.getElementById('fMotorista').value;
@@ -3121,22 +3253,33 @@ function salvarCadastro(){
   // Regra 3: KM e Litros obrigatórios juntos
   if(kmVal && !litVal){ showToast('⚠️ Se informar KM, informe também Qtde Litros!', true); return; }
   if(litVal && !kmVal){ showToast('⚠️ Se informar Litros, informe também o KM!', true); return; }
-  // Regras 1 e 2: validar KM contra histórico do mês atual
+  // Regras 1 e 2: validar KM contra histórico do mês atual, respeitando a ORDEM DAS DATAS
+  // (permite lançar abastecimento retroativo com KM menor que lançamentos futuros já existentes)
   if(kmVal && rec['PLACA']){
     var mesAtual = dt.substring(0,7); // YYYY-MM
-    var kmsPlacaMes = DB.cadastro.filter(function(r){
-      return r.PLACA === rec['PLACA'] &&
+    var registrosMes = DB.cadastro.filter(function(r){
+      return _normPlacaCad(r.PLACA) === _normPlacaCad(rec['PLACA']) &&
              r.KM && num(r.KM) > 0 &&
              r.DATA && r.DATA.substring(0,7) === mesAtual;
-    }).map(function(r){ return num(r.KM); });
-    if(kmsPlacaMes.length > 0){
-      var ultimoKM = Math.max.apply(null, kmsPlacaMes);
+    });
+    var anteriores = registrosMes.filter(function(r){ return r.DATA <= dt; }).map(function(r){ return num(r.KM); });
+    var posteriores = registrosMes.filter(function(r){ return r.DATA > dt; });
+    if(anteriores.length > 0){
+      var ultimoKM = Math.max.apply(null, anteriores);
       if(kmVal <= ultimoKM){
-        showToast('⚠️ KM inválido! O último KM desta placa no mês é ' + numBR(ultimoKM,2) + '. Informe um valor maior.', true);
+        showToast('⚠️ KM inválido! O último KM desta placa até esta data é ' + numBR(ultimoKM,2) + '. Informe um valor maior.', true);
         return;
       }
       if(kmVal > ultimoKM + 2500){
-        showToast('⚠️ KM inválido! O valor ' + numBR(kmVal,2) + ' ultrapassa o limite de 2.500 km acima do último registrado (' + numBR(ultimoKM,2) + ').', true);
+        showToast('⚠️ KM inválido! O valor ' + numBR(kmVal,2) + ' ultrapassa o limite de 2.500 km acima do último registrado até esta data (' + numBR(ultimoKM,2) + ').', true);
+        return;
+      }
+    }
+    if(posteriores.length > 0){
+      var proximoKM = Math.min.apply(null, posteriores.map(function(r){ return num(r.KM); }));
+      if(kmVal >= proximoKM){
+        var proximoReg = posteriores.filter(function(r){ return num(r.KM) === proximoKM; })[0];
+        showToast('⚠️ KM inválido! Já existe um lançamento posterior (' + formatDateBR(proximoReg.DATA) + ') com KM ' + numBR(proximoKM,2) + '. Informe um valor menor.', true);
         return;
       }
     }
@@ -3485,8 +3628,9 @@ function buildProducao(){
     {id:'fpSemana',label:'Semana',options:uSemP,optionLabels:uSemP.map(getWeekDisplay),onChange:buildProducao,linkedMonthId:'fpMes',allWeeks:uSemP},
     {id:'fpUnid',label:'Unidade',options:['TON','M³'],onChange:buildProducao},
     {type:'dateRange',idIni:'fpDtIni',idFim:'fpDtFim',onChange:buildProducao}
-  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim'],buildProducao); });
+  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); });
 
+  var fNota=document.getElementById('fpNota')?document.getElementById('fpNota').value.trim():'';
   var fM=document.getElementById('fpMot')?document.getElementById('fpMot').value:'';
   var fP=document.getElementById('fpPlaca')?document.getElementById('fpPlaca').value:'';
   var fC=document.getElementById('fpCarga')?document.getElementById('fpCarga').value:'';
@@ -3500,6 +3644,7 @@ function buildProducao(){
   var hasRange = !!(fDtIni||fDtFim);
 
   var data=DB.cadastro.filter(function(r){
+    if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
     if(fM&&r.MOTORISTA!==fM) return false;
     if(fP&&r.PLACA!==fP) return false;
     if(fC&&r['LOCAL CARGA']!==fC) return false;
@@ -5095,7 +5240,8 @@ function buildHistorico(){
     {id:'fhPla',label:'Placa',options:uPla,onChange:buildHistorico},
     {id:'fhMes',label:'Mês',options:uMon,optionLabels:uMon.map(getMonthLabel),onChange:buildHistorico},
     {type:'dateRange',idIni:'fhDtIni',idFim:'fhDtFim',onChange:buildHistorico}
-  ],null,function(){clearFilters(['fhUser','fhMot','fhPla','fhMes','fhDtIni','fhDtFim'],buildHistorico);});
+  ],null,function(){clearFilters(['fhUser','fhMot','fhPla','fhMes','fhDtIni','fhDtFim','fhNota'],buildHistorico);});
+  var fNota=document.getElementById('fhNota')?document.getElementById('fhNota').value.trim():'';
   var fU=document.getElementById('fhUser')?document.getElementById('fhUser').value:'';
   var fM=document.getElementById('fhMot')?document.getElementById('fhMot').value:'';
   var fPla=document.getElementById('fhPla')?document.getElementById('fhPla').value:'';
@@ -5104,6 +5250,7 @@ function buildHistorico(){
   var fDtFim=document.getElementById('fhDtFim')?document.getElementById('fhDtFim').value:'';
   var hasRangeH=!!(fDtIni||fDtFim);
   var rows=DB.cadastro.filter(function(r){
+    if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
     if(fU&&r.USUARIO!==fU) return false;
     if(fM&&r.MOTORISTA!==fM) return false;
     if(fPla){

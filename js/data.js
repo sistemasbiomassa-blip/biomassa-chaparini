@@ -123,20 +123,20 @@ var EDIT_FIELDS=[
   {key:'LOCAL CARGA', label:'Local Carga', type:'select', src:'localCarga'},
   {key:'LOCAL DESCARGA', label:'Local Descarga', type:'select', src:'localDescarga'},
   {key:'NOTA', label:'Nota', type:'number'},
-  {key:'QUANTIDADE', label:'Quantidade', type:'number', step:'0.01'},
+  {key:'QUANTIDADE', label:'Quantidade', type:'moneynum', mask:'quantidade'},
   {key:'CHEGADA FLORESTA', label:'Chegada Floresta', type:'time'},
   {key:'SAIDA FLORESTA', label:'Saída Floresta', type:'time'},
   {key:'CHEGADA CLIENTE', label:'Chegada Cliente', type:'time'},
   {key:'SAIDA CLIENTE', label:'Saída Cliente', type:'time'},
   {key:'LOCAL ABASTECIMENTO', label:'Posto', type:'select', src:'localAbast'},
-  {key:'KM', label:'KM', type:'number'},
-  {key:'QTDADE LITROS', label:'Litros', type:'number', step:'0.01'},
-  {key:'VALOR UNITARIO', label:'Vlr Unit. Combust.', type:'number', step:'0.01'},
-  {key:'ARLA VALOR', label:'Vlr ARLA', type:'number', step:'0.01'},
+  {key:'KM', label:'KM', type:'moneynum', mask:'km'},
+  {key:'QTDADE LITROS', label:'Litros', type:'moneynum', mask:'litros'},
+  {key:'VALOR UNITARIO', label:'Vlr Unit. Combust.', type:'moneynum', mask:'valorUnit'},
+  {key:'ARLA VALOR', label:'Vlr ARLA', type:'moneynum', mask:'arla'},
   {key:'CLASSE DESPESA', label:'Classe Despesa', type:'select', src:'classeDesp'},
   {key:'DESCR. DESPESA', label:'Descr. Despesa', type:'text'},
   {key:'LOCAL DESPESA', label:'Local Despesa', type:'text'},
-  {key:'VALOR DESPESA', label:'Vlr Despesa', type:'number', step:'0.01'},
+  {key:'VALOR DESPESA', label:'Vlr Despesa', type:'moneynum', mask:'valorDesp'},
   {key:'OBSERVAÇÃO', label:'Observação', type:'textarea'}
 ];
 
@@ -192,13 +192,42 @@ function openEditModal(key){
       html+='<input type="time" id="'+id+'" value="'+tval+'">';
     } else if(f.type==='number'){
       html+='<input type="number" id="'+id+'" '+(f.step?'step="'+f.step+'"':'')+' value="'+(val===''?'':val)+'">';
+    } else if(f.type==='moneynum'){
+      var mval=(val===''||val==null)?'':fmt(val,2);
+      html+='<input type="text" inputmode="decimal" id="'+id+'" value="'+mval+'">';
     } else {
       html+='<input type="text" id="'+id+'" value="'+String(val).replace(/"/g,'&quot;')+'">';
     }
     html+='</div>';
   });
   grid.innerHTML=html;
+  _aplicarMascarasEdit();
   document.getElementById('editOverlay').classList.add('show');
+}
+
+// Aplica as mesmas máscaras numéricas do Cadastro (js/mascaras.js) aos campos do modal de Editar
+function _aplicarMascarasEdit(){
+  clonarEMascarar('ed_KM',             LIMITES_CAMPOS.km,        2);
+  clonarEMascarar('ed_QTDADE_LITROS',  LIMITES_CAMPOS.litros,    2);
+  clonarEMascarar('ed_VALOR_UNITARIO', LIMITES_CAMPOS.valorUnit, 2);
+  clonarEMascarar('ed_ARLA_VALOR',     LIMITES_CAMPOS.arla,      2);
+  clonarEMascarar('ed_VALOR_DESPESA',  LIMITES_CAMPOS.valorDesp, 2);
+  _aplicarMascaraQuantidadeEdit(false);
+  var locSel=document.getElementById('ed_LOCAL_DESCARGA');
+  if(locSel) locSel.addEventListener('change', function(){ _aplicarMascaraQuantidadeEdit(true); });
+}
+
+// limpar=true quando o Local de Descarga muda depois do modal já aberto (mesmo comportamento do Cadastro:
+// como o limite de dígitos muda entre TON e M³, o valor antigo é descartado em vez de reformatado)
+function _aplicarMascaraQuantidadeEdit(limpar){
+  var fQ=document.getElementById('ed_QUANTIDADE');
+  if(!fQ) return;
+  if(limpar) fQ.value='';
+  var locSel=document.getElementById('ed_LOCAL_DESCARGA');
+  var local=locSel?locSel.value:'';
+  var isM3=BASE.clientesM3.includes(local);
+  var maxInt=isM3?LIMITES_CAMPOS.quantidadeM3:LIMITES_CAMPOS.quantidadeTON;
+  clonarEMascarar('ed_QUANTIDADE', maxInt, 2);
 }
 
 function closeEditModal(){
@@ -217,7 +246,7 @@ function saveEdit(){
     var el=document.getElementById(id);
     if(!el) return;
     var v=el.value;
-    if(f.type==='number'){
+    if(f.type==='number'||f.type==='moneynum'){
       updates[f.key]=v===''?null:num(v);
     } else {
       updates[f.key]=v===''?null:v;
@@ -233,6 +262,42 @@ function saveEdit(){
   if(!updates['MOTORISTA'] || !updates['DATA']){
     showToast('Motorista e Data são obrigatórios',true);
     return;
+  }
+  // KM e Litros obrigatórios juntos (mesma regra do Cadastro, sem a validação sequencial por mês)
+  if(updates['KM'] && !updates['QTDADE LITROS']){ showToast('⚠️ Se informar KM, informe também Qtde Litros!', true); return; }
+  if(updates['QTDADE LITROS'] && !updates['KM']){ showToast('⚠️ Se informar Litros, informe também o KM!', true); return; }
+  // KM contra histórico da placa por DATA (mesma regra "inteligente" do Cadastro, ignorando o próprio registro)
+  if(updates['KM'] && updates['PLACA'] && updates['DATA']){
+    var kmValEdit = updates['KM'];
+    var dtEdit = updates['DATA'];
+    var mesAtualEdit = dtEdit.substring(0,7);
+    var registrosMesEdit = DB.cadastro.filter(function(other){
+      return other!==r &&
+             _normPlacaCad(other.PLACA) === _normPlacaCad(updates['PLACA']) &&
+             other.KM && num(other.KM) > 0 &&
+             other.DATA && other.DATA.substring(0,7) === mesAtualEdit;
+    });
+    var anterioresEdit = registrosMesEdit.filter(function(o){ return o.DATA <= dtEdit; }).map(function(o){ return num(o.KM); });
+    var posterioresEdit = registrosMesEdit.filter(function(o){ return o.DATA > dtEdit; });
+    if(anterioresEdit.length > 0){
+      var ultimoKMEdit = Math.max.apply(null, anterioresEdit);
+      if(kmValEdit <= ultimoKMEdit){
+        showToast('⚠️ KM inválido! O último KM desta placa até esta data é ' + numBR(ultimoKMEdit,2) + '. Informe um valor maior.', true);
+        return;
+      }
+      if(kmValEdit > ultimoKMEdit + 2500){
+        showToast('⚠️ KM inválido! O valor ' + numBR(kmValEdit,2) + ' ultrapassa o limite de 2.500 km acima do último registrado até esta data (' + numBR(ultimoKMEdit,2) + ').', true);
+        return;
+      }
+    }
+    if(posterioresEdit.length > 0){
+      var proximoKMEdit = Math.min.apply(null, posterioresEdit.map(function(o){ return num(o.KM); }));
+      if(kmValEdit >= proximoKMEdit){
+        var proximoRegEdit = posterioresEdit.filter(function(o){ return num(o.KM) === proximoKMEdit; })[0];
+        showToast('⚠️ KM inválido! Já existe um lançamento posterior (' + formatDateBR(proximoRegEdit.DATA) + ') com KM ' + numBR(proximoKMEdit,2) + '. Informe um valor menor.', true);
+        return;
+      }
+    }
   }
   // Nota Fiscal duplicada (global, só quando preenchida, ignorando o próprio registro)
   if(updates['NOTA']){

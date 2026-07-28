@@ -71,6 +71,18 @@
   </div>
 </div>
 
+<!-- ===== MODAL LANÇAMENTO DUPLICADO (PLACA + DATA) ===== -->
+<div class="modal-overlay" id="dupCadastroOverlay" onclick="if(event.target===this)closeDupCadastroModal()">
+  <div class="modal" style="max-width:480px">
+    <h2>⚠️ Lançamento já existe</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Já existe lançamento para esta placa nesta data. É continuação da mesma viagem ou uma viagem nova?</p>
+    <div id="dupCadastroList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="dupCadastroNovaViagem()">🆕 Nova Viagem</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL MÁQUINA (novo/editar) ===== -->
 <div class="modal-overlay" id="maqModalOverlay" onclick="if(event.target===this)closeMaqModal()">
   <div class="modal">
@@ -287,7 +299,7 @@
               <div class="form-section-title">🚚 Viagem</div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista *</label><select id="fMotorista"></select></div>
-                <div class="form-group"><label>Data *</label><input type="date" id="fData"></div>
+                <div class="form-group"><label>Data *</label><input type="date" id="fData" onchange="checkDuplicadoCadastro()"></div>
                 <div class="form-group"><label>Situação</label><select id="fSituacao"><option value="">Selecione</option><option>ATIVO</option><option>INATIVO</option></select></div>
                 <div class="form-group"><label>Entrega</label><input type="text" inputmode="decimal" id="fEntrega" placeholder="ex: 1"></div>
               </div>
@@ -298,7 +310,7 @@
                 <div class="form-group"><label>Quantidade <span id="unidadeLabel">(TON)</span></label><input type="text" inputmode="decimal" id="fQuantidade" placeholder="ex: 25,50"></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Placa *</label><select id="fPlaca"></select></div>
+                <div class="form-group"><label>Placa *</label><select id="fPlaca" onchange="checkDuplicadoCadastro()"></select></div>
               </div>
             </div>
             <div class="form-section">
@@ -463,6 +475,9 @@
       <!-- PRODUCAO PAGE -->
       <div class="page" id="pageProducao">
         <div class="page-header"><h1 class="page-title">📊 Produção</h1></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <input type="text" inputmode="numeric" id="fpNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildProducao()">
+        </div>
         <div class="filters" id="filtersProd"></div>
         <div class="kpi-row" id="kpiProd"></div>
         <div class="charts-grid" id="chartsProd"></div>
@@ -580,6 +595,9 @@
       <!-- HISTORICO PAGE (admin only) -->
       <div class="page" id="pageHistorico">
         <div class="page-header"><h1 class="page-title">📋 Histórico de Lançamentos</h1></div>
+        <div style="display:flex;gap:10px;margin-bottom:10px">
+          <input type="text" inputmode="numeric" id="fhNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildHistorico()">
+        </div>
         <div class="filters" id="filtersHistorico"></div>
         <div class="table-container" id="tblHistorico"></div>
       </div>

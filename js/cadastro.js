@@ -38,6 +38,55 @@ function _cadAbPrecoAuto(){
   if(preco!=null){ pre.value=fmt(preco,2); calcValorTotal(); }
 }
 
+// ==================== DUPLICIDADE PLACA + DATA ====================
+var _dupCadastroDismissKey=null;
+var _dupCadastroPendingKey=null;
+
+function _normPlacaCad(p){ return String(p||'').toUpperCase().replace(/\s+/g,''); }
+
+function checkDuplicadoCadastro(){
+  var placa=document.getElementById('fPlaca').value;
+  var dt=document.getElementById('fData').value;
+  if(!placa||!dt) return;
+  var key=_normPlacaCad(placa)+'|'+dt;
+  if(_dupCadastroDismissKey===key) return;
+  var matches=DB.cadastro.filter(function(r){
+    return _normPlacaCad(r.PLACA)===_normPlacaCad(placa) && r.DATA===dt;
+  });
+  if(!matches.length) return;
+  _dupCadastroPendingKey=key;
+  var html='';
+  matches.forEach(function(r){
+    var resumo=[];
+    if(r['CHEGADA FLORESTA']) resumo.push('Cheg. Floresta '+r['CHEGADA FLORESTA']);
+    if(r['SAIDA FLORESTA']) resumo.push('Saída Floresta '+r['SAIDA FLORESTA']);
+    if(r['CHEGADA CLIENTE']) resumo.push('Cheg. Cliente '+r['CHEGADA CLIENTE']);
+    if(r['SAIDA CLIENTE']) resumo.push('Saída Cliente '+r['SAIDA CLIENTE']);
+    if(r['QUANTIDADE']) resumo.push('Qtd '+fmt(r['QUANTIDADE']));
+    html+='<div style="border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:10px">';
+    html+='<div style="font-size:12px;line-height:1.5"><strong>'+(r.MOTORISTA||'-')+'</strong><br>'+(resumo.length?resumo.join(' • '):'sem horários preenchidos')+'</div>';
+    html+='<button class="btn btn-primary btn-sm" onclick="dupCadastroComplementar(\''+rowKeyAttr(r)+'\')">Complementar</button>';
+    html+='</div>';
+  });
+  document.getElementById('dupCadastroList').innerHTML=html;
+  document.getElementById('dupCadastroOverlay').classList.add('show');
+}
+
+function closeDupCadastroModal(){
+  document.getElementById('dupCadastroOverlay').classList.remove('show');
+}
+
+function dupCadastroNovaViagem(){
+  _dupCadastroDismissKey=_dupCadastroPendingKey;
+  closeDupCadastroModal();
+}
+
+function dupCadastroComplementar(key){
+  closeDupCadastroModal();
+  limparFormCadastro();
+  openEditModal(key);
+}
+
 // ==================== SAVE ====================
 function salvarCadastro(){
   var mot=document.getElementById('fMotorista').value;
@@ -80,22 +129,33 @@ function salvarCadastro(){
   // Regra 3: KM e Litros obrigatórios juntos
   if(kmVal && !litVal){ showToast('⚠️ Se informar KM, informe também Qtde Litros!', true); return; }
   if(litVal && !kmVal){ showToast('⚠️ Se informar Litros, informe também o KM!', true); return; }
-  // Regras 1 e 2: validar KM contra histórico do mês atual
+  // Regras 1 e 2: validar KM contra histórico do mês atual, respeitando a ORDEM DAS DATAS
+  // (permite lançar abastecimento retroativo com KM menor que lançamentos futuros já existentes)
   if(kmVal && rec['PLACA']){
     var mesAtual = dt.substring(0,7); // YYYY-MM
-    var kmsPlacaMes = DB.cadastro.filter(function(r){
-      return r.PLACA === rec['PLACA'] &&
+    var registrosMes = DB.cadastro.filter(function(r){
+      return _normPlacaCad(r.PLACA) === _normPlacaCad(rec['PLACA']) &&
              r.KM && num(r.KM) > 0 &&
              r.DATA && r.DATA.substring(0,7) === mesAtual;
-    }).map(function(r){ return num(r.KM); });
-    if(kmsPlacaMes.length > 0){
-      var ultimoKM = Math.max.apply(null, kmsPlacaMes);
+    });
+    var anteriores = registrosMes.filter(function(r){ return r.DATA <= dt; }).map(function(r){ return num(r.KM); });
+    var posteriores = registrosMes.filter(function(r){ return r.DATA > dt; });
+    if(anteriores.length > 0){
+      var ultimoKM = Math.max.apply(null, anteriores);
       if(kmVal <= ultimoKM){
-        showToast('⚠️ KM inválido! O último KM desta placa no mês é ' + numBR(ultimoKM,2) + '. Informe um valor maior.', true);
+        showToast('⚠️ KM inválido! O último KM desta placa até esta data é ' + numBR(ultimoKM,2) + '. Informe um valor maior.', true);
         return;
       }
       if(kmVal > ultimoKM + 2500){
-        showToast('⚠️ KM inválido! O valor ' + numBR(kmVal,2) + ' ultrapassa o limite de 2.500 km acima do último registrado (' + numBR(ultimoKM,2) + ').', true);
+        showToast('⚠️ KM inválido! O valor ' + numBR(kmVal,2) + ' ultrapassa o limite de 2.500 km acima do último registrado até esta data (' + numBR(ultimoKM,2) + ').', true);
+        return;
+      }
+    }
+    if(posteriores.length > 0){
+      var proximoKM = Math.min.apply(null, posteriores.map(function(r){ return num(r.KM); }));
+      if(kmVal >= proximoKM){
+        var proximoReg = posteriores.filter(function(r){ return num(r.KM) === proximoKM; })[0];
+        showToast('⚠️ KM inválido! Já existe um lançamento posterior (' + formatDateBR(proximoReg.DATA) + ') com KM ' + numBR(proximoKM,2) + '. Informe um valor menor.', true);
         return;
       }
     }
