@@ -4256,55 +4256,78 @@ function calcConsumoPlacas(){
   return result;
 }
 
-// NOVA — Consumo por placa com método tanque-a-tanque (descarta litros do 1º abastecimento)
-// Retorna mesmo formato {placa, km, lit, kmL, vlr}. 'lit' = total comprado (exibição);
-// o km/L usa litros tanque-a-tanque (total - 1º abastecimento).
+// Monta, para cada placa, os trechos entre abastecimentos consecutivos (de QUALQUER motorista,
+// ordenados por KM). Cada trecho carrega quem fez o abastecimento que o fechou — é ele quem
+// rodou aquele trecho e comprou o combustível que o cobriu. Usado tanto pelo ranking por
+// motorista quanto pela tabela por placa, pra nunca "emprestar" km de folguista/substituto.
+function calcSegmentosPorPlaca(rows){
+  var porPlaca={};   // placa -> [{km, lit, mot}]
+  rows.forEach(function(r){
+    if(!r.PLACA) return;
+    if(!r['QTDADE LITROS']) return;
+    var km=r.KM?parseKM(r.KM):NaN;
+    if(isNaN(km) || km<=0) return;
+    var p=String(r.PLACA).replace(/\s+/g,'');
+    if(!porPlaca[p]) porPlaca[p]=[];
+    porPlaca[p].push({km:km, lit:num(r['QTDADE LITROS']), mot:r.MOTORISTA||''});
+  });
+  var segsPorPlaca={};
+  Object.keys(porPlaca).forEach(function(p){
+    var ab=porPlaca[p].sort(function(a,b){return a.km-b.km});
+    var segs=[];
+    for(var i=1;i<ab.length;i++){
+      var trechoKm=ab[i].km-ab[i-1].km;
+      var lit=ab[i].lit;
+      if(trechoKm<=0 || lit<=0) continue;      // descarta trecho inválido (ex: erro de KM)
+      segs.push({km:trechoKm, lit:lit, mot:ab[i].mot});
+    }
+    segsPorPlaca[p]=segs;
+  });
+  return segsPorPlaca;
+}
+
+// NOVA — Consumo por placa com método tanque-a-tanque por SEGMENTO (descarta litros do 1º
+// abastecimento do período). Retorna mesmo formato {placa, km, lit, kmL, vlr}. 'lit' = total
+// comprado (exibição); o km/L usa litros tanque-a-tanque somados por segmento.
+// Importante: a sequência de KM da placa é montada com TODOS os motoristas, mesmo que o filtro
+// de motorista esteja ativo — senão o km rodado por um substituto acaba sendo contado a mais
+// (ou a menos) para quem só abasteceu antes/depois dele. O filtro de motorista só entra depois,
+// selecionando quais trechos (já fechados corretamente) pertencem a ele.
 function calcConsumoPlacasT2T(){
   var f=consumoFiltro;
   var hasRangeC=!!(f.dtIni||f.dtFim);
-  var rows=DB.cadastro.filter(function(r){
+  var rowsPlaca=DB.cadastro.filter(function(r){
     if(hasRangeC){
       if(!dateInRange(r.DATA,f.dtIni,f.dtFim)) return false;
     } else {
       if(f.mes && getMonthYear(r.DATA)!==f.mes) return false;
     }
-    if(f.motorista && r.MOTORISTA!==f.motorista) return false;
     if(f.placa){
       var p=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
       if(p!==f.placa) return false;
     }
     return true;
   });
-  // Por placa: lista de abastecimentos (km, lit) + total de litros + valor
-  var placaAbast={};   // placa -> [{km, lit}]  (só linhas de abastecimento, com litros)
-  var placaLitTot={};  // placa -> soma de litros comprados
-  var placaVlr={};     // placa -> soma VALOR TOTAL
-  rows.forEach(function(r){
+  // Litros comprados e valor gasto exibidos são informativos — aí sim respeitam o filtro de
+  // motorista (é "quanto ele abasteceu/gastou"), sem entrar na conta do km/L.
+  var placaLitCompra={}, placaVlr={};
+  rowsPlaca.forEach(function(r){
     if(!r.PLACA) return;
+    if(f.motorista && r.MOTORISTA!==f.motorista) return;
     var p=String(r.PLACA).replace(/\s+/g,'');
-    if(r['QTDADE LITROS']){
-      var lit=num(r['QTDADE LITROS']);
-      var km=r.KM?parseKM(r.KM):NaN;
-      if(!placaAbast[p]) placaAbast[p]=[];
-      placaAbast[p].push({km:km, lit:lit});
-      placaLitTot[p]=(placaLitTot[p]||0)+lit;
-    }
-    if(r['VALOR TOTAL']){
-      placaVlr[p]=(placaVlr[p]||0)+num(r['VALOR TOTAL']);
-    }
+    if(r['QTDADE LITROS']) placaLitCompra[p]=(placaLitCompra[p]||0)+num(r['QTDADE LITROS']);
+    if(r['VALOR TOTAL']) placaVlr[p]=(placaVlr[p]||0)+num(r['VALOR TOTAL']);
   });
+  var segsPorPlaca=calcSegmentosPorPlaca(rowsPlaca);
   var result=[];
-  Object.keys(placaAbast).forEach(function(p){
-    var ab=placaAbast[p];
-    // abastecimentos com KM válido, ordenados pelo KM
-    var comKm=ab.filter(function(a){return !isNaN(a.km) && a.km>0}).sort(function(a,b){return a.km-b.km});
-    if(comKm.length<2) return;                 // precisa 2+ abastecimentos com KM
-    var kmR=comKm[comKm.length-1].km - comKm[0].km;
-    var litTot=placaLitTot[p]||0;
-    var litT2T=litTot - comKm[0].lit;          // tanque-a-tanque: descarta o 1º abastecimento
-    var vlr=placaVlr[p]||0;
-    if(kmR>0 && litT2T>0){
-      result.push({placa:p, km:kmR, lit:litTot, kmL:kmR/litT2T, vlr:vlr});
+  Object.keys(segsPorPlaca).forEach(function(p){
+    var km=0, litT2T=0;
+    segsPorPlaca[p].forEach(function(s){
+      if(f.motorista && s.mot!==f.motorista) return; // só os trechos fechados por ele
+      km+=s.km; litT2T+=s.lit;
+    });
+    if(km>0 && litT2T>0){
+      result.push({placa:p, km:km, lit:placaLitCompra[p]||litT2T, kmL:km/litT2T, vlr:placaVlr[p]||0});
     }
   });
   result.sort(function(a,b){return b.kmL-a.kmL});
@@ -4428,10 +4451,14 @@ function calcRankingConsumoMotorista(mesFiltro, dtIni, dtFim){
   return ranking;
 }
 
-// NOVA — Ranking de consumo por motorista, método INDIVIDUAL + tanque-a-tanque.
-// Para cada placa com 2+ abastecimentos DELE: trecho = (maior KM dele − menor KM dele);
-// litros = (litros dele na placa − litros do 1º abastecimento dele). Soma trechos válidos
-// ÷ soma dos litros. Nunca empresta dado de outro motorista. Mesmo formato {motorista, kmL, placas}.
+// NOVA — Ranking de consumo por motorista, método por SEGMENTO tanque-a-tanque.
+// Para cada placa, ordena TODOS os abastecimentos (de qualquer motorista) por KM e monta
+// trechos entre abastecimentos consecutivos. Cada trecho (km rodado + litros do abastecimento
+// que o fechou) é atribuído a quem fez esse abastecimento final — é ele quem rodou aquele trecho
+// e comprou o combustível que o cobriu. Isso evita "emprestar" km de folguista/substituto para
+// quem só abasteceu antes e depois da folga: a soma dos trechos de todos os motoristas de uma
+// placa sempre fecha exatamente com o total da placa (calcConsumoPlacasT2T). Mesmo formato
+// {motorista, kmL, placas}.
 function calcRankingConsumoMotoristaT2T(mesFiltro, dtIni, dtFim){
   var hasRange = !!(dtIni||dtFim);
   var rows=DB.cadastro.filter(function(r){
@@ -4442,37 +4469,21 @@ function calcRankingConsumoMotoristaT2T(mesFiltro, dtIni, dtFim){
     }
     return true;
   });
-  // Agrupar abastecimentos por (motorista, placa) — só linhas com litros, e SÓ do próprio motorista
-  var grupo={};  // "MOT||PLACA" -> [{km, lit}]
-  rows.forEach(function(r){
-    if(!r.MOTORISTA || !r.PLACA) return;
-    if(!r['QTDADE LITROS']) return;            // abastecimento = tem litros
-    var p=String(r.PLACA).replace(/\s+/g,'');
-    var k=r.MOTORISTA+'||'+p;
-    var km=r.KM?parseKM(r.KM):NaN;
-    if(!grupo[k]) grupo[k]=[];
-    grupo[k].push({km:km, lit:num(r['QTDADE LITROS'])});
-  });
-  // Consolidar por motorista: somar trechos válidos e litros (tanque-a-tanque)
-  var motAcc={};  // motorista -> {km, lit, placas}
-  Object.keys(grupo).forEach(function(k){
-    var mot=k.split('||')[0];
-    var ab=grupo[k];
-    var comKm=ab.filter(function(a){return !isNaN(a.km) && a.km>0}).sort(function(a,b){return a.km-b.km});
-    if(comKm.length<2) return;                 // placa descartada (menos de 2 abast. dele com KM)
-    var trechoKm=comKm[comKm.length-1].km - comKm[0].km;
-    var litTot=0; ab.forEach(function(a){litTot+=a.lit;});
-    var litT2T=litTot - comKm[0].lit;          // descarta o 1º abastecimento dele
-    if(trechoKm<=0 || litT2T<=0) return;
-    if(!motAcc[mot]) motAcc[mot]={km:0, lit:0, placas:0};
-    motAcc[mot].km+=trechoKm;
-    motAcc[mot].lit+=litT2T;
-    motAcc[mot].placas++;
+  var segsPorPlaca=calcSegmentosPorPlaca(rows);
+  var motAcc={};  // motorista -> {km, lit, placas:{placa:1}}
+  Object.keys(segsPorPlaca).forEach(function(p){
+    segsPorPlaca[p].forEach(function(s){
+      if(!s.mot) return;
+      if(!motAcc[s.mot]) motAcc[s.mot]={km:0, lit:0, placas:{}};
+      motAcc[s.mot].km+=s.km;
+      motAcc[s.mot].lit+=s.lit;
+      motAcc[s.mot].placas[p]=1;
+    });
   });
   var ranking=[];
   Object.keys(motAcc).forEach(function(m){
     var a=motAcc[m];
-    if(a.lit>0) ranking.push({motorista:m, kmL:a.km/a.lit, placas:a.placas});
+    if(a.lit>0) ranking.push({motorista:m, kmL:a.km/a.lit, placas:Object.keys(a.placas).length});
   });
   ranking.sort(function(a,b){return b.kmL-a.kmL});
   return ranking;
