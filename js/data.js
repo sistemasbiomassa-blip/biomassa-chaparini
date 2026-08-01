@@ -45,6 +45,16 @@ function loadFromSheets(callback) {
       BASE.tipoManut = b['TIPO_MANUTENCAO'] || [];
       BASE.clientesM3 = ['ADM PF', 'ADM LEM'];
       LOCAIS_DATA = (d.locais && d.locais.rows) ? d.locais.rows : (d.locais || []);
+      LOCAIS_DATA.forEach(function(loc) {
+        var nomeLoc = loc['NOME'];
+        if (!nomeLoc) return;
+        if (String(loc['UNIDADE'] || '').toUpperCase() === 'M3') {
+          if (!BASE.clientesM3.includes(nomeLoc)) BASE.clientesM3.push(nomeLoc);
+        } else {
+          var pos = BASE.clientesM3.indexOf(nomeLoc);
+          if (pos >= 0 && !['ADM PF', 'ADM LEM'].includes(nomeLoc)) BASE.clientesM3.splice(pos, 1);
+        }
+      });
       MOTORISTAS_DATA = (d.motoristas && d.motoristas.rows) ? d.motoristas.rows : (d.motoristas || []);
       CAMINHOES_DATA = (d.caminhoes && d.caminhoes.rows) ? d.caminhoes.rows : (d.caminhoes || []);
       USUARIOS = (d.usuarios && d.usuarios.rows) ? d.usuarios.rows : (d.usuarios || []);

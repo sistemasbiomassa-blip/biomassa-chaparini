@@ -1,0 +1,1185 @@
+/*****************************************************************
+ * BIOMASSA CHAPARINI - APPS SCRIPT (Code.gs)
+ * Versão: 29/05/2026 - Correção conversão numérica (KM, litros, valores)
+ *
+ * CORREÇÃO DESTE PACOTE:
+ *  - Função _toNum() converte valores como "360.530,60" para número correto
+ *  - Aplicada em addCadastro e updateCadastro nos campos numéricos
+ *  - Mantém TUDO do pacote 25/05/2026
+ *****************************************************************/
+
+// ============== CONFIG ==============
+var SHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+var ABA_CADASTRO   = 'CADASTRO';
+var ABA_MANUT_R    = 'MANUT_REALIZADA';
+var ABA_MANUT_P    = 'MANUT_PROGRAMADA';
+var ABA_BASE       = 'BASE DE DADOS';
+var ABA_LOCAIS     = 'LOCAIS';
+var ABA_MOTORISTAS = 'MOTORISTAS';
+var ABA_CAMINHOES  = 'CAMINHOES';
+var ABA_USUARIOS   = 'USUARIOS';
+
+// ===== MÓDULO MAQUINÁRIOS (adicionado - Fase 2) =====
+var ABA_MAQUINAS           = 'MAQUINAS';
+var ABA_MAQ_LOCALIZACAO    = 'MAQ_LOCALIZACAO';
+var ABA_MAQ_ABASTECIMENTO  = 'MAQ_ABASTECIMENTO';
+var ABA_MAQ_MANUTENCAO     = 'MAQ_MANUTENCAO';
+
+// ===== MÓDULO COMBOIO (adicionado - Fase 2) =====
+var ABA_TANQUES         = 'TANQUES';
+var ABA_TANQUE_ENTRADAS = 'TANQUE_ENTRADAS';
+
+// ===== MÓDULO FREQUÊNCIA (adicionado - Fase 2) =====
+var ABA_FREQUENCIA = 'FREQUENCIA';
+
+var TZ = 'America/Sao_Paulo';
+
+// Colunas da BASE DE DADOS (nomes exatos do cabeçalho)
+var BASE_COL_MOTORISTA          = 'MOTORISTA';
+var BASE_COL_PLACA              = 'PLACA';
+var BASE_COL_LOCAL_CARGA        = 'LOCAL CARGA';
+var BASE_COL_LOCAL_DESCARGA     = 'LOCAL DESCARGA';
+var BASE_COL_LOCAL_ABASTECIMENTO = 'LOCAL ABASTECIMENTO';
+
+// Campos numéricos do CADASTRO que precisam de conversão
+var CAMPOS_NUMERICOS = [
+  'KM', 'QTDADE LITROS', 'VALOR UNITARIO', 'VALOR TOTAL',
+  'ARLA VALOR', 'VALOR DESPESA', 'QUANTIDADE', 'NOTA', 'ENTREGA'
+];
+
+// ============== CONVERSÃO NUMÉRICA ==============
+/**
+ * Converte string brasileira para número.
+ * "360.530,60" -> 360530.60
+ * "360.530"    -> 360530
+ * "360,60"     -> 360.60
+ * 360530       -> 360530 (já é número, retorna direto)
+ * ""           -> "" (vazio retorna vazio)
+ */
+function _toNum(v) {
+  if (v === '' || v === null || v === undefined) return '';
+  if (typeof v === 'number') return v;
+  var s = String(v).trim();
+  if (s === '') return '';
+  // Remove pontos de milhar e troca vírgula decimal por ponto
+  var normalizado = s.replace(/\./g, '').replace(',', '.');
+  var n = Number(normalizado);
+  return isNaN(n) ? v : n;
+}
+
+/**
+ * Aplica _toNum em todos os campos numéricos de um row.
+ */
+function _normalizarNumericos(row) {
+  if (!row) return row;
+  CAMPOS_NUMERICOS.forEach(function(campo) {
+    if (Object.prototype.hasOwnProperty.call(row, campo)) {
+      row[campo] = _toNum(row[campo]);
+    }
+  });
+  return row;
+}
+
+// ============== ENTRADA PRINCIPAL ==============
+function doGet(e) {
+  try {
+    var action = (e && e.parameter && e.parameter.action) || 'all';
+    var payload = {};
+
+    if (action === 'all' || action === 'cadastro') payload.cadastro          = _readSheet(ABA_CADASTRO);
+    if (action === 'all' || action === 'manutR')   payload.manutRealizada    = _readSheet(ABA_MANUT_R);
+    if (action === 'all' || action === 'manutP')   payload.manutProgramada   = _readSheet(ABA_MANUT_P);
+    if (action === 'all' || action === 'base')     payload.base              = _readSheet(ABA_BASE);
+    if (action === 'all' || action === 'locais')   payload.locais            = _readSheet(ABA_LOCAIS);
+    if (action === 'all' || action === 'motoristas') payload.motoristas      = _readSheet(ABA_MOTORISTAS);
+    if (action === 'all' || action === 'caminhoes')  payload.caminhoes       = _readSheet(ABA_CAMINHOES);
+    if (action === 'all' || action === 'usuarios') payload.usuarios          = _readSheet(ABA_USUARIOS);
+
+    // ===== MÓDULO MAQUINÁRIOS (adicionado) =====
+    if (action === 'all' || action === 'maquinarios' || action === 'maquinas')         payload.maquinas         = _readSheet(ABA_MAQUINAS);
+    if (action === 'all' || action === 'maquinarios' || action === 'maqLocalizacao')   payload.maqLocalizacao   = _readSheet(ABA_MAQ_LOCALIZACAO);
+    if (action === 'all' || action === 'maquinarios' || action === 'maqAbastecimento') payload.maqAbastecimento = _readSheet(ABA_MAQ_ABASTECIMENTO);
+    if (action === 'all' || action === 'maquinarios' || action === 'maqManutencao')    payload.maqManutencao    = _readSheet(ABA_MAQ_MANUTENCAO);
+
+    // ===== MÓDULO COMBOIO (adicionado) =====
+    if (action === 'all' || action === 'comboio' || action === 'tanques')         payload.tanques        = _readSheet(ABA_TANQUES);
+    if (action === 'all' || action === 'comboio' || action === 'tanqueEntradas')  payload.tanqueEntradas = _readSheet(ABA_TANQUE_ENTRADAS);
+
+    // ===== MÓDULO FREQUÊNCIA (adicionado) =====
+    if (action === 'all' || action === 'frequencia') payload.frequencia = _readSheet(ABA_FREQUENCIA);
+
+    return _json({ ok: true, data: payload });
+  } catch (err) {
+    return _json({
+      ok: false,
+      error: String(err && err.message ? err.message : err),
+      stack: String(err && err.stack ? err.stack : '')
+    });
+  }
+}
+
+function doPost(e) {
+  try {
+    var body = {};
+    if (e && e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+    var action = body.action || '';
+    var data = body.data || body;
+
+    switch (action) {
+      case 'addCadastro':       return _json(addCadastro(data.row || data));
+      case 'updateCadastro':    return _json(updateCadastro(data));
+      case 'deleteCadastro':    return _json(deleteCadastro(data));
+      case 'addLocal':          return _json(addLocal(data.row || data));
+      case 'updateLocal':       return _json(updateLocal(data));
+      case 'addMotorista':      return _json(addMotorista(data.row || data));
+      case 'addCaminhao':       return _json(addCaminhao(data.row || data));
+      case 'addManutRealizada': return _json(addManutRealizada(data.row || data));
+      case 'addManutProgramada':return _json(addManutProgramada(data.row || data));
+      case 'updateManutR':      return _json(updateManutR(data));
+      case 'updateManutP':      return _json(updateManutP(data));
+      case 'deleteManutR':      return _json(deleteManutR(data));
+      case 'deleteManutP':      return _json(deleteManutP(data));
+      case 'addUsuario':        return _json(addUsuario(data.row || data));
+      case 'updateUsuario':     return _json(updateUsuario(data));
+      case 'updatePassword':    return _json(updatePassword(data));
+      case 'deleteUsuario':     return _json(deleteUsuario(data));
+
+      // ===== MÓDULO MAQUINÁRIOS (adicionado) =====
+      case 'addMaquina':             return _json(addMaquina(data.row || data));
+      case 'updateMaquina':          return _json(updateMaquina(data));
+      case 'deleteMaquina':          return _json(deleteMaquina(data));
+      case 'addLocalizacaoMaq':      return _json(addLocalizacaoMaq(data.row || data));
+      case 'updateLocalizacaoMaq':   return _json(updateLocalizacaoMaq(data));
+      case 'deleteLocalizacaoMaq':   return _json(deleteLocalizacaoMaq(data));
+      case 'addAbastecimentoMaq':    return _json(addAbastecimentoMaq(data.row || data));
+      case 'updateAbastecimentoMaq': return _json(updateAbastecimentoMaq(data));
+      case 'deleteAbastecimentoMaq': return _json(deleteAbastecimentoMaq(data));
+      case 'addManutMaq':            return _json(addManutMaq(data.row || data));
+      case 'updateManutMaq':         return _json(updateManutMaq(data));
+      case 'deleteManutMaq':         return _json(deleteManutMaq(data));
+
+      // ===== MÓDULO COMBOIO (adicionado) =====
+      case 'addTanque':              return _json(addTanque(data.row || data));
+      case 'updateTanque':           return _json(updateTanque(data));
+      case 'deleteTanque':           return _json(deleteTanque(data));
+      case 'addTanqueEntrada':       return _json(addTanqueEntrada(data.row || data));
+      case 'updateTanqueEntrada':    return _json(updateTanqueEntrada(data));
+      case 'deleteTanqueEntrada':    return _json(deleteTanqueEntrada(data));
+
+      // ===== MÓDULO FREQUÊNCIA (adicionado) =====
+      case 'saveFrequenciaMes':      return _json(saveFrequenciaMes(data));
+      case 'updateMotorista':        return _json(updateMotorista(data));
+
+      default:
+        return _json({ ok:false, error: 'Ação desconhecida: ' + action });
+    }
+  } catch (err) {
+    return _json({
+      ok: false,
+      error: String(err && err.message ? err.message : err),
+      stack: String(err && err.stack ? err.stack : '')
+    });
+  }
+}
+
+// ============== LEITURA ==============
+function _readSheet(name) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(name);
+  if (!sh) return { headers: [], rows: [] };
+  var values = sh.getDataRange().getValues();
+  if (!values.length) return { headers: [], rows: [] };
+
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var rows = [];
+  for (var i = 1; i < values.length; i++) {
+    var row = values[i];
+    var hasAny = false;
+    for (var k=0; k<row.length; k++) {
+      if (row[k] !== '' && row[k] !== null && row[k] !== undefined) { hasAny = true; break; }
+    }
+    if (!hasAny) continue;
+
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = _formatSheetDate(row[j], headers[j]);
+    }
+    rows.push(obj);
+  }
+  return { headers: headers, rows: rows };
+}
+
+// ============== FORMATAÇÃO DE CÉLULA ==============
+function _formatSheetDate(val, headerName) {
+  if (val === '' || val === null || val === undefined) return '';
+
+  var h = String(headerName||'').toUpperCase();
+  var isTimeCol = (h.indexOf('HORA') >= 0 ||
+                   h.indexOf('CHEGADA') >= 0 ||
+                   h.indexOf('SAIDA') >= 0 ||
+                   h.indexOf('SAÍDA') >= 0 ||
+                   h.indexOf('INICIO') >= 0 ||
+                   h.indexOf('INÍCIO') >= 0 ||
+                   h.indexOf('FIM') >= 0);
+
+  if (Object.prototype.toString.call(val) === '[object Date]' && !isNaN(val)) {
+    var y = val.getFullYear();
+    if (y === 1899 && val.getMonth() === 11 && val.getDate() === 30) {
+      return Utilities.formatDate(val, TZ, 'HH:mm');
+    }
+    if (isTimeCol) {
+      return Utilities.formatDate(val, TZ, 'HH:mm');
+    }
+    return Utilities.formatDate(val, TZ, 'yyyy-MM-dd');
+  }
+
+  if (typeof val === 'number') return val;
+  if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+
+  var isNumericCol = (h.indexOf('QUANTIDADE') >= 0 ||
+                      h.indexOf('LITROS') >= 0 ||
+                      h.indexOf('VALOR') >= 0 ||
+                      h === 'KM' ||
+                      h.indexOf('INTERVALO KM') >= 0 ||
+                      h.indexOf('ALERTA') >= 0 ||
+                      h === 'LATITUDE' || h === 'LONGITUDE');
+  if (isNumericCol) {
+    var s = String(val).trim();
+    if (s !== '') {
+      var normalizado;
+      if (s.indexOf(',') >= 0) {
+        normalizado = s.replace(/\./g, '').replace(',', '.');
+      } else {
+        normalizado = s;
+      }
+      var n = Number(normalizado);
+      if (!isNaN(n)) return n;
+    }
+  }
+
+  return String(val);
+}
+
+// ============== UTILITÁRIOS DE CHAVE ==============
+function _normalizeKey(s) {
+  return String(s||'').trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function _extractDatePart(v) {
+  if (v === '' || v === null || v === undefined) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) {
+    return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  }
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1]+'-'+m[2]+'-'+m[3];
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return m[3]+'-'+m[2]+'-'+m[1];
+  return s;
+}
+
+function _sameDayRegistro(a, b) {
+  return _extractDatePart(a) === _extractDatePart(b);
+}
+
+function _matchesKey(rowObj, key) {
+  var rMot = _normalizeKey(rowObj['MOTORISTA']);
+  var rDt  = _extractDatePart(rowObj['DATA']);
+  var rReg = _extractDatePart(rowObj['DATA_REGISTRO'] || rowObj['DATAREGISTRO'] || '');
+
+  var kMot = _normalizeKey(key.motorista);
+  var kDt  = _extractDatePart(key.data);
+  var kReg = _extractDatePart(key.dataRegistro);
+
+  if (rMot !== kMot) return false;
+  if (rDt  !== kDt)  return false;
+  if (rReg && kReg && rReg !== kReg) return false;
+  return true;
+}
+
+// ============== BUSCA DE LINHA NA CADASTRO ==============
+function _findCadastroRow(body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_CADASTRO);
+  if (!sh) throw new Error('Aba CADASTRO não encontrada');
+
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return null;
+
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+
+  if (body.id !== undefined && body.id !== null && body.id !== '' && idxId >= 0) {
+    var alvoId = String(body.id).trim();
+    for (var i = 1; i < values.length; i++) {
+      var cur = String(values[i][idxId]||'').trim();
+      if (cur && cur === alvoId) {
+        return { sheet: sh, rowIndex: i+1, headers: headers, currentValues: values[i] };
+      }
+    }
+    return null;
+  }
+
+  var key = {
+    motorista:    body.motorista    || body.keyMotorista    || (body.row && body.row.MOTORISTA),
+    data:         body.data         || body.keyData         || (body.row && body.row.DATA),
+    dataRegistro: body.dataRegistro || body.keyDataRegistro || (body.row && body.row.DATA_REGISTRO)
+  };
+  for (var j = 1; j < values.length; j++) {
+    var obj = {};
+    for (var k = 0; k < headers.length; k++) obj[headers[k]] = values[j][k];
+    if (_matchesKey(obj, key)) {
+      return { sheet: sh, rowIndex: j+1, headers: headers, currentValues: values[j] };
+    }
+  }
+  return null;
+}
+
+// ============== ID AUTOMÁTICO ==============
+function _proximoId(sheet, headers) {
+  var idxId = headers.indexOf('ID');
+  if (idxId < 0) return 1;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 1;
+  var col = sheet.getRange(2, idxId+1, lastRow-1, 1).getValues();
+  var maxId = 0;
+  for (var i = 0; i < col.length; i++) {
+    var n = parseInt(col[i][0], 10);
+    if (!isNaN(n) && n > maxId) maxId = n;
+  }
+  return maxId + 1;
+}
+
+// ============== GERAR IDs RETROATIVOS ==============
+function gerarIDsRetroativos() {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_CADASTRO);
+  if (!sh) throw new Error('Aba CADASTRO não encontrada');
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) {
+    Logger.log('CADASTRO vazia, nada a fazer.');
+    return;
+  }
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId  = headers.indexOf('ID');
+  if (idxId < 0) {
+    throw new Error('Coluna ID não encontrada. Crie a coluna "ID" como primeira coluna (A) e rode de novo.');
+  }
+  var idxData = headers.indexOf('DATA');
+  var idxReg  = headers.indexOf('DATA_REGISTRO');
+
+  var maxId = 0;
+  var jaTem = [];
+  var paraPreencher = [];
+  for (var i = 1; i < values.length; i++) {
+    var raw = values[i][idxId];
+    var n = parseInt(raw, 10);
+    if (!isNaN(n) && n > 0) {
+      jaTem.push(i);
+      if (n > maxId) maxId = n;
+    } else {
+      paraPreencher.push(i);
+    }
+  }
+
+  paraPreencher.sort(function(a, b){
+    var ra = _extractDatePart(idxReg >= 0 ? values[a][idxReg] : '') || _extractDatePart(idxData >= 0 ? values[a][idxData] : '');
+    var rb = _extractDatePart(idxReg >= 0 ? values[b][idxReg] : '') || _extractDatePart(idxData >= 0 ? values[b][idxData] : '');
+    if (!ra && !rb) return a - b;
+    if (!ra) return 1;
+    if (!rb) return -1;
+    if (ra < rb) return -1;
+    if (ra > rb) return 1;
+    return a - b;
+  });
+
+  var prox = maxId + 1;
+  var atualizacoes = [];
+  for (var p = 0; p < paraPreencher.length; p++) {
+    var lin = paraPreencher[p];
+    atualizacoes.push({ row: lin+1, id: prox });
+    prox++;
+  }
+
+  if (atualizacoes.length === 0) {
+    Logger.log('Nenhuma linha precisava de ID. Já tinha %s linhas com ID.', jaTem.length);
+    return;
+  }
+  for (var u = 0; u < atualizacoes.length; u++) {
+    sh.getRange(atualizacoes[u].row, idxId+1).setValue(atualizacoes[u].id);
+  }
+  Logger.log('IDs preenchidos: %s linhas. Já tinham ID: %s. Maior ID agora: %s.',
+             atualizacoes.length, jaTem.length, prox - 1);
+}
+
+// ============== REPLICAÇÃO NA BASE DE DADOS ==============
+function _appendNaBase(nomeColuna, valor) {
+  if (valor === '' || valor === null || valor === undefined) return;
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_BASE);
+  if (!sh) {
+    Logger.log('AVISO: aba BASE DE DADOS não encontrada para replicar ' + nomeColuna);
+    return;
+  }
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+    .map(function(h){ return String(h||'').trim(); });
+  var idxCol = headers.indexOf(nomeColuna);
+  if (idxCol < 0) {
+    Logger.log('AVISO: coluna "' + nomeColuna + '" não encontrada na BASE DE DADOS');
+    return;
+  }
+
+  var lastRow = sh.getLastRow();
+  var valorNorm = _normalizeKey(valor);
+
+  var primeiraVazia = -1;
+  if (lastRow >= 2) {
+    var col = sh.getRange(2, idxCol+1, lastRow-1, 1).getValues();
+    for (var i = 0; i < col.length; i++) {
+      var celula = col[i][0];
+      if (celula === '' || celula === null || celula === undefined) {
+        if (primeiraVazia < 0) primeiraVazia = i + 2;
+      } else if (_normalizeKey(celula) === valorNorm) {
+        Logger.log('Valor "' + valor + '" já existe em ' + nomeColuna + ', pulando.');
+        return;
+      }
+    }
+  }
+
+  var linhaDestino = (primeiraVazia > 0) ? primeiraVazia : (lastRow + 1);
+  sh.getRange(linhaDestino, idxCol+1).setValue(valor);
+  Logger.log('Replicado "' + valor + '" em ' + nomeColuna + ' (linha ' + linhaDestino + ')');
+}
+
+function sincronizarBaseDados() {
+  Logger.log('=== INICIANDO SINCRONIZAÇÃO COM BASE DE DADOS ===');
+
+  var shMot = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_MOTORISTAS);
+  if (shMot) {
+    var valsMot = shMot.getDataRange().getValues();
+    var headersMot = valsMot[0].map(function(h){ return String(h||'').trim(); });
+    var idxNomeMot = headersMot.indexOf('NOME');
+    if (idxNomeMot < 0) idxNomeMot = headersMot.indexOf('MOTORISTA');
+    if (idxNomeMot >= 0) {
+      Logger.log('-- Replicando motoristas --');
+      for (var i = 1; i < valsMot.length; i++) {
+        var nome = valsMot[i][idxNomeMot];
+        if (nome) _appendNaBase(BASE_COL_MOTORISTA, nome);
+      }
+    }
+  }
+
+  var shCam = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_CAMINHOES);
+  if (shCam) {
+    var valsCam = shCam.getDataRange().getValues();
+    var headersCam = valsCam[0].map(function(h){ return String(h||'').trim(); });
+    var idxPlaca = headersCam.indexOf('PLACA');
+    if (idxPlaca >= 0) {
+      Logger.log('-- Replicando placas --');
+      for (var j = 1; j < valsCam.length; j++) {
+        var placa = valsCam[j][idxPlaca];
+        if (placa) _appendNaBase(BASE_COL_PLACA, placa);
+      }
+    }
+  }
+
+  var shLoc = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_LOCAIS);
+  if (shLoc) {
+    var valsLoc = shLoc.getDataRange().getValues();
+    var headersLoc = valsLoc[0].map(function(h){ return String(h||'').trim(); });
+    var idxNomeLoc = headersLoc.indexOf('NOME');
+    var idxTipoLoc = headersLoc.indexOf('TIPO');
+    if (idxNomeLoc >= 0 && idxTipoLoc >= 0) {
+      Logger.log('-- Replicando locais --');
+      for (var k = 1; k < valsLoc.length; k++) {
+        var nomeLoc = valsLoc[k][idxNomeLoc];
+        var tipoLoc = valsLoc[k][idxTipoLoc];
+        if (nomeLoc && tipoLoc) {
+          _replicarLocalPorTipo(nomeLoc, tipoLoc);
+        }
+      }
+    }
+  }
+
+  Logger.log('=== SINCRONIZAÇÃO CONCLUÍDA ===');
+}
+
+function _replicarLocalPorTipo(nome, tipo) {
+  var t = _normalizeKey(tipo);
+  if (t === 'CARGA') {
+    _appendNaBase(BASE_COL_LOCAL_CARGA, nome);
+  } else if (t === 'DESCARGA') {
+    _appendNaBase(BASE_COL_LOCAL_DESCARGA, nome);
+  } else if (t === 'ABASTECIMENTO') {
+    _appendNaBase(BASE_COL_LOCAL_ABASTECIMENTO, nome);
+  } else if (t === 'DESPESA') {
+    Logger.log('Local "' + nome + '" do tipo Despesa não replicado (sem coluna na BASE)');
+  } else {
+    Logger.log('AVISO: tipo desconhecido "' + tipo + '" para local "' + nome + '"');
+  }
+}
+
+// ============== CADASTRO (CRUD) ==============
+function addCadastro(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_CADASTRO);
+  if (!sh) return { ok:false, error:'Aba CADASTRO não encontrada' };
+
+  // Normalizar campos numéricos antes de salvar
+  row = _normalizarNumericos(row);
+
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+    .map(function(h){ return String(h||'').trim(); });
+
+  var idxId = headers.indexOf('ID');
+  var novoId = null;
+  if (idxId >= 0 && (row.ID === undefined || row.ID === null || row.ID === '')) {
+    novoId = _proximoId(sh, headers);
+    row.ID = novoId;
+  }
+
+  var linha = headers.map(function(h){
+    var v = row[h];
+    return (v === undefined || v === null) ? '' : v;
+  });
+  sh.appendRow(linha);
+  return { ok:true, id: novoId, row: row };
+}
+
+function updateCadastro(body) {
+  var found = _findCadastroRow(body);
+  if (!found) return { ok:false, error:'Linha não encontrada' };
+
+  var row = body.row || body.updates || {};
+
+  // Normalizar campos numéricos antes de salvar
+  row = _normalizarNumericos(row);
+
+  var headers = found.headers;
+  var sh = found.sheet;
+
+  var idxId = headers.indexOf('ID');
+  var oldId = (idxId >= 0) ? found.currentValues[idxId] : null;
+
+  var novaLinha = headers.map(function(h, i){
+    if (h === 'ID' && oldId !== null && oldId !== '') return oldId;
+    if (Object.prototype.hasOwnProperty.call(row, h)) {
+      var v = row[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return found.currentValues[i];
+  });
+  sh.getRange(found.rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true, id: oldId };
+}
+
+function deleteCadastro(body) {
+  var found = _findCadastroRow(body);
+  if (!found) return { ok:false, error:'Linha não encontrada' };
+  found.sheet.deleteRow(found.rowIndex);
+  return { ok:true };
+}
+
+// ============== LOCAIS / MOTORISTAS / CAMINHÕES ==============
+function addLocal(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var resultado = _appendIntoSheet(ABA_LOCAIS, row);
+  if (!resultado.ok) return resultado;
+
+  var nome = row.NOME || row.nome || '';
+  var tipo = row.TIPO || row.tipo || '';
+  if (nome && tipo) {
+    try {
+      _replicarLocalPorTipo(nome, tipo);
+    } catch (e) {
+      Logger.log('Erro ao replicar local na BASE: ' + e);
+    }
+  }
+  return resultado;
+}
+
+function updateLocal(body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_LOCAIS);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + ABA_LOCAIS };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba LOCAIS vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxNome = headers.indexOf('NOME');
+  if (idxNome < 0) return { ok:false, error:'Coluna NOME não encontrada em LOCAIS' };
+
+  var alvoNome = (body && (body.nomeOriginal || body.NOME_ORIGINAL)) ||
+                 (body && body.row && (body.row.NOME || body.row.nome)) || '';
+  alvoNome = _normalizeKey(alvoNome);
+  if (!alvoNome) return { ok:false, error:'Nome original obrigatório para editar local' };
+
+  var rowIndex = -1;
+  for (var i = 1; i < values.length; i++) {
+    if (_normalizeKey(values[i][idxNome]) === alvoNome) { rowIndex = i + 1; break; }
+  }
+  if (rowIndex < 0) return { ok:false, error:'Local não encontrado na aba LOCAIS: ' + (body.nomeOriginal || '') };
+
+  var rowData = (body && body.row) || {};
+  var novaLinha = headers.map(function(h, i){
+    if (Object.prototype.hasOwnProperty.call(rowData, h)) {
+      var v = rowData[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return values[rowIndex-1][i]; // preserva o que não veio
+  });
+  sh.getRange(rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true, nome: (rowData.NOME || body.nomeOriginal || '') };
+}
+
+function addMotorista(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var resultado = _appendIntoSheet(ABA_MOTORISTAS, row);
+  if (!resultado.ok) return resultado;
+
+  var nome = row.NOME || row.nome || row.MOTORISTA || row.motorista || '';
+  if (nome) {
+    try {
+      _appendNaBase(BASE_COL_MOTORISTA, nome);
+    } catch (e) {
+      Logger.log('Erro ao replicar motorista na BASE: ' + e);
+    }
+  }
+  return resultado;
+}
+
+function addCaminhao(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var resultado = _appendIntoSheet(ABA_CAMINHOES, row);
+  if (!resultado.ok) return resultado;
+
+  var placa = row.PLACA || row.placa || '';
+  if (placa) {
+    try {
+      _appendNaBase(BASE_COL_PLACA, placa);
+    } catch (e) {
+      Logger.log('Erro ao replicar placa na BASE: ' + e);
+    }
+  }
+  return resultado;
+}
+
+function _appendIntoSheet(abaNome, row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+    .map(function(h){ return String(h||'').trim(); });
+  var linha = headers.map(function(h){
+    var v = row[h];
+    return (v === undefined || v === null) ? '' : v;
+  });
+  sh.appendRow(linha);
+  return { ok:true };
+}
+
+// ============== MANUTENÇÃO REALIZADA / PROGRAMADA ==============
+function addManutRealizada(row)  { return _appendIntoSheet(ABA_MANUT_R, row); }
+function addManutProgramada(row) { return _appendIntoSheet(ABA_MANUT_P, row); }
+
+function updateManutR(body) { return _updateManutGeneric(ABA_MANUT_R, body); }
+function updateManutP(body) { return _updateManutGeneric(ABA_MANUT_P, body); }
+function deleteManutR(body) { return _deleteManutGeneric(ABA_MANUT_R, body); }
+function deleteManutP(body) { return _deleteManutGeneric(ABA_MANUT_P, body); }
+
+function _updateManutGeneric(abaNome, body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+
+  var rowIndex = -1;
+
+  if (idxId >= 0 && body.id !== undefined && body.id !== null && body.id !== '') {
+    var alvo = String(body.id).trim();
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][idxId]||'').trim() === alvo) { rowIndex = i+1; break; }
+    }
+  }
+
+  if (rowIndex < 0) {
+    var idxPlaca = headers.indexOf('PLACA');
+    var idxData  = headers.indexOf('DATA');
+    var idxTipo  = headers.indexOf('TIPO');
+    for (var j = 1; j < values.length; j++) {
+      var okP = !body.placa || _normalizeKey(values[j][idxPlaca]) === _normalizeKey(body.placa);
+      var okD = !body.data  || _extractDatePart(values[j][idxData]) === _extractDatePart(body.data);
+      var okT = !body.tipo  || _normalizeKey(values[j][idxTipo])  === _normalizeKey(body.tipo);
+      if (okP && okD && okT) { rowIndex = j+1; break; }
+    }
+  }
+
+  if (rowIndex < 0) return { ok:false, error:'Linha não encontrada' };
+
+  var rowData = body.row || {};
+  var novaLinha = headers.map(function(h, i){
+    if (Object.prototype.hasOwnProperty.call(rowData, h)) {
+      var v = rowData[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return values[rowIndex-1][i];
+  });
+  sh.getRange(rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true };
+}
+
+function _deleteManutGeneric(abaNome, body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+
+  var rowIndex = -1;
+  if (idxId >= 0 && body.id !== undefined && body.id !== null && body.id !== '') {
+    var alvo = String(body.id).trim();
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][idxId]||'').trim() === alvo) { rowIndex = i+1; break; }
+    }
+  }
+  if (rowIndex < 0) {
+    var idxPlaca = headers.indexOf('PLACA');
+    var idxData  = headers.indexOf('DATA');
+    var idxTipo  = headers.indexOf('TIPO');
+    for (var j = 1; j < values.length; j++) {
+      var okP = !body.placa || _normalizeKey(values[j][idxPlaca]) === _normalizeKey(body.placa);
+      var okD = !body.data  || _extractDatePart(values[j][idxData]) === _extractDatePart(body.data);
+      var okT = !body.tipo  || _normalizeKey(values[j][idxTipo])  === _normalizeKey(body.tipo);
+      if (okP && okD && okT) { rowIndex = j+1; break; }
+    }
+  }
+  if (rowIndex < 0) return { ok:false, error:'Linha não encontrada' };
+  sh.deleteRow(rowIndex);
+  return { ok:true };
+}
+
+// ============== USUÁRIOS ==============
+function addUsuario(row) { return _appendIntoSheet(ABA_USUARIOS, row); }
+
+function updateUsuario(body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_USUARIOS);
+  if (!sh) return { ok:false, error:'Aba USUARIOS não encontrada' };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxUser = headers.indexOf('USUARIO');
+  if (idxUser < 0) return { ok:false, error:'Coluna USUARIO não encontrada' };
+
+  var rowData = body.row || body;
+  var alvoUsr = body.usuario || rowData.USUARIO;
+  var alvo = _normalizeKey(alvoUsr);
+
+  var rowIndex = -1;
+  for (var i = 1; i < values.length; i++) {
+    if (_normalizeKey(values[i][idxUser]) === alvo) { rowIndex = i+1; break; }
+  }
+  if (rowIndex < 0) return { ok:false, error:'Usuário não encontrado: '+alvoUsr };
+
+  var novaLinha = headers.map(function(h, i){
+    if (Object.prototype.hasOwnProperty.call(rowData, h)) {
+      var v = rowData[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return values[rowIndex-1][i];
+  });
+  sh.getRange(rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true };
+}
+
+function updatePassword(body) {
+  return updateUsuario(body);
+}
+
+function deleteUsuario(body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_USUARIOS);
+  if (!sh) return { ok:false, error:'Aba USUARIOS não encontrada' };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxUser = headers.indexOf('USUARIO');
+  if (idxUser < 0) return { ok:false, error:'Coluna USUARIO não encontrada' };
+
+  var alvo = _normalizeKey(body.usuario);
+  for (var i = 1; i < values.length; i++) {
+    if (_normalizeKey(values[i][idxUser]) === alvo) {
+      sh.deleteRow(i+1);
+      return { ok:true };
+    }
+  }
+  return { ok:false, error:'Usuário não encontrado' };
+}
+
+// ============== HELPER JSON ==============
+function _json(obj) {
+  if (obj && typeof obj === 'object') {
+    if (obj.ok !== undefined && obj.success === undefined) obj.success = obj.ok;
+    if (obj.success !== undefined && obj.ok === undefined) obj.ok = obj.success;
+  }
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============== TESTES MANUAIS (rodar no editor) ==============
+function testDoGet() {
+  var r = doGet({ parameter: { action: 'all' } });
+  Logger.log(r.getContent().substring(0, 500));
+}
+function testProximoId() {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_CADASTRO);
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function(h){ return String(h||'').trim(); });
+  Logger.log('Próximo ID: %s', _proximoId(sh, headers));
+}
+
+// ============================================================
+// ===== MÓDULO MAQUINÁRIOS (adicionado - Fase 2) =============
+// Tudo aqui é ADITIVO: não altera nenhuma função acima.
+// Abas: MAQUINAS, MAQ_LOCALIZACAO, MAQ_ABASTECIMENTO, MAQ_MANUTENCAO
+// IDs numéricos via _proximoId. Permissão é tratada no front-end.
+// ============================================================
+
+// Append COM geração de ID (reusa _proximoId)
+function _appendComId(abaNome, row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+    .map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+  var novoId = null;
+  if (idxId >= 0 && (row.ID === undefined || row.ID === null || row.ID === '')) {
+    novoId = _proximoId(sh, headers);
+    row.ID = novoId;
+  }
+  var linha = headers.map(function(h){
+    var v = row[h];
+    return (v === undefined || v === null) ? '' : v;
+  });
+  sh.appendRow(linha);
+  return { ok:true, id: novoId, row: row };
+}
+
+// Update SOMENTE por ID (seguro — sem fallback que pegaria linha errada)
+function _updateMaqById(abaNome, body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+  if (idxId < 0) return { ok:false, error:'Coluna ID não encontrada em ' + abaNome };
+  if (body.id === undefined || body.id === null || body.id === '') return { ok:false, error:'ID obrigatório para editar' };
+  var alvo = String(body.id).trim();
+  var rowIndex = -1;
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][idxId]||'').trim() === alvo) { rowIndex = i+1; break; }
+  }
+  if (rowIndex < 0) return { ok:false, error:'Linha não encontrada (ID '+alvo+')' };
+  var rowData = body.row || {};
+  var novaLinha = headers.map(function(h, i){
+    if (h === 'ID') return values[rowIndex-1][idxId]; // ID nunca muda
+    if (Object.prototype.hasOwnProperty.call(rowData, h)) {
+      var v = rowData[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return values[rowIndex-1][i];
+  });
+  sh.getRange(rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true, id: alvo };
+}
+
+// Delete SOMENTE por ID (seguro)
+function _deleteMaqById(abaNome, body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(abaNome);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + abaNome };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxId = headers.indexOf('ID');
+  if (idxId < 0) return { ok:false, error:'Coluna ID não encontrada em ' + abaNome };
+  if (body.id === undefined || body.id === null || body.id === '') return { ok:false, error:'ID obrigatório para excluir' };
+  var alvo = String(body.id).trim();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][idxId]||'').trim() === alvo) { sh.deleteRow(i+1); return { ok:true, id: alvo }; }
+  }
+  return { ok:false, error:'Linha não encontrada (ID '+alvo+')' };
+}
+
+function _hojeISO() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'); }
+
+// ---------- MÁQUINAS (cadastro) ----------
+function addMaquina(row)    { if (!row) return { ok:false, error:'row vazio' }; return _appendComId(ABA_MAQUINAS, row); }
+function updateMaquina(body){ return _updateMaqById(ABA_MAQUINAS, body); }
+function deleteMaquina(body){ return _deleteMaqById(ABA_MAQUINAS, body); }
+
+// ---------- LOCALIZAÇÃO (transferências) ----------
+function addLocalizacaoMaq(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  if (!row.DATA_REGISTRO) row.DATA_REGISTRO = _hojeISO();
+  return _appendComId(ABA_MAQ_LOCALIZACAO, row);
+}
+function updateLocalizacaoMaq(body){ return _updateMaqById(ABA_MAQ_LOCALIZACAO, body); }
+function deleteLocalizacaoMaq(body){ return _deleteMaqById(ABA_MAQ_LOCALIZACAO, body); }
+
+// ---------- ABASTECIMENTO (VALOR_TOTAL = LITROS x PRECO_LITRO) ----------
+function addAbastecimentoMaq(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  row.HORIMETRO   = _toNum(row.HORIMETRO);
+  row.KM          = _toNum(row.KM);
+  row.LITROS      = _toNum(row.LITROS);
+  row.PRECO_LITRO = _toNum(row.PRECO_LITRO);
+  var l = (typeof row.LITROS === 'number') ? row.LITROS : 0;
+  var p = (typeof row.PRECO_LITRO === 'number') ? row.PRECO_LITRO : 0;
+  row.VALOR_TOTAL = Math.round(l * p * 100) / 100;
+  if (!row.DATA_REGISTRO) row.DATA_REGISTRO = _hojeISO();
+  return _appendComId(ABA_MAQ_ABASTECIMENTO, row);
+}
+function updateAbastecimentoMaq(body) {
+  if (body && body.row) {
+    var r = body.row;
+    if (r.HORIMETRO !== undefined) r.HORIMETRO = _toNum(r.HORIMETRO);
+    if (r.KM !== undefined) r.KM = _toNum(r.KM);
+    if (r.LITROS !== undefined && r.PRECO_LITRO !== undefined) {
+      r.LITROS = _toNum(r.LITROS); r.PRECO_LITRO = _toNum(r.PRECO_LITRO);
+      var l = (typeof r.LITROS === 'number') ? r.LITROS : 0;
+      var p = (typeof r.PRECO_LITRO === 'number') ? r.PRECO_LITRO : 0;
+      r.VALOR_TOTAL = Math.round(l * p * 100) / 100;
+    }
+  }
+  return _updateMaqById(ABA_MAQ_ABASTECIMENTO, body);
+}
+function deleteAbastecimentoMaq(body){ return _deleteMaqById(ABA_MAQ_ABASTECIMENTO, body); }
+
+// ---------- MANUTENÇÃO (CUSTO_TOTAL = peças + mão de obra + terceiros) ----------
+function addManutMaq(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  row.HORIMETRO = _toNum(row.HORIMETRO);
+  row.KM = _toNum(row.KM);
+  var pec = _toNum(row.CUSTO_PECAS);     row.CUSTO_PECAS = pec;
+  var mao = _toNum(row.CUSTO_MAO_OBRA);  row.CUSTO_MAO_OBRA = mao;
+  var ter = _toNum(row.CUSTO_TERCEIROS); row.CUSTO_TERCEIROS = ter;
+  var soma = (typeof pec==='number'?pec:0) + (typeof mao==='number'?mao:0) + (typeof ter==='number'?ter:0);
+  row.CUSTO_TOTAL = Math.round(soma * 100) / 100;
+  if (!row.DATA_REGISTRO) row.DATA_REGISTRO = _hojeISO();
+  return _appendComId(ABA_MAQ_MANUTENCAO, row);
+}
+function updateManutMaq(body) {
+  if (body && body.row) {
+    var r = body.row;
+    if (r.HORIMETRO !== undefined) r.HORIMETRO = _toNum(r.HORIMETRO);
+    if (r.KM !== undefined) r.KM = _toNum(r.KM);
+    if (r.CUSTO_PECAS !== undefined || r.CUSTO_MAO_OBRA !== undefined || r.CUSTO_TERCEIROS !== undefined) {
+      var pec = _toNum(r.CUSTO_PECAS);     r.CUSTO_PECAS = pec;
+      var mao = _toNum(r.CUSTO_MAO_OBRA);  r.CUSTO_MAO_OBRA = mao;
+      var ter = _toNum(r.CUSTO_TERCEIROS); r.CUSTO_TERCEIROS = ter;
+      var soma = (typeof pec==='number'?pec:0) + (typeof mao==='number'?mao:0) + (typeof ter==='number'?ter:0);
+      r.CUSTO_TOTAL = Math.round(soma * 100) / 100;
+    }
+  }
+  return _updateMaqById(ABA_MAQ_MANUTENCAO, body);
+}
+function deleteManutMaq(body){ return _deleteMaqById(ABA_MAQ_MANUTENCAO, body); }
+
+// ---------- TESTE MANUAL (rodar no editor antes de implantar) ----------
+function testDoGetMaq() {
+  var r = doGet({ parameter: { action: 'maquinarios' } });
+  Logger.log(r.getContent().substring(0, 800));
+}
+
+// ============================================================
+// ===== MÓDULO COMBOIO (adicionado - Fase 2) ================
+// Tudo aqui é ADITIVO: não altera nenhuma função acima.
+// Abas: TANQUES, TANQUE_ENTRADAS
+// Reusa os helpers genéricos do módulo Maquinários:
+//   _appendComId / _updateMaqById / _deleteMaqById / _hojeISO / _toNum
+// IDs numéricos via _proximoId. Permissão é tratada no front-end.
+// Saldo (SALDO_INICIAL + entradas − saídas) é calculado no FRONT.
+// VALOR_TOTAL das entradas é calculado AQUI no servidor (litros x preço).
+// ============================================================
+
+// ---------- TANQUES (cadastro) ----------
+function addTanque(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  row.SALDO_INICIAL = _toNum(row.SALDO_INICIAL);
+  row.NIVEL_MINIMO  = _toNum(row.NIVEL_MINIMO);
+  if (!row.DATA_REGISTRO) row.DATA_REGISTRO = _hojeISO();
+  return _appendComId(ABA_TANQUES, row);
+}
+function updateTanque(body) {
+  if (body && body.row) {
+    var r = body.row;
+    if (r.SALDO_INICIAL !== undefined) r.SALDO_INICIAL = _toNum(r.SALDO_INICIAL);
+    if (r.NIVEL_MINIMO  !== undefined) r.NIVEL_MINIMO  = _toNum(r.NIVEL_MINIMO);
+  }
+  return _updateMaqById(ABA_TANQUES, body);
+}
+function deleteTanque(body) { return _deleteMaqById(ABA_TANQUES, body); }
+
+// ---------- TANQUE_ENTRADAS (VALOR_TOTAL = LITROS x PRECO_LITRO) ----------
+function addTanqueEntrada(row) {
+  if (!row) return { ok:false, error:'row vazio' };
+  row.LITROS      = _toNum(row.LITROS);
+  row.PRECO_LITRO = _toNum(row.PRECO_LITRO);
+  var l = (typeof row.LITROS === 'number') ? row.LITROS : 0;
+  var p = (typeof row.PRECO_LITRO === 'number') ? row.PRECO_LITRO : 0;
+  row.VALOR_TOTAL = Math.round(l * p * 100) / 100;
+  if (!row.DATA_REGISTRO) row.DATA_REGISTRO = _hojeISO();
+  return _appendComId(ABA_TANQUE_ENTRADAS, row);
+}
+function updateTanqueEntrada(body) {
+  if (body && body.row) {
+    var r = body.row;
+    if (r.LITROS !== undefined && r.PRECO_LITRO !== undefined) {
+      r.LITROS = _toNum(r.LITROS); r.PRECO_LITRO = _toNum(r.PRECO_LITRO);
+      var l = (typeof r.LITROS === 'number') ? r.LITROS : 0;
+      var p = (typeof r.PRECO_LITRO === 'number') ? r.PRECO_LITRO : 0;
+      r.VALOR_TOTAL = Math.round(l * p * 100) / 100;
+    }
+  }
+  return _updateMaqById(ABA_TANQUE_ENTRADAS, body);
+}
+function deleteTanqueEntrada(body) { return _deleteMaqById(ABA_TANQUE_ENTRADAS, body); }
+
+// ============================================================
+// ===== MÓDULO FREQUÊNCIA (adicionado) =====
+// ============================================================
+
+// Grava o mês inteiro de uma vez (lote). Recebe body.marcacoes = [{DATA, MOTORISTA, CODIGO}, ...]
+// Faz UPSERT por MOTORISTA+DATA: se já existe a linha daquele motorista/dia, atualiza o CODIGO;
+// senão, cria com ID novo. Assim salvar o mesmo mês de novo não duplica linhas.
+// CODIGO vazio/null => remove a marcação daquele dia (se existir).
+function saveFrequenciaMes(body) {
+  var marcacoes = (body && body.marcacoes) || [];
+  if (!marcacoes.length) return { ok:true, gravadas:0, atualizadas:0, removidas:0, info:'nada a gravar' };
+
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_FREQUENCIA);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + ABA_FREQUENCIA };
+
+  var values = sh.getDataRange().getValues();
+  var headers = (values[0] || []).map(function(h){ return String(h||'').trim(); });
+  var idxId   = headers.indexOf('ID');
+  var idxData = headers.indexOf('DATA');
+  var idxMot  = headers.indexOf('MOTORISTA');
+  var idxCod  = headers.indexOf('CODIGO');
+  var idxUsu  = headers.indexOf('USUARIO');
+  var idxReg  = headers.indexOf('DATA_REGISTRO');
+  if (idxData < 0 || idxMot < 0 || idxCod < 0) {
+    return { ok:false, error:'Cabeçalho da aba FREQUENCIA precisa ter DATA, MOTORISTA e CODIGO' };
+  }
+
+  // Índice das linhas existentes por chave MOTORISTA||DATA (normalizada)
+  var mapaLinha = {}; // chave -> número da linha na planilha (1-based)
+  for (var i = 1; i < values.length; i++) {
+    var dataP = _extractDatePart(values[i][idxData]);
+    var motN  = _normalizeKey(values[i][idxMot]);
+    if (!dataP && !motN) continue;
+    mapaLinha[motN + '||' + dataP] = i + 1;
+  }
+
+  var usuario = (body && body.usuario) || '';
+  var hoje = _hojeISO();
+  var maxId = _proximoId(sh, headers) - 1; // último ID usado
+  var gravadas = 0, atualizadas = 0, removidas = 0;
+
+  for (var m = 0; m < marcacoes.length; m++) {
+    var mc = marcacoes[m] || {};
+    var dataP = _extractDatePart(mc.DATA);
+    var motN  = _normalizeKey(mc.MOTORISTA);
+    var cod   = String(mc.CODIGO == null ? '' : mc.CODIGO).trim();
+    if (!dataP || !motN) continue; // linha incompleta: ignora, não quebra
+
+    var chave = motN + '||' + dataP;
+    var linhaExistente = mapaLinha[chave];
+
+    if (cod === '') {
+      // remoção: se existe, apaga a linha
+      if (linhaExistente) {
+        sh.deleteRow(linhaExistente);
+        removidas++;
+        // reindexar mapa (linhas abaixo subiram 1)
+        for (var key in mapaLinha) {
+          if (mapaLinha[key] > linhaExistente) mapaLinha[key] = mapaLinha[key] - 1;
+        }
+        delete mapaLinha[chave];
+        values.splice(linhaExistente - 1, 1);
+      }
+      continue;
+    }
+
+    if (linhaExistente) {
+      // atualiza só o CODIGO (e USUARIO/DATA_REGISTRO da alteração)
+      if (idxCod >= 0) sh.getRange(linhaExistente, idxCod+1).setValue(cod);
+      if (idxUsu >= 0 && usuario) sh.getRange(linhaExistente, idxUsu+1).setValue(usuario);
+      if (idxReg >= 0) sh.getRange(linhaExistente, idxReg+1).setValue(hoje);
+      atualizadas++;
+    } else {
+      // cria linha nova com ID
+      maxId++;
+      var nova = headers.map(function(h){
+        if (h === 'ID') return maxId;
+        if (h === 'DATA') return dataP;
+        if (h === 'MOTORISTA') return mc.MOTORISTA;
+        if (h === 'CODIGO') return cod;
+        if (h === 'USUARIO') return usuario;
+        if (h === 'DATA_REGISTRO') return hoje;
+        return '';
+      });
+      sh.appendRow(nova);
+      mapaLinha[chave] = sh.getLastRow();
+      gravadas++;
+    }
+  }
+
+  return { ok:true, gravadas:gravadas, atualizadas:atualizadas, removidas:removidas };
+}
+
+// Atualiza um motorista existente na aba MOTORISTAS, casando por NOME (a aba não tem ID).
+// Atualiza SOMENTE os campos enviados em body.row; preserva os demais (CPF/CNH/etc).
+// Usado principalmente para gravar DATA_DESLIGAMENTO (e reativar = enviar DATA_DESLIGAMENTO vazio).
+function updateMotorista(body) {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(ABA_MOTORISTAS);
+  if (!sh) return { ok:false, error:'Aba não encontrada: ' + ABA_MOTORISTAS };
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { ok:false, error:'Aba MOTORISTAS vazia' };
+  var headers = values[0].map(function(h){ return String(h||'').trim(); });
+  var idxNome = headers.indexOf('NOME');
+  if (idxNome < 0) idxNome = headers.indexOf('MOTORISTA');
+  if (idxNome < 0) return { ok:false, error:'Coluna NOME não encontrada em MOTORISTAS' };
+
+  var alvoNome = (body && (body.nome || body.NOME)) || (body && body.row && (body.row.NOME || body.row.nome)) || '';
+  alvoNome = _normalizeKey(alvoNome);
+  if (!alvoNome) return { ok:false, error:'NOME obrigatório para editar motorista' };
+
+  var rowIndex = -1;
+  for (var i = 1; i < values.length; i++) {
+    if (_normalizeKey(values[i][idxNome]) === alvoNome) { rowIndex = i + 1; break; }
+  }
+  if (rowIndex < 0) return { ok:false, error:'Motorista não encontrado na aba MOTORISTAS: ' + (body.nome || body.NOME || '') };
+
+  var rowData = (body && body.row) || {};
+  var novaLinha = headers.map(function(h, i){
+    if (Object.prototype.hasOwnProperty.call(rowData, h)) {
+      var v = rowData[h];
+      return (v === undefined || v === null) ? '' : v;
+    }
+    return values[rowIndex-1][i]; // preserva o que não veio
+  });
+  sh.getRange(rowIndex, 1, 1, headers.length).setValues([novaLinha]);
+  return { ok:true, nome: (body.nome || body.NOME || '') };
+}
+
+// ---------- TESTE MANUAL (rodar no editor antes de implantar) ----------
+function testDoGetComboio() {
+  var r = doGet({ parameter: { action: 'comboio' } });
+  Logger.log(r.getContent().substring(0, 800));
+}
+
+function testDoGetFrequencia() {
+  var r = doGet({ parameter: { action: 'frequencia' } });
+  Logger.log(r.getContent().substring(0, 800));
+}

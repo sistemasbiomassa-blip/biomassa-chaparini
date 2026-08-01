@@ -249,7 +249,7 @@ function addManutProg(){
 // ==================== LOCAIS ====================
 function renderLocaisTable(){
   var data = LOCAIS_DATA;
-  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Ações</th></tr></thead><tbody>';
   data.forEach(function(r){
     var tipo = r['TIPO'] || r.tipo || '-';
     var badge = '';
@@ -258,10 +258,29 @@ function renderLocaisTable(){
     else if(tipo.toLowerCase()==='abastecimento') badge='<span style="color:var(--yellow)">●</span> ';
     else badge='<span style="color:var(--purple)">●</span> ';
     var unid=r['UNIDADE']||'-';
-    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td></tr>';
+    var nomeAttr=String(r['NOME']||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td><td><button class="btn btn-sm btn-secondary" onclick="editLocal(\''+nomeAttr+'\')">✏️ Editar</button></td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblLocaisContainer').innerHTML=h;
+}
+
+var _editandoLocalNome=null;
+
+function editLocal(nome){
+  var rec=LOCAIS_DATA.filter(function(r){ return r['NOME']===nome; })[0];
+  if(!rec){showToast('Local não encontrado',true);return;}
+  _editandoLocalNome=nome;
+  document.getElementById('flNome').value=rec['NOME']||'';
+  document.getElementById('flTipo').value=(rec['TIPO']||'').toLowerCase();
+  document.getElementById('flUnidade').value=rec['UNIDADE']||'';
+  document.getElementById('flEndereco').value=rec['ENDEREÇO']||rec['ENDERECO']||'';
+  document.getElementById('flMunicipio').value=rec['MUNICIPIO']||'';
+  document.getElementById('flEstado').value=rec['ESTADO']||'';
+  document.getElementById('flLat').value=rec['LATITUDE']||'';
+  document.getElementById('flLng').value=rec['LONGITUDE']||'';
+  document.getElementById('btnSalvarLocal').textContent='💾 ATUALIZAR LOCAL';
+  document.getElementById('flNome').scrollIntoView({behavior:'smooth',block:'center'});
 }
 
 function salvarLocal(){
@@ -278,6 +297,28 @@ function salvarLocal(){
     'LATITUDE': n(document.getElementById('flLat').value) ? num(document.getElementById('flLat').value) : null,
     'LONGITUDE': n(document.getElementById('flLng').value) ? num(document.getElementById('flLng').value) : null
   };
+
+  if(_editandoLocalNome){
+    var nomeOriginal=_editandoLocalNome;
+    var idx=LOCAIS_DATA.findIndex(function(r){ return r['NOME']===nomeOriginal; });
+    if(idx<0){showToast('Local não encontrado',true);return;}
+    LOCAIS_DATA[idx]=rec;
+    if(rec['LATITUDE'] && rec['LONGITUDE']){
+      LOCAIS_COORDS[nome]={lat:rec['LATITUDE'],lng:rec['LONGITUDE'],tipo:tipo};
+    }
+    if(nomeOriginal!==nome) delete LOCAIS_COORDS[nomeOriginal];
+    var posM3=BASE.clientesM3.indexOf(nomeOriginal);
+    if(posM3>=0) BASE.clientesM3.splice(posM3,1);
+    if(rec['UNIDADE']==='M3' && !BASE.clientesM3.includes(nome)){BASE.clientesM3.push(nome);}
+    saveToSheets('updateLocal', {nomeOriginal:nomeOriginal, row:rec}, function(ok){
+      if(ok) showToast('✅ Local atualizado na planilha! '+nome);
+      else showToast('⚠️ Atualizado local, falha na planilha',true);
+    });
+    renderLocaisTable();
+    limparFormLocal();
+    return;
+  }
+
   LOCAIS_DATA.push(rec);
   if(rec['LATITUDE'] && rec['LONGITUDE']){
     LOCAIS_COORDS[nome]={lat:rec['LATITUDE'],lng:rec['LONGITUDE'],tipo:tipo};
@@ -298,5 +339,7 @@ function limparFormLocal(){
   ['flNome','flEndereco','flMunicipio','flEstado','flLat','flLng'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('flTipo').value='';
   document.getElementById('flUnidade').value='';
+  _editandoLocalNome=null;
+  document.getElementById('btnSalvarLocal').textContent='💾 SALVAR LOCAL';
 }
 
