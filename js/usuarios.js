@@ -1,13 +1,13 @@
 // ==================== USUARIOS (ADMIN) ====================
 function renderUsuariosTable(){
-  var h='<div class="table-header"><h3>Usuários Cadastrados</h3><span class="chart-badge">'+USUARIOS.length+' usuários</span></div><div class="table-scroll"><table><thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Primeiro Acesso</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
+  var h='<div class="table-header"><h3>Usuários Cadastrados</h3><span class="chart-badge">'+USUARIOS.length+' usuários</span></div><div class="table-scroll"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Primeiro Acesso</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
   USUARIOS.forEach(function(u,i){
     var perfil=(u.PERFIL||'ANALISTA').toUpperCase();
     var perfilClass=perfil==='ADMIN'?'admin':(perfil==='DIRETOR'?'diretor':'analista');
     var ativo=u.ATIVO?u.ATIVO.toUpperCase()!=='FALSE':true;
     var primeiroAcesso=u.PRIMEIRO_ACESSO?u.PRIMEIRO_ACESSO.toUpperCase()==='TRUE':false;
     h+='<tr>';
-    h+='<td style="font-weight:600">'+u.USUARIO+'</td>';
+    h+='<td style="font-weight:600">'+(u.EMAIL||u.USUARIO||'-')+'</td>';
     h+='<td>'+(u.NOME||'-')+'</td>';
     h+='<td><span class="historico-badge '+perfilClass+'">'+perfil+'</span></td>';
     h+='<td>'+(primeiroAcesso?'<span style="color:var(--yellow)">Sim</span>':'Não')+'</td>';
@@ -28,28 +28,26 @@ function renderUsuariosTable(){
 function showAddUserForm(){document.getElementById('addUserForm').style.display='block';}
 
 function salvarNovoUsuario(){
+  var email=document.getElementById('nuEmail').value.trim();
   var usuario=document.getElementById('nuUser').value.trim();
   var nome=document.getElementById('nuNome').value.trim();
   var senha=document.getElementById('nuSenha').value;
   var perfil=document.getElementById('nuPerfil').value;
-  if(!usuario||!nome||!senha){showToast('Preencha todos os campos!',true);return;}
-  // Check duplicate
-  var dup=false;
-  USUARIOS.forEach(function(u){if(u.USUARIO.toUpperCase()===usuario.toUpperCase())dup=true;});
-  if(dup){showToast('Usuário já existe!',true);return;}
-  var novoUser={USUARIO:usuario,SENHA:senha,PERFIL:perfil,NOME:nome,PRIMEIRO_ACESSO:'TRUE',ATIVO:'TRUE'};
-  saveToSheets('addUsuario',novoUser,function(ok){
+  if(!email||!nome||!senha){showToast('Preencha e-mail, nome e senha!',true);return;}
+  var dup=USUARIOS.some(function(u){return (u.EMAIL||'').toLowerCase()===email.toLowerCase();});
+  if(dup){showToast('Já existe usuário com esse e-mail!',true);return;}
+  saveToSheets('addUsuario',{EMAIL:email,USUARIO:usuario,SENHA:senha,PERFIL:perfil,NOME:nome},function(ok,res){
     if(ok){
-      USUARIOS.push(novoUser);
       showToast('✅ Usuário '+nome+' criado!');
       document.getElementById('addUserForm').style.display='none';
+      document.getElementById('nuEmail').value='';
       document.getElementById('nuUser').value='';
       document.getElementById('nuNome').value='';
       document.getElementById('nuSenha').value='';
       document.getElementById('nuPerfil').value='ANALISTA';
-      renderUsuariosTable();
+      loadFromSheets(function(){ renderUsuariosTable(); });
     } else {
-      showToast('❌ Erro ao salvar usuário',true);
+      showToast('❌ Erro ao salvar usuário: '+((res&&res.error)||'desconhecido'),true);
     }
   });
 }
@@ -58,12 +56,12 @@ function toggleUsuario(idx,ativar){
   var u=USUARIOS[idx];
   if(!u)return;
   var novoStatus=ativar?'TRUE':'FALSE';
-  saveToSheets('updateUsuario',{USUARIO:u.USUARIO,ATIVO:novoStatus},function(ok){
+  saveToSheets('updateUsuario',{id:u._id,ATIVO:novoStatus},function(ok,res){
     if(ok){
       u.ATIVO=novoStatus;
       showToast(ativar?'✅ Usuário ativado':'⛔ Usuário desativado');
       renderUsuariosTable();
-    } else {showToast('❌ Erro ao atualizar',true);}
+    } else {showToast('❌ Erro ao atualizar: '+((res&&res.error)||'desconhecido'),true);}
   });
 }
 
@@ -71,13 +69,11 @@ function resetSenhaUsuario(idx){
   var u=USUARIOS[idx];
   if(!u)return;
   if(!confirm('Resetar a senha de '+u.NOME+'?\nA nova senha será: 123456'))return;
-  saveToSheets('updatePassword',{USUARIO:u.USUARIO,SENHA:'123456',PRIMEIRO_ACESSO:'TRUE'},function(ok){
+  saveToSheets('updatePassword',{id:u._id,novaSenha:'123456'},function(ok,res){
     if(ok){
-      u.SENHA='123456';
       u.PRIMEIRO_ACESSO='TRUE';
       showToast('✅ Senha resetada! Nova senha: 123456');
       renderUsuariosTable();
-    } else {showToast('❌ Erro ao resetar senha',true);}
+    } else {showToast('❌ Erro ao resetar senha: '+((res&&res.error)||'desconhecido'),true);}
   });
 }
-

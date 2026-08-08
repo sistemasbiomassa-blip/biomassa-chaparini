@@ -173,9 +173,19 @@ function salvarCadastro(){
   // ────────────────────────────────────────────────────────────────────────
 
   DB.cadastro.push(rec);
-  saveToSheets('addCadastro', rec, function(ok) {
-    if (ok) showToast('✅ Salvo na planilha! '+mot+' - '+dt);
-    else showToast('⚠️ Salvo local, falha na planilha', true);
+  saveToSheets('addCadastro', rec, function(ok, res) {
+    if (ok) {
+      // Sincroniza o ID real gerado pelo banco (sem isso, editar o lançamento
+      // antes de recarregar a página falha por falta de ID)
+      var salvo = res && res[0];
+      if (salvo) { rec.ID = salvo.id; rec.DATA_REGISTRO = salvo.data_registro ? String(salvo.data_registro).slice(0,10) : rec.DATA_REGISTRO; }
+      showToast('✅ Salvo na planilha! '+mot+' - '+dt);
+    } else {
+      // Insert falhou de verdade (não é só a planilha antiga) — remove da lista local pra não ficar um registro fantasma
+      var idx = DB.cadastro.indexOf(rec);
+      if (idx >= 0) DB.cadastro.splice(idx, 1);
+      showToast('❌ Falha ao salvar: '+((res&&res.error)||'erro desconhecido'), true);
+    }
   })
   limparFormCadastro();
 }

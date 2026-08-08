@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -24,7 +25,7 @@
     <div class="login-title">SISTEMA DE GESTÃO DE FROTA</div>
     <div class="login-sub">BIOMASSA CHAPARINI</div>
     <div class="login-form">
-      <div class="form-group"><label>Usuário</label><input type="text" id="loginUser" placeholder="Digite seu usuário" onkeypress="if(event.key==='Enter')doLogin()"></div>
+      <div class="form-group"><label>E-mail</label><input type="email" id="loginUser" placeholder="Digite seu e-mail" onkeypress="if(event.key==='Enter')doLogin()"></div>
       <div class="form-group"><label>Senha</label><div style="position:relative"><input type="password" id="loginPass" placeholder="Digite sua senha" onkeypress="if(event.key==='Enter')doLogin()" style="padding-right:40px;width:100%"><span onclick="togglePass('loginPass',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span></div></div>
       <button class="btn btn-primary" onclick="doLogin()">ENTRAR</button>
       <div class="login-error" id="loginError">Usuário ou senha incorretos</div>
@@ -306,7 +307,7 @@
               <div class="form-row">
                 <div class="form-group"><label>Local de Carga</label><select id="fLocalCarga"></select></div>
                 <div class="form-group"><label>Local de Descarga</label><select id="fLocalDescarga" onchange="updateUnidade()"></select></div>
-                <div class="form-group"><label>Nota Fiscal</label><input type="text" inputmode="decimal" id="fNota" placeholder="ex: 12345"></div>
+                <div class="form-group"><label>Nota Fiscal</label><input type="number" inputmode="numeric" id="fNota" placeholder="ex: 12345"></div>
                 <div class="form-group"><label>Quantidade <span id="unidadeLabel">(TON)</span></label><input type="text" inputmode="decimal" id="fQuantidade" placeholder="ex: 25,50"></div>
               </div>
               <div class="form-row">
@@ -606,13 +607,14 @@
       <div class="page" id="pageUsuarios">
         <div class="page-header">
           <h1 class="page-title">👥 Gerenciar Usuários</h1>
-          <button class="btn btn-primary btn-sm" onclick="showAddUserForm()">➕ Novo Usuário</button>
+          <button class="btn btn-primary btn-sm admin-only" onclick="showAddUserForm()">➕ Novo Usuário</button>
         </div>
         <div id="addUserForm" style="display:none" class="form-card" >
           <div class="form-section">
             <div class="form-section-title">Novo Usuário</div>
             <div class="form-row">
-              <div class="form-group"><label>Usuário *</label><input type="text" id="nuUser" placeholder="login (sem espaços)"></div>
+              <div class="form-group"><label>E-mail *</label><input type="email" id="nuEmail" placeholder="usado pra fazer login"></div>
+              <div class="form-group"><label>Usuário (opcional)</label><input type="text" id="nuUser" placeholder="referência antiga, não é mais o login"></div>
               <div class="form-group"><label>Nome Completo *</label><input type="text" id="nuNome" placeholder="Nome exibido"></div>
               <div class="form-group"><label>Senha Inicial *</label><input type="text" id="nuSenha" placeholder="Senha temporária"></div>
               <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option></select></div>
