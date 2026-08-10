@@ -7375,7 +7375,11 @@ function closeTanqueModal(){ document.getElementById('tanqueModalOverlay').class
 function salvarTanque(){
   if(!comboioIsAdmin()){ showToast('Sem permissão',true); return; }
   var row={};
-  TANQUE_FIELDS.forEach(function(f){ var el=document.getElementById('tqf_'+f.key); row[f.key]=el?String(el.value).trim():''; });
+  TANQUE_FIELDS.forEach(function(f){
+    var el=document.getElementById('tqf_'+f.key);
+    var val=el?String(el.value).trim():'';
+    row[f.key]=(f.type==='mask')?(val===''?'':_cbNum(val)):val;
+  });
   if(!row.LOCAL_ABASTECIMENTO){ showToast('Selecione o Posto / Local',true); return; }
   if(row.DATA_INICIO===''){ showToast('Informe a data de início',true); return; }
   if(row.SALDO_INICIAL==='') row.SALDO_INICIAL='0';
