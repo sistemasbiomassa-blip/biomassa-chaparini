@@ -26,9 +26,12 @@ function _limparPayload(o){
   return out;
 }
 // converte um objeto com chaves tipo "ID_MAQUINA","OBS","LITROS" pra snake_case (já bate 1:1 com as colunas)
+// "usuario" nunca é uma coluna de verdade (as tabelas usam usuario_id/usuario_nome_legado,
+// preenchidos à parte por _comUsuarioAtual) — remover aqui evita erro "column usuario does not exist".
 function _lowerKeys(row){
   var out={};
   Object.keys(row||{}).forEach(function(k){ out[k.toLowerCase()]=row[k]; });
+  delete out.usuario;
   return _limparPayload(out);
 }
 // CADASTRO tem headers com acento/espaço que não viram snake_case só com toLowerCase()
