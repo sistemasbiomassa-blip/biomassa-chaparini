@@ -78,6 +78,8 @@ function carregarPerfilELogar(user){
 
 function enterApp(){
   _comboioAlertDismissed=false;
+  _alertasDismissed={};
+  _alertasBannerVisible=false;
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appPage').style.display='block';
   // Show/hide admin elements
@@ -97,6 +99,7 @@ function enterApp(){
   document.getElementById('userBadge').innerHTML='<span>👤</span><span class="user-name">'+currentUserData.nome+'</span><span class="user-role '+roleClass+'">'+roleLabel+'</span>';
   initApp();
   checkComboioAlert();
+  renderAlertasBanner();
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
   // outro usuário na mesma aba do navegador (sem dar F5), a última página aberta
   // (ex: Usuários, só de ADMIN) continuava visível pro novo usuário.
@@ -143,7 +146,7 @@ function navigateTo(page){
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
-  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia'};
+  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas'};
   document.getElementById(map[page]).classList.add('active');
   if(page==='producao') buildProducao();
   else if(page==='financeiro') buildFinanceiro();
@@ -157,6 +160,7 @@ function navigateTo(page){
   else if(page==='maquinarios') buildMaquinarios();
   else if(page==='comboio') buildComboio();
   else if(page==='frequencia') buildFrequencia();
+  else if(page==='alertas') buildAlertas();
   if(page==='cadastro') setTimeout(iniciarMascaras,100);
 }
 

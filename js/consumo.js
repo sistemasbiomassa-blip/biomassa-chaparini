@@ -35,6 +35,7 @@ function buildConsumo(){
   if(document.getElementById('fcDtIni')) document.getElementById('fcDtIni').value=consumoFiltro.dtIni||'';
   if(document.getElementById('fcDtFim')) document.getElementById('fcDtFim').value=consumoFiltro.dtFim||'';
 
+  renderConsumoGauge();
   renderConsumoPlacas();
   renderConsumoTops();
   renderConsumoAbastList();
@@ -46,9 +47,61 @@ function onConsumoFilterChange(){
   consumoFiltro.mes=document.getElementById('fcMes')?document.getElementById('fcMes').value:'';
   consumoFiltro.dtIni=document.getElementById('fcDtIni')?document.getElementById('fcDtIni').value:'';
   consumoFiltro.dtFim=document.getElementById('fcDtFim')?document.getElementById('fcDtFim').value:'';
+  renderConsumoGauge();
   renderConsumoPlacas();
   renderConsumoTops();
   renderConsumoAbastList();
+}
+
+// Faixas de km/L (caminhão): mesma régua usada na tabela por placa e no gauge da frota.
+function kmLStatus(kmL){
+  if(kmL>10) return {cor:'#ef4444', label:'Suspeito', icone:'🚨 ', tooltip:'Valor suspeito — caminhão geralmente faz entre 1 e 5 km/L. Verifique se há erro de digitação nos KMs lançados desta placa.'};
+  if(kmL>2.5) return {cor:'#f59e0b', label:'Atenção', icone:'⚠️ ', tooltip:'Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.'};
+  if(kmL>=1.5) return {cor:'#22c55e', label:'Normal', icone:'', tooltip:''};
+  return {cor:'#f59e0b', label:'Atenção', icone:'⚠️ ', tooltip:'Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.'};
+}
+
+// Consumo médio da frota (ponderado por km rodado), aplicando os filtros ativos.
+// Usa o mesmo método tanque-a-tanque de calcConsumoPlacasT2T: soma o km e o litro
+// tanque-a-tanque de todas as placas do período, em vez de tirar média simples das
+// médias — assim uma placa que rodou 10x mais não pesa igual a uma que rodou pouco.
+function calcConsumoMedioGeral(){
+  var placas=calcConsumoPlacasT2T();
+  if(!placas.length) return null;
+  var totalKm=0, totalLit=0;
+  placas.forEach(function(p){ totalKm+=p.km; totalLit+=(p.km/p.kmL); });
+  if(totalLit<=0) return null;
+  return {kmL:totalKm/totalLit, km:totalKm, placas:placas.length};
+}
+
+// Gauge (meia-lua) com o consumo médio da frota, faixa de 0 a 5 km/L.
+function renderConsumoGauge(){
+  var el=document.getElementById('cnsGauge');
+  if(!el) return;
+  var g=calcConsumoMedioGeral();
+  if(!g){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Sem dados suficientes para calcular o consumo médio da frota.</div>';
+    return;
+  }
+  var st=kmLStatus(g.kmL);
+  var SCALE_MAX=5; // faixa "normal" de caminhão vai até ~2,5 km/L; 5 dá folga visual
+  var frac=Math.max(0,Math.min(1,g.kmL/SCALE_MAX));
+  var r=90, len=Math.PI*r; // comprimento do semicírculo
+  var filled=frac*len;
+  var h='<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+  h+='<svg viewBox="0 0 220 130" style="width:100%;max-width:320px">';
+  h+='<path d="M20,110 A90,90 0 0 1 200,110" fill="none" stroke="var(--border)" stroke-width="16" stroke-linecap="round"/>';
+  h+='<path d="M20,110 A90,90 0 0 1 200,110" fill="none" stroke="'+st.cor+'" stroke-width="16" stroke-linecap="round" stroke-dasharray="'+filled.toFixed(1)+' '+len.toFixed(1)+'"/>';
+  h+='<text x="20" y="126" font-size="10" fill="var(--text2)" text-anchor="start">0</text>';
+  h+='<text x="200" y="126" font-size="10" fill="var(--text2)" text-anchor="end">'+SCALE_MAX+'+ km/L</text>';
+  h+='</svg>';
+  h+='<div style="text-align:center;margin-top:-30px">';
+  h+='<div style="font-family:JetBrains Mono,monospace;font-size:28px;font-weight:700;color:'+st.cor+'">'+numBR(g.kmL,2)+'</div>';
+  h+='<div style="font-size:11px;color:var(--text2)">km/L médio · '+g.placas+' placa'+(g.placas>1?'s':'')+' · '+numBR(Math.round(g.km))+' km rodados</div>';
+  h+='<div style="font-size:12px;font-weight:600;color:'+st.cor+';margin-top:4px"'+(st.tooltip?' title="'+st.tooltip.replace(/"/g,'&quot;')+'"':'')+'>'+st.icone+st.label+'</div>';
+  h+='</div>';
+  h+='</div>';
+  el.innerHTML=h;
 }
 
 // Calcula consumo médio por placa aplicando os 3 filtros
@@ -205,29 +258,9 @@ function renderConsumoPlacas(){
   h+='</tr></thead><tbody>';
   placas.forEach(function(p){
     // Cor do km/L baseado em faixas
-    var cor, icone='', tooltip='', rowBg='';
-    if(p.kmL>10){
-      // Suspeito (vermelho com alerta) — INALTERADO
-      cor='#ef4444';
-      icone='🚨 ';
-      tooltip='Valor suspeito — caminhão geralmente faz entre 1 e 5 km/L. Verifique se há erro de digitação nos KMs lançados desta placa.';
-      rowBg='background:rgba(239,68,68,0.06);';
-    } else if(p.kmL>2.5){
-      // Incomum (amarelo) — acima de 2,5 km/L
-      cor='#f59e0b';
-      icone='⚠️ ';
-      tooltip='Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.';
-      rowBg='background:rgba(245,158,11,0.04);';
-    } else if(p.kmL>=1.5){
-      // Normal (verde) — entre 1,5 e 2,5 km/L
-      cor='#22c55e';
-    } else {
-      // Incomum (amarelo) — abaixo de 1,5 km/L
-      cor='#f59e0b';
-      icone='⚠️ ';
-      tooltip='Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.';
-      rowBg='background:rgba(245,158,11,0.04);';
-    }
+    var st=kmLStatus(p.kmL);
+    var cor=st.cor, icone=st.icone, tooltip=st.tooltip;
+    var rowBg=p.kmL>10?'background:rgba(239,68,68,0.06);':(cor==='#f59e0b'?'background:rgba(245,158,11,0.04);':'');
     var tipAttr=tooltip?' title="'+tooltip.replace(/"/g,'&quot;')+'"':'';
     h+='<tr style="border-top:1px solid var(--border);'+rowBg+'">';
     h+='<td style="padding:10px 14px;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--accent);font-weight:600">'+p.placa+'</td>';

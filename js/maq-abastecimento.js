@@ -4,8 +4,10 @@
 // Floresta automática pela DATA do abastecimento (via localização).
 // ============================================================
 var _maqAbEditId=null, _maqAbDelId=null;
-var MAQ_COMBUSTIVEIS=['Diesel S10','Diesel comum','Gasolina','Arla 32','Outro'];
+var MAQ_COMBUSTIVEIS=['Arla 32','Diesel comum','Diesel S10','Gasolina','Outro'];
 var MAQ_TANQUES=['Interno','Externo'];
+
+function _maqOrdAlfa(arr){ return (arr||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})}); }
 
 // Floresta onde a máquina estava NA DATA informada (período que contém a data)
 function maqFlorestaNaData(idMaquina, dataISO){
@@ -27,9 +29,12 @@ function maqMetrica(idMaquina){ var m=findMaqById(idMaquina); return m?(m.METRIC
 
 function _maqPopAbastSelects(){
   var sm=document.getElementById('maqAbFiltroMaq');
-  if(sm && sm.options.length<=1){ DB.maquinas.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
+  if(sm && sm.options.length<=1){
+    var maqsOrd=DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})});
+    maqsOrd.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); });
+  }
   var sf=document.getElementById('maqAbFiltroFloresta');
-  if(sf && sf.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
+  if(sf && sf.options.length<=1){ _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
 }
 
 function renderMaqAbastTable(){
@@ -68,24 +73,25 @@ function renderMaqAbastTable(){
 function _maqAbBuildForm(row){
   row=row||{};
   var mo='<option value="">—</option>';
-  DB.maquinas.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  var maqsOrdForm=DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})});
+  maqsOrdForm.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
   var co=''; MAQ_COMBUSTIVEIS.forEach(function(c){ co+='<option'+(String(row.TIPO_COMBUSTIVEL||'Diesel S10')===c?' selected':'')+'>'+c+'</option>'; });
   var curPosto=row.TANQUE_POSTO||''; var achouPosto=false;
   var to='<option value="">—</option>';
-  (BASE.localAbast||[]).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
+  _maqOrdAlfa(BASE.localAbast).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
   if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo)
   var fo='<option value="">— automático (pela localização) —</option>';
-  (BASE.localCarga||[]).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?fmt(num(row.LITROS),2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?fmt(num(row.PRECO_LITRO),2):'';
   var horVal=(row.HORIMETRO!=null&&row.HORIMETRO!=='')?num(row.HORIMETRO):'';
-  var kmVal=(row.KM!=null&&row.KM!=='')?num(row.KM):'';
+  var kmVal=(row.KM!=null&&row.KM!=='')?fmt(num(row.KM),2):'';
   return ''+
     '<div class="form-group"><label>Data *</label><input id="mab_data" type="date" value="'+_maqEsc(dataVal)+'"></div>'+
     '<div class="form-group"><label>Máquina *</label><select id="mab_maq" onchange="_maqAbToggleLeitura()">'+mo+'</select></div>'+
     '<div class="form-group" id="mab_horGrp"><label>Horímetro (h)</label><input id="mab_hor" type="number" step="0.1" value="'+_maqEsc(horVal)+'"></div>'+
-    '<div class="form-group" id="mab_kmGrp"><label>KM</label><input id="mab_km" type="number" step="1" value="'+_maqEsc(kmVal)+'"></div>'+
+    '<div class="form-group" id="mab_kmGrp"><label>KM</label><input id="mab_km" type="text" inputmode="decimal" value="'+_maqEsc(kmVal)+'"></div>'+
     '<div class="form-group"><label>Litros *</label><input id="mab_lit" type="text" inputmode="decimal" value="'+_maqEsc(litVal)+'"></div>'+
     '<div class="form-group"><label>Valor unitário (R$/L) *</label><input id="mab_pre" type="text" inputmode="decimal" value="'+_maqEsc(preVal)+'"></div>'+
     '<div class="form-group"><label>Valor total</label><input id="mab_tot" type="text" value="" readonly style="background:var(--surface2);font-weight:600"></div>'+
@@ -117,8 +123,9 @@ function openMaqAbastModal(id){
   var aaud=document.getElementById('maqAbAudit');
   if(_maqAbEditId){ aaud.innerHTML=_maqAuditTxt(row); aaud.style.display=''; } else { aaud.style.display='none'; }
   document.getElementById('maqAbModalGrid').innerHTML=_maqAbBuildForm(row);
-  mascaraNumero(document.getElementById('mab_lit'),4,2);
-  mascaraNumero(document.getElementById('mab_pre'),2,2);
+  mascaraNumero(document.getElementById('mab_lit'),LIMITES_CAMPOS.litros,2);
+  mascaraNumero(document.getElementById('mab_pre'),LIMITES_CAMPOS.valorUnit,2);
+  mascaraNumero(document.getElementById('mab_km'),LIMITES_CAMPOS.km,2);
   document.getElementById('mab_lit').addEventListener('input',_maqAbCalcTotal);
   document.getElementById('mab_pre').addEventListener('input',_maqAbCalcTotal);
   _maqAbToggleLeitura();

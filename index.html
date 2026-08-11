@@ -643,8 +643,34 @@ tbody tr:hover{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ===== MODAL NOVO ALERTA ===== -->
+<div class="modal-overlay" id="alModalOverlay" onclick="if(event.target===this)closeNovoAlertaModal()">
+  <div class="modal">
+    <h2>🔔 Novo Alerta</h2>
+    <div class="maq-grid" id="alModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeNovoAlertaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="alSalvarBtn" onclick="salvarAlerta()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL RESOLVER ALERTA ===== -->
+<div class="modal-overlay" id="alResolverOverlay" onclick="if(event.target===this)closeResolverAlertaModal()">
+  <div class="modal">
+    <h2>✅ Resolver Alerta</h2>
+    <div id="alResolverDesc" style="font-size:13px;color:var(--text2);margin-bottom:10px"></div>
+    <div class="maq-grid" id="alResolverGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeResolverAlertaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="alResolverBtn" onclick="confirmarResolverAlerta()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== APP ===== -->
 <div id="appPage">
+  <div id="alertasBannerContainer" style="position:fixed;top:16px;right:16px;z-index:9999;display:none;flex-direction:column;gap:10px;max-width:340px"></div>
   <div class="app-container">
     <div class="sidebar">
       <div class="sidebar-logo">
@@ -662,6 +688,7 @@ tbody tr:hover{background:var(--surface2)}
       <div class="nav-item" data-page="relatorio" onclick="navigateTo('relatorio')"><span class="icon">📄</span><span>Relatório</span></div>
       <div class="nav-item" data-page="maquinarios" onclick="navigateTo('maquinarios')"><span class="icon">🌲</span><span>Maquinários</span></div>
       <div class="nav-item" data-page="comboio" onclick="navigateTo('comboio')"><span class="icon">🛢️</span><span>Comboio</span></div>
+      <div class="nav-item" data-page="alertas" onclick="navigateTo('alertas')"><span class="icon">🔔</span><span>Alertas</span></div>
       <div class="nav-item freq-visible" data-page="frequencia" onclick="navigateTo('frequencia')" style="display:none"><span class="icon">📅</span><span>Frequência</span></div>
       <div class="nav-item diretor-only" data-page="historico" onclick="navigateTo('historico')" style="display:none"><span class="icon">📋</span><span>Histórico</span></div>
       <div class="nav-item admin-only" data-page="usuarios" onclick="navigateTo('usuarios')" style="display:none"><span class="icon">👥</span><span>Usuários</span></div>
@@ -920,6 +947,12 @@ tbody tr:hover{background:var(--surface2)}
           </div>
         </div>
         <div class="filters" id="filtersConsumo"></div>
+
+        <!-- Gauge de consumo médio da frota -->
+        <div class="table-container" style="margin-bottom:20px">
+          <div class="table-header"><h3>⛽ Consumo Médio da Frota</h3></div>
+          <div id="cnsGauge" style="padding:12px"></div>
+        </div>
 
         <!-- Tabela Consumo Médio -->
         <div class="table-container" style="margin-bottom:20px">
@@ -1197,6 +1230,22 @@ tbody tr:hover{background:var(--surface2)}
         </div>
       </div>
 
+      <!-- ALERTAS PAGE -->
+      <div class="page" id="pageAlertas">
+        <div class="page-header">
+          <h1 class="page-title">🔔 Alertas</h1>
+          <button class="btn btn-primary btn-sm" onclick="openNovoAlertaModal()">➕ Novo alerta</button>
+        </div>
+        <div class="table-container" style="margin-bottom:16px">
+          <div class="table-header"><h3>Ativos agora</h3></div>
+          <div id="alertasAtivosContainer" style="padding:12px"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>Todos os alertas</h3></div>
+          <div class="table-scroll" id="alertasTodosContainer"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1233,7 +1282,7 @@ tbody tr:hover{background:var(--surface2)}
 
 <script>
 // ==================== DATA (carregado do Google Sheets) ====================
-var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [] };
+var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [] };
 var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
@@ -1324,11 +1373,11 @@ function loadFromSheets(callback) {
     sbFetchAll('locais'), sbFetchAll('motoristas'), sbFetchAll('caminhoes'),
     sbFetchAll('classes_despesa'), sbFetchAll('profiles'), sbFetchAll('maquinas'),
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
-    sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'),
+    sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
-        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14];
+        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -1409,6 +1458,12 @@ function loadFromSheets(callback) {
     DB.frequencia = freqR.map(function(x){ return {
       ID:x.id, DATA:x.data, MOTORISTA:x.motorista, CODIGO:x.codigo,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+    };});
+
+    DB.alertas = alertasR.map(function(x){ return {
+      ID:x.id, DESCRICAO:x.descricao, TIPO_GATILHO:x.tipo_gatilho, DATA_ALVO:x.data_alvo,
+      PLACA:x.placa, KM_ALVO:x.km_alvo, STATUS:x.status, MOTIVO:x.motivo_nao_concluido,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id, CRIADO_EM:x.criado_em
     };});
 
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
@@ -1574,6 +1629,11 @@ function _rotearAction(action, data) {
       });
     }
 
+    // ---------- ALERTAS ----------
+    case 'addAlerta': return sb.from('alertas').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateAlerta': return sb.from('alertas').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteAlerta': return sb.from('alertas').delete().eq('id', data.id).then(_unwrap);
+
     // ---------- USUÁRIOS (gestão de contas via Edge Function, única peça com acesso à service_role) ----------
     case 'addUsuario':
     case 'updateUsuario':
@@ -1665,7 +1725,7 @@ function openEditModal(key){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+'>';
     html+='<label>'+f.label+'</label>';
     if(f.type==='select'){
-      var opts=BASE[f.src]||[];
+      var opts=(BASE[f.src]||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
       html+='<select id="'+id+'"><option value="">—</option>';
       opts.forEach(function(o){
         var sel=String(o)===String(val)?' selected':'';
@@ -2103,6 +2163,21 @@ function parseKM(v){
   return parseFloat(s);
 }
 
+// Km atual (mais alto já registrado) de uma placa, a partir de DB.cadastro.
+function kmAtualPorPlaca(placa){
+  if(!placa) return null;
+  var alvo=String(placa).replace(/\s+/g,'');
+  var km=null;
+  DB.cadastro.forEach(function(r){
+    if(!r.PLACA||!r.KM) return;
+    if(String(r.PLACA).replace(/\s+/g,'')!==alvo) return;
+    var v=parseKM(r.KM);
+    if(isNaN(v)||v<=0) return;
+    if(km===null||v>km) km=v;
+  });
+  return km;
+}
+
 function clearFilters(ids,rebuildFn){
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   if(rebuildFn) rebuildFn();
@@ -2390,6 +2465,8 @@ function carregarPerfilELogar(user){
 
 function enterApp(){
   _comboioAlertDismissed=false;
+  _alertasDismissed={};
+  _alertasBannerVisible=false;
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appPage').style.display='block';
   // Show/hide admin elements
@@ -2409,6 +2486,7 @@ function enterApp(){
   document.getElementById('userBadge').innerHTML='<span>👤</span><span class="user-name">'+currentUserData.nome+'</span><span class="user-role '+roleClass+'">'+roleLabel+'</span>';
   initApp();
   checkComboioAlert();
+  renderAlertasBanner();
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
   // outro usuário na mesma aba do navegador (sem dar F5), a última página aberta
   // (ex: Usuários, só de ADMIN) continuava visível pro novo usuário.
@@ -2455,7 +2533,7 @@ function navigateTo(page){
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
-  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia'};
+  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas'};
   document.getElementById(map[page]).classList.add('active');
   if(page==='producao') buildProducao();
   else if(page==='financeiro') buildFinanceiro();
@@ -2469,6 +2547,7 @@ function navigateTo(page){
   else if(page==='maquinarios') buildMaquinarios();
   else if(page==='comboio') buildComboio();
   else if(page==='frequencia') buildFrequencia();
+  else if(page==='alertas') buildAlertas();
   if(page==='cadastro') setTimeout(iniciarMascaras,100);
 }
 
@@ -2817,8 +2896,10 @@ function confirmMaqLocalDelete(){
 // Floresta automática pela DATA do abastecimento (via localização).
 // ============================================================
 var _maqAbEditId=null, _maqAbDelId=null;
-var MAQ_COMBUSTIVEIS=['Diesel S10','Diesel comum','Gasolina','Arla 32','Outro'];
+var MAQ_COMBUSTIVEIS=['Arla 32','Diesel comum','Diesel S10','Gasolina','Outro'];
 var MAQ_TANQUES=['Interno','Externo'];
+
+function _maqOrdAlfa(arr){ return (arr||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})}); }
 
 // Floresta onde a máquina estava NA DATA informada (período que contém a data)
 function maqFlorestaNaData(idMaquina, dataISO){
@@ -2840,9 +2921,12 @@ function maqMetrica(idMaquina){ var m=findMaqById(idMaquina); return m?(m.METRIC
 
 function _maqPopAbastSelects(){
   var sm=document.getElementById('maqAbFiltroMaq');
-  if(sm && sm.options.length<=1){ DB.maquinas.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
+  if(sm && sm.options.length<=1){
+    var maqsOrd=DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})});
+    maqsOrd.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); });
+  }
   var sf=document.getElementById('maqAbFiltroFloresta');
-  if(sf && sf.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
+  if(sf && sf.options.length<=1){ _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
 }
 
 function renderMaqAbastTable(){
@@ -2881,24 +2965,25 @@ function renderMaqAbastTable(){
 function _maqAbBuildForm(row){
   row=row||{};
   var mo='<option value="">—</option>';
-  DB.maquinas.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  var maqsOrdForm=DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})});
+  maqsOrdForm.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
   var co=''; MAQ_COMBUSTIVEIS.forEach(function(c){ co+='<option'+(String(row.TIPO_COMBUSTIVEL||'Diesel S10')===c?' selected':'')+'>'+c+'</option>'; });
   var curPosto=row.TANQUE_POSTO||''; var achouPosto=false;
   var to='<option value="">—</option>';
-  (BASE.localAbast||[]).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
+  _maqOrdAlfa(BASE.localAbast).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
   if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo)
   var fo='<option value="">— automático (pela localização) —</option>';
-  (BASE.localCarga||[]).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?fmt(num(row.LITROS),2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?fmt(num(row.PRECO_LITRO),2):'';
   var horVal=(row.HORIMETRO!=null&&row.HORIMETRO!=='')?num(row.HORIMETRO):'';
-  var kmVal=(row.KM!=null&&row.KM!=='')?num(row.KM):'';
+  var kmVal=(row.KM!=null&&row.KM!=='')?fmt(num(row.KM),2):'';
   return ''+
     '<div class="form-group"><label>Data *</label><input id="mab_data" type="date" value="'+_maqEsc(dataVal)+'"></div>'+
     '<div class="form-group"><label>Máquina *</label><select id="mab_maq" onchange="_maqAbToggleLeitura()">'+mo+'</select></div>'+
     '<div class="form-group" id="mab_horGrp"><label>Horímetro (h)</label><input id="mab_hor" type="number" step="0.1" value="'+_maqEsc(horVal)+'"></div>'+
-    '<div class="form-group" id="mab_kmGrp"><label>KM</label><input id="mab_km" type="number" step="1" value="'+_maqEsc(kmVal)+'"></div>'+
+    '<div class="form-group" id="mab_kmGrp"><label>KM</label><input id="mab_km" type="text" inputmode="decimal" value="'+_maqEsc(kmVal)+'"></div>'+
     '<div class="form-group"><label>Litros *</label><input id="mab_lit" type="text" inputmode="decimal" value="'+_maqEsc(litVal)+'"></div>'+
     '<div class="form-group"><label>Valor unitário (R$/L) *</label><input id="mab_pre" type="text" inputmode="decimal" value="'+_maqEsc(preVal)+'"></div>'+
     '<div class="form-group"><label>Valor total</label><input id="mab_tot" type="text" value="" readonly style="background:var(--surface2);font-weight:600"></div>'+
@@ -2930,8 +3015,9 @@ function openMaqAbastModal(id){
   var aaud=document.getElementById('maqAbAudit');
   if(_maqAbEditId){ aaud.innerHTML=_maqAuditTxt(row); aaud.style.display=''; } else { aaud.style.display='none'; }
   document.getElementById('maqAbModalGrid').innerHTML=_maqAbBuildForm(row);
-  mascaraNumero(document.getElementById('mab_lit'),4,2);
-  mascaraNumero(document.getElementById('mab_pre'),2,2);
+  mascaraNumero(document.getElementById('mab_lit'),LIMITES_CAMPOS.litros,2);
+  mascaraNumero(document.getElementById('mab_pre'),LIMITES_CAMPOS.valorUnit,2);
+  mascaraNumero(document.getElementById('mab_km'),LIMITES_CAMPOS.km,2);
   document.getElementById('mab_lit').addEventListener('input',_maqAbCalcTotal);
   document.getElementById('mab_pre').addEventListener('input',_maqAbCalcTotal);
   _maqAbToggleLeitura();
@@ -4170,11 +4256,11 @@ function buildManutencao(){
   // Compute KM by placa
   var kmByPlaca={};
   DB.cadastro.forEach(function(r){
-    if(!r.PLACA||!r.KM) return;
+    if(!r.PLACA) return;
     var placa=String(r.PLACA).replace(/\s+/g,'');
-    var km=parseKM(r.KM);
-    if(isNaN(km)||km<=0) return;
-    if(!kmByPlaca[placa]||km>kmByPlaca[placa]) kmByPlaca[placa]=km;
+    if(kmByPlaca[placa]!==undefined) return;
+    var km=kmAtualPorPlaca(placa);
+    if(km!==null) kmByPlaca[placa]=km;
   });
   // Last maintenance per placa+type
   var lastManut={};
@@ -4457,6 +4543,7 @@ function buildConsumo(){
   if(document.getElementById('fcDtIni')) document.getElementById('fcDtIni').value=consumoFiltro.dtIni||'';
   if(document.getElementById('fcDtFim')) document.getElementById('fcDtFim').value=consumoFiltro.dtFim||'';
 
+  renderConsumoGauge();
   renderConsumoPlacas();
   renderConsumoTops();
   renderConsumoAbastList();
@@ -4468,9 +4555,61 @@ function onConsumoFilterChange(){
   consumoFiltro.mes=document.getElementById('fcMes')?document.getElementById('fcMes').value:'';
   consumoFiltro.dtIni=document.getElementById('fcDtIni')?document.getElementById('fcDtIni').value:'';
   consumoFiltro.dtFim=document.getElementById('fcDtFim')?document.getElementById('fcDtFim').value:'';
+  renderConsumoGauge();
   renderConsumoPlacas();
   renderConsumoTops();
   renderConsumoAbastList();
+}
+
+// Faixas de km/L (caminhão): mesma régua usada na tabela por placa e no gauge da frota.
+function kmLStatus(kmL){
+  if(kmL>10) return {cor:'#ef4444', label:'Suspeito', icone:'🚨 ', tooltip:'Valor suspeito — caminhão geralmente faz entre 1 e 5 km/L. Verifique se há erro de digitação nos KMs lançados desta placa.'};
+  if(kmL>2.5) return {cor:'#f59e0b', label:'Atenção', icone:'⚠️ ', tooltip:'Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.'};
+  if(kmL>=1.5) return {cor:'#22c55e', label:'Normal', icone:'', tooltip:''};
+  return {cor:'#f59e0b', label:'Atenção', icone:'⚠️ ', tooltip:'Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.'};
+}
+
+// Consumo médio da frota (ponderado por km rodado), aplicando os filtros ativos.
+// Usa o mesmo método tanque-a-tanque de calcConsumoPlacasT2T: soma o km e o litro
+// tanque-a-tanque de todas as placas do período, em vez de tirar média simples das
+// médias — assim uma placa que rodou 10x mais não pesa igual a uma que rodou pouco.
+function calcConsumoMedioGeral(){
+  var placas=calcConsumoPlacasT2T();
+  if(!placas.length) return null;
+  var totalKm=0, totalLit=0;
+  placas.forEach(function(p){ totalKm+=p.km; totalLit+=(p.km/p.kmL); });
+  if(totalLit<=0) return null;
+  return {kmL:totalKm/totalLit, km:totalKm, placas:placas.length};
+}
+
+// Gauge (meia-lua) com o consumo médio da frota, faixa de 0 a 5 km/L.
+function renderConsumoGauge(){
+  var el=document.getElementById('cnsGauge');
+  if(!el) return;
+  var g=calcConsumoMedioGeral();
+  if(!g){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2);font-size:12px">Sem dados suficientes para calcular o consumo médio da frota.</div>';
+    return;
+  }
+  var st=kmLStatus(g.kmL);
+  var SCALE_MAX=5; // faixa "normal" de caminhão vai até ~2,5 km/L; 5 dá folga visual
+  var frac=Math.max(0,Math.min(1,g.kmL/SCALE_MAX));
+  var r=90, len=Math.PI*r; // comprimento do semicírculo
+  var filled=frac*len;
+  var h='<div style="display:flex;flex-direction:column;align-items:center;gap:4px">';
+  h+='<svg viewBox="0 0 220 130" style="width:100%;max-width:320px">';
+  h+='<path d="M20,110 A90,90 0 0 1 200,110" fill="none" stroke="var(--border)" stroke-width="16" stroke-linecap="round"/>';
+  h+='<path d="M20,110 A90,90 0 0 1 200,110" fill="none" stroke="'+st.cor+'" stroke-width="16" stroke-linecap="round" stroke-dasharray="'+filled.toFixed(1)+' '+len.toFixed(1)+'"/>';
+  h+='<text x="20" y="126" font-size="10" fill="var(--text2)" text-anchor="start">0</text>';
+  h+='<text x="200" y="126" font-size="10" fill="var(--text2)" text-anchor="end">'+SCALE_MAX+'+ km/L</text>';
+  h+='</svg>';
+  h+='<div style="text-align:center;margin-top:-30px">';
+  h+='<div style="font-family:JetBrains Mono,monospace;font-size:28px;font-weight:700;color:'+st.cor+'">'+numBR(g.kmL,2)+'</div>';
+  h+='<div style="font-size:11px;color:var(--text2)">km/L médio · '+g.placas+' placa'+(g.placas>1?'s':'')+' · '+numBR(Math.round(g.km))+' km rodados</div>';
+  h+='<div style="font-size:12px;font-weight:600;color:'+st.cor+';margin-top:4px"'+(st.tooltip?' title="'+st.tooltip.replace(/"/g,'&quot;')+'"':'')+'>'+st.icone+st.label+'</div>';
+  h+='</div>';
+  h+='</div>';
+  el.innerHTML=h;
 }
 
 // Calcula consumo médio por placa aplicando os 3 filtros
@@ -4627,29 +4766,9 @@ function renderConsumoPlacas(){
   h+='</tr></thead><tbody>';
   placas.forEach(function(p){
     // Cor do km/L baseado em faixas
-    var cor, icone='', tooltip='', rowBg='';
-    if(p.kmL>10){
-      // Suspeito (vermelho com alerta) — INALTERADO
-      cor='#ef4444';
-      icone='🚨 ';
-      tooltip='Valor suspeito — caminhão geralmente faz entre 1 e 5 km/L. Verifique se há erro de digitação nos KMs lançados desta placa.';
-      rowBg='background:rgba(239,68,68,0.06);';
-    } else if(p.kmL>2.5){
-      // Incomum (amarelo) — acima de 2,5 km/L
-      cor='#f59e0b';
-      icone='⚠️ ';
-      tooltip='Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.';
-      rowBg='background:rgba(245,158,11,0.04);';
-    } else if(p.kmL>=1.5){
-      // Normal (verde) — entre 1,5 e 2,5 km/L
-      cor='#22c55e';
-    } else {
-      // Incomum (amarelo) — abaixo de 1,5 km/L
-      cor='#f59e0b';
-      icone='⚠️ ';
-      tooltip='Valor incomum — pode ser caminhão leve ou pequeno erro nos dados.';
-      rowBg='background:rgba(245,158,11,0.04);';
-    }
+    var st=kmLStatus(p.kmL);
+    var cor=st.cor, icone=st.icone, tooltip=st.tooltip;
+    var rowBg=p.kmL>10?'background:rgba(239,68,68,0.06);':(cor==='#f59e0b'?'background:rgba(245,158,11,0.04);':'');
     var tipAttr=tooltip?' title="'+tooltip.replace(/"/g,'&quot;')+'"':'';
     h+='<tr style="border-top:1px solid var(--border);'+rowBg+'">';
     h+='<td style="padding:10px 14px;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--accent);font-weight:600">'+p.placa+'</td>';
@@ -7419,6 +7538,255 @@ function confirmTanqueDelete(){
   });
 }
 
+</script>
+<script>
+// ============================================================
+// ===== MÓDULO ALERTAS / LEMBRETES ==========================
+// Lembrete livre disparado por data ou por km atingido numa placa.
+// Fica "ativo" (aparece pra todo mundo) enquanto STATUS==='pendente' e a
+// condição bate. O botão OK do banner só esconde pela sessão (sem
+// persistência) — some de vez só quando o criador ou um ADMIN resolve
+// (concluído / não concluído + motivo).
+// ============================================================
+var _alertasDismissed={};
+var _alResolveId=null;
+var _alertasBannerVisible=false;
+
+// Beep curto (Web Audio API, sem arquivo de áudio) tocado quando o banner
+// passa de escondido pra visível — silencioso se o navegador bloquear.
+function _alTocarSom(){
+  try{
+    var Ctx=window.AudioContext||window.webkitAudioContext;
+    var ctx=new Ctx();
+    var now=ctx.currentTime;
+    // Timbre de sininho: alguns harmônicos afinados como os de um sino real
+    // (fundamental + parciais em ~2x/3x/4.2x), cada um com seu próprio decaimento.
+    var fundamental=1318.5; // E6
+    var parciais=[
+      {mult:1,    ganho:0.30, decaimento:0.9},
+      {mult:2.01, ganho:0.16, decaimento:0.7},
+      {mult:3.0,  ganho:0.09, decaimento:0.5},
+      {mult:4.2,  ganho:0.05, decaimento:0.35}
+    ];
+    parciais.forEach(function(p){
+      var o=ctx.createOscillator(), g=ctx.createGain();
+      o.type='sine';
+      o.frequency.value=fundamental*p.mult;
+      g.gain.setValueAtTime(0.0001,now);
+      g.gain.exponentialRampToValueAtTime(p.ganho,now+0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001,now+p.decaimento);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now);
+      o.stop(now+p.decaimento);
+    });
+  }catch(e){ /* autoplay bloqueado ou API indisponível — ignora */ }
+}
+
+function alertaIsAdmin(){ return !!(currentUserData && currentUserData.perfil==='ADMIN'); }
+function alertaEhDono(r){ return !!(currentUserData && r._usuarioId===currentUser); }
+function _alEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function findAlertaById(id){ id=String(id); for(var i=0;i<DB.alertas.length;i++){ if(String(DB.alertas[i].ID)===id) return DB.alertas[i]; } return null; }
+function _alHojeISO(){ return new Date().toISOString().slice(0,10); }
+
+function alertaEstaAtivo(a){
+  if(!a || a.STATUS!=='pendente') return false;
+  if(a.TIPO_GATILHO==='data'){
+    if(!a.DATA_ALVO) return false;
+    return String(a.DATA_ALVO).slice(0,10)<=_alHojeISO();
+  }
+  if(a.TIPO_GATILHO==='km'){
+    var kmAtual=kmAtualPorPlaca(a.PLACA);
+    return kmAtual!=null && kmAtual>=num(a.KM_ALVO);
+  }
+  return false;
+}
+function alertasAtivosList(){ return (DB.alertas||[]).filter(alertaEstaAtivo); }
+
+// ---------- Banner global (aparece em qualquer aba) ----------
+function renderAlertasBanner(){
+  var cont=document.getElementById('alertasBannerContainer');
+  if(!cont) return;
+  var ativos=alertasAtivosList().filter(function(a){ return !_alertasDismissed[a.ID]; });
+  if(!ativos.length){ cont.innerHTML=''; cont.style.display='none'; _alertasBannerVisible=false; return; }
+  var h='';
+  ativos.forEach(function(a){
+    var gat=a.TIPO_GATILHO==='data'
+      ? ('📅 alvo: '+formatDateBR(a.DATA_ALVO))
+      : ('🚚 '+_alEsc(a.PLACA)+' atingiu '+fmt(num(a.KM_ALVO),0)+' km');
+    h+='<div style="background:var(--surface);border:1px solid var(--red);border-left:5px solid var(--red);border-radius:10px;padding:12px 14px;box-shadow:0 4px 14px rgba(0,0,0,.25)">'+
+       '<div style="font-weight:700;font-size:13px">🔔 '+_alEsc(a.DESCRICAO)+'</div>'+
+       '<div style="font-size:12px;color:var(--text2);margin:4px 0 10px">'+gat+'</div>'+
+       '<div style="text-align:right"><button class="btn btn-primary btn-sm" onclick="dismissAlertaBanner(\''+a.ID+'\')">OK</button></div>'+
+       '</div>';
+  });
+  cont.innerHTML=h;
+  cont.style.display='flex';
+  if(!_alertasBannerVisible) _alTocarSom();
+  _alertasBannerVisible=true;
+}
+function dismissAlertaBanner(id){
+  _alertasDismissed[id]=true;
+  renderAlertasBanner();
+}
+
+// ---------- Página Alertas ----------
+function buildAlertas(){ renderAlertasTable(); }
+
+function renderAlertasTable(){
+  var contAtivos=document.getElementById('alertasAtivosContainer');
+  var contTodos=document.getElementById('alertasTodosContainer');
+  if(!contAtivos||!contTodos) return;
+
+  var ativos=alertasAtivosList();
+  if(!ativos.length){
+    contAtivos.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2)">Nenhum alerta ativo no momento.</div>';
+  } else {
+    var h='';
+    ativos.forEach(function(a){ h+=_alCard(a); });
+    contAtivos.innerHTML=h;
+  }
+
+  var todos=(DB.alertas||[]).slice().sort(function(a,b){ return String(b.CRIADO_EM||'').localeCompare(String(a.CRIADO_EM||'')); });
+  if(!todos.length){ contTodos.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2)">Nenhum alerta cadastrado.</div>'; return; }
+  var h2='<table class="maq-table"><thead><tr><th>Descrição</th><th>Gatilho</th><th>Status</th><th>Criado por</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  todos.forEach(function(a){
+    var gat=a.TIPO_GATILHO==='data'
+      ? ('📅 '+formatDateBR(a.DATA_ALVO))
+      : ('🚚 '+_alEsc(a.PLACA)+' @ '+fmt(num(a.KM_ALVO),0)+' km');
+    var canResolve=(a.STATUS==='pendente') && (alertaEhDono(a)||alertaIsAdmin());
+    var acts=canResolve
+      ? '<span class="maq-act" title="Resolver" onclick="abrirResolverAlertaModal(\''+a.ID+'\')">✅</span>'
+      : '<span style="color:var(--text2)">—</span>';
+    h2+='<tr><td>'+_alEsc(a.DESCRICAO)+'</td><td>'+gat+'</td><td>'+_alStatusChip(a)+'</td><td>'+_alEsc(a.USUARIO||'-')+'</td><td style="text-align:center">'+acts+'</td></tr>';
+  });
+  h2+='</tbody></table>';
+  contTodos.innerHTML=h2;
+}
+
+function _alStatusChip(a){
+  if(a.STATUS==='concluido') return '<span class="maq-chip maq-chip-g">Concluído</span>';
+  if(a.STATUS==='nao_concluido') return '<span class="maq-chip maq-chip-y" title="'+_alEsc(a.MOTIVO||'')+'">Não concluído</span>';
+  return '<span class="maq-chip maq-chip-gray">Pendente</span>';
+}
+
+function _alCard(a){
+  var gat=a.TIPO_GATILHO==='data'
+    ? ('Data alvo: '+formatDateBR(a.DATA_ALVO))
+    : ('Placa '+_alEsc(a.PLACA)+' · KM alvo: '+fmt(num(a.KM_ALVO),0));
+  var canResolve=alertaEhDono(a)||alertaIsAdmin();
+  return '<div style="border:1px solid var(--red);border-left:5px solid var(--red);border-radius:10px;padding:12px 14px;margin-bottom:10px">'+
+    '<div style="font-weight:700">🔔 '+_alEsc(a.DESCRICAO)+'</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin:4px 0 8px">'+gat+' · criado por '+_alEsc(a.USUARIO||'-')+'</div>'+
+    (canResolve?'<button class="btn btn-secondary btn-sm" onclick="abrirResolverAlertaModal(\''+a.ID+'\')">✅ Resolver</button>':'')+
+    '</div>';
+}
+
+// ---------- Modal: Novo Alerta ----------
+function _alBuildNovoForm(){
+  var po='<option value="">—</option>';
+  (BASE.placas||[]).forEach(function(p){ po+='<option>'+_alEsc(p)+'</option>'; });
+  return ''+
+    '<div class="form-group" style="grid-column:1/-1"><label>Descrição *</label><textarea id="al_desc" rows="3" placeholder="ex: Trocar pastilha de freio"></textarea></div>'+
+    '<div class="form-group" style="grid-column:1/-1"><label>Disparar por *</label>'+
+      '<div style="display:flex;gap:16px;margin-top:4px">'+
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="radio" name="al_tipo" value="data" checked onchange="_alToggleTipo()"> Data</label>'+
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="radio" name="al_tipo" value="km" onchange="_alToggleTipo()"> KM de uma placa</label>'+
+      '</div>'+
+    '</div>'+
+    '<div class="form-group" id="al_dataGrp"><label>Data alvo *</label><input id="al_data" type="date"></div>'+
+    '<div class="form-group" id="al_placaGrp" style="display:none"><label>Placa *</label><select id="al_placa">'+po+'</select></div>'+
+    '<div class="form-group" id="al_kmGrp" style="display:none"><label>KM alvo *</label><input id="al_km" type="number" step="1" placeholder="ex: 250000"></div>';
+}
+function _alToggleTipo(){
+  var tipo=document.querySelector('input[name="al_tipo"]:checked').value;
+  document.getElementById('al_dataGrp').style.display=tipo==='data'?'':'none';
+  document.getElementById('al_placaGrp').style.display=tipo==='km'?'':'none';
+  document.getElementById('al_kmGrp').style.display=tipo==='km'?'':'none';
+}
+function openNovoAlertaModal(){
+  document.getElementById('alModalGrid').innerHTML=_alBuildNovoForm();
+  document.getElementById('alModalOverlay').classList.add('show');
+}
+function closeNovoAlertaModal(){ document.getElementById('alModalOverlay').classList.remove('show'); }
+function salvarAlerta(){
+  var desc=document.getElementById('al_desc').value.trim();
+  if(!desc){ showToast('Descreva o alerta',true); return; }
+  var tipo=document.querySelector('input[name="al_tipo"]:checked').value;
+  var row={DESCRICAO:desc, TIPO_GATILHO:tipo};
+  if(tipo==='data'){
+    var d=document.getElementById('al_data').value;
+    if(!d){ showToast('Informe a data alvo',true); return; }
+    row.DATA_ALVO=d;
+  } else {
+    var placa=document.getElementById('al_placa').value;
+    var km=document.getElementById('al_km').value;
+    if(!placa){ showToast('Selecione a placa',true); return; }
+    if(!km){ showToast('Informe o KM alvo',true); return; }
+    row.PLACA=placa;
+    row.KM_ALVO=num(km);
+  }
+  var btn=document.getElementById('alSalvarBtn'); if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
+  saveToSheets('addAlerta', row, function(ok,res){
+    if(btn){ btn.disabled=false; btn.textContent='💾 Salvar'; }
+    if(!ok){ showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true); return; }
+    showToast('✅ Alerta criado!');
+    closeNovoAlertaModal();
+    loadFromSheets(function(){
+      renderAlertasBanner();
+      if(document.getElementById('pageAlertas').classList.contains('active')) renderAlertasTable();
+    });
+  });
+}
+
+// ---------- Modal: Resolver Alerta ----------
+function _alBuildResolverForm(){
+  return ''+
+    '<div class="form-group" style="grid-column:1/-1"><label>Resultado *</label>'+
+      '<div style="display:flex;gap:16px;margin-top:4px">'+
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="radio" name="al_resultado" value="concluido" checked onchange="_alToggleMotivo()"> Concluído</label>'+
+        '<label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:normal"><input type="radio" name="al_resultado" value="nao_concluido" onchange="_alToggleMotivo()"> Não concluído</label>'+
+      '</div>'+
+    '</div>'+
+    '<div class="form-group" id="al_motivoGrp" style="display:none;grid-column:1/-1"><label>Motivo *</label><textarea id="al_motivo" rows="2" placeholder="Por que não foi concluído?"></textarea></div>';
+}
+function _alToggleMotivo(){
+  var v=document.querySelector('input[name="al_resultado"]:checked').value;
+  document.getElementById('al_motivoGrp').style.display=v==='nao_concluido'?'':'none';
+}
+function abrirResolverAlertaModal(id){
+  var r=findAlertaById(id);
+  if(!r){ showToast('Alerta não encontrado',true); return; }
+  if(!(alertaEhDono(r)||alertaIsAdmin())){ showToast('❌ Só quem criou o alerta ou um ADMIN pode resolvê-lo',true); return; }
+  _alResolveId=String(id);
+  document.getElementById('alResolverDesc').textContent=r.DESCRICAO;
+  document.getElementById('alResolverGrid').innerHTML=_alBuildResolverForm();
+  document.getElementById('alResolverOverlay').classList.add('show');
+}
+function closeResolverAlertaModal(){ document.getElementById('alResolverOverlay').classList.remove('show'); _alResolveId=null; }
+function confirmarResolverAlerta(){
+  if(!_alResolveId) return;
+  var v=document.querySelector('input[name="al_resultado"]:checked').value;
+  var row={status:v, resolvido_em:new Date().toISOString()};
+  if(v==='nao_concluido'){
+    var motivo=document.getElementById('al_motivo').value.trim();
+    if(!motivo){ showToast('Descreva o motivo',true); return; }
+    row.motivo_nao_concluido=motivo;
+  } else {
+    row.motivo_nao_concluido=null;
+  }
+  var btn=document.getElementById('alResolverBtn'); if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
+  saveToSheets('updateAlerta', {id:_alResolveId, row:row}, function(ok,res){
+    if(btn){ btn.disabled=false; btn.textContent='💾 Salvar'; }
+    if(!ok){ showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true); return; }
+    showToast('✅ Alerta resolvido!');
+    closeResolverAlertaModal();
+    loadFromSheets(function(){
+      renderAlertasBanner();
+      if(document.getElementById('pageAlertas').classList.contains('active')) renderAlertasTable();
+    });
+  });
+}
+// ===== FIM MÓDULO ALERTAS =====
 </script>
 </body>
 </html>

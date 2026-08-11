@@ -158,6 +158,23 @@ create policy cadastro_update on public.cadastro
 create policy cadastro_delete on public.cadastro
   for delete using (public.is_admin());
 
+-- ---------- ALERTAS ----------
+-- Aplicada via supabase/migrations/0009_alertas.sql. Qualquer usuário logado
+-- cria; só o próprio criador ou ADMIN edita (resolve); exclusão só ADMIN.
+alter table public.alertas enable row level security;
+
+create policy alertas_select on public.alertas
+  for select using (auth.uid() is not null);
+
+create policy alertas_insert on public.alertas
+  for insert with check (auth.uid() is not null);
+
+create policy alertas_update on public.alertas
+  for update using (public.is_admin() or usuario_id = auth.uid());
+
+create policy alertas_delete on public.alertas
+  for delete using (public.is_admin());
+
 -- ============================================================
 -- NOVO USUÁRIO: cria profile automaticamente quando alguém é criado em auth.users
 -- (usado no script de migração de usuários da Fase B, via API admin do Supabase)

@@ -232,6 +232,21 @@ function parseKM(v){
   return parseFloat(s);
 }
 
+// Km atual (mais alto já registrado) de uma placa, a partir de DB.cadastro.
+function kmAtualPorPlaca(placa){
+  if(!placa) return null;
+  var alvo=String(placa).replace(/\s+/g,'');
+  var km=null;
+  DB.cadastro.forEach(function(r){
+    if(!r.PLACA||!r.KM) return;
+    if(String(r.PLACA).replace(/\s+/g,'')!==alvo) return;
+    var v=parseKM(r.KM);
+    if(isNaN(v)||v<=0) return;
+    if(km===null||v>km) km=v;
+  });
+  return km;
+}
+
 function clearFilters(ids,rebuildFn){
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   if(rebuildFn) rebuildFn();

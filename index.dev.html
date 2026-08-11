@@ -250,8 +250,34 @@
   </div>
 </div>
 
+<!-- ===== MODAL NOVO ALERTA ===== -->
+<div class="modal-overlay" id="alModalOverlay" onclick="if(event.target===this)closeNovoAlertaModal()">
+  <div class="modal">
+    <h2>🔔 Novo Alerta</h2>
+    <div class="maq-grid" id="alModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeNovoAlertaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="alSalvarBtn" onclick="salvarAlerta()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL RESOLVER ALERTA ===== -->
+<div class="modal-overlay" id="alResolverOverlay" onclick="if(event.target===this)closeResolverAlertaModal()">
+  <div class="modal">
+    <h2>✅ Resolver Alerta</h2>
+    <div id="alResolverDesc" style="font-size:13px;color:var(--text2);margin-bottom:10px"></div>
+    <div class="maq-grid" id="alResolverGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeResolverAlertaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="alResolverBtn" onclick="confirmarResolverAlerta()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== APP ===== -->
 <div id="appPage">
+  <div id="alertasBannerContainer" style="position:fixed;top:16px;right:16px;z-index:9999;display:none;flex-direction:column;gap:10px;max-width:340px"></div>
   <div class="app-container">
     <div class="sidebar">
       <div class="sidebar-logo">
@@ -269,6 +295,7 @@
       <div class="nav-item" data-page="relatorio" onclick="navigateTo('relatorio')"><span class="icon">📄</span><span>Relatório</span></div>
       <div class="nav-item" data-page="maquinarios" onclick="navigateTo('maquinarios')"><span class="icon">🌲</span><span>Maquinários</span></div>
       <div class="nav-item" data-page="comboio" onclick="navigateTo('comboio')"><span class="icon">🛢️</span><span>Comboio</span></div>
+      <div class="nav-item" data-page="alertas" onclick="navigateTo('alertas')"><span class="icon">🔔</span><span>Alertas</span></div>
       <div class="nav-item freq-visible" data-page="frequencia" onclick="navigateTo('frequencia')" style="display:none"><span class="icon">📅</span><span>Frequência</span></div>
       <div class="nav-item diretor-only" data-page="historico" onclick="navigateTo('historico')" style="display:none"><span class="icon">📋</span><span>Histórico</span></div>
       <div class="nav-item admin-only" data-page="usuarios" onclick="navigateTo('usuarios')" style="display:none"><span class="icon">👥</span><span>Usuários</span></div>
@@ -527,6 +554,12 @@
           </div>
         </div>
         <div class="filters" id="filtersConsumo"></div>
+
+        <!-- Gauge de consumo médio da frota -->
+        <div class="table-container" style="margin-bottom:20px">
+          <div class="table-header"><h3>⛽ Consumo Médio da Frota</h3></div>
+          <div id="cnsGauge" style="padding:12px"></div>
+        </div>
 
         <!-- Tabela Consumo Médio -->
         <div class="table-container" style="margin-bottom:20px">
@@ -804,6 +837,22 @@
         </div>
       </div>
 
+      <!-- ALERTAS PAGE -->
+      <div class="page" id="pageAlertas">
+        <div class="page-header">
+          <h1 class="page-title">🔔 Alertas</h1>
+          <button class="btn btn-primary btn-sm" onclick="openNovoAlertaModal()">➕ Novo alerta</button>
+        </div>
+        <div class="table-container" style="margin-bottom:16px">
+          <div class="table-header"><h3>Ativos agora</h3></div>
+          <div id="alertasAtivosContainer" style="padding:12px"></div>
+        </div>
+        <div class="table-container">
+          <div class="table-header"><h3>Todos os alertas</h3></div>
+          <div class="table-scroll" id="alertasTodosContainer"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -866,5 +915,6 @@
 <script src="js/chart-defaults.js"></script>
 <script src="js/mascaras.js"></script>
 <script src="js/comboio.js"></script>
+<script src="js/alertas.js"></script>
 </body>
 </html>

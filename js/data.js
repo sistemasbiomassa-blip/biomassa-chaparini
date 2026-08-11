@@ -69,11 +69,11 @@ function loadFromSheets(callback) {
     sbFetchAll('locais'), sbFetchAll('motoristas'), sbFetchAll('caminhoes'),
     sbFetchAll('classes_despesa'), sbFetchAll('profiles'), sbFetchAll('maquinas'),
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
-    sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'),
+    sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
-        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14];
+        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -154,6 +154,12 @@ function loadFromSheets(callback) {
     DB.frequencia = freqR.map(function(x){ return {
       ID:x.id, DATA:x.data, MOTORISTA:x.motorista, CODIGO:x.codigo,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+    };});
+
+    DB.alertas = alertasR.map(function(x){ return {
+      ID:x.id, DESCRICAO:x.descricao, TIPO_GATILHO:x.tipo_gatilho, DATA_ALVO:x.data_alvo,
+      PLACA:x.placa, KM_ALVO:x.km_alvo, STATUS:x.status, MOTIVO:x.motivo_nao_concluido,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id, CRIADO_EM:x.criado_em
     };});
 
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
@@ -319,6 +325,11 @@ function _rotearAction(action, data) {
       });
     }
 
+    // ---------- ALERTAS ----------
+    case 'addAlerta': return sb.from('alertas').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateAlerta': return sb.from('alertas').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteAlerta': return sb.from('alertas').delete().eq('id', data.id).then(_unwrap);
+
     // ---------- USUÁRIOS (gestão de contas via Edge Function, única peça com acesso à service_role) ----------
     case 'addUsuario':
     case 'updateUsuario':
@@ -410,7 +421,7 @@ function openEditModal(key){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+'>';
     html+='<label>'+f.label+'</label>';
     if(f.type==='select'){
-      var opts=BASE[f.src]||[];
+      var opts=(BASE[f.src]||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
       html+='<select id="'+id+'"><option value="">—</option>';
       opts.forEach(function(o){
         var sel=String(o)===String(val)?' selected':'';

@@ -7,11 +7,11 @@ function buildManutencao(){
   // Compute KM by placa
   var kmByPlaca={};
   DB.cadastro.forEach(function(r){
-    if(!r.PLACA||!r.KM) return;
+    if(!r.PLACA) return;
     var placa=String(r.PLACA).replace(/\s+/g,'');
-    var km=parseKM(r.KM);
-    if(isNaN(km)||km<=0) return;
-    if(!kmByPlaca[placa]||km>kmByPlaca[placa]) kmByPlaca[placa]=km;
+    if(kmByPlaca[placa]!==undefined) return;
+    var km=kmAtualPorPlaca(placa);
+    if(km!==null) kmByPlaca[placa]=km;
   });
   // Last maintenance per placa+type
   var lastManut={};
