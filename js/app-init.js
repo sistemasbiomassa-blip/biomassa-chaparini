@@ -3,6 +3,8 @@ function initApp(){
   populateSelects();
   renderManutRealTable();
   renderManutProgTable();
+  renderGarantiaTable();
+  renderGarantiaPgTable();
   renderLocaisTable();
   document.getElementById('fData').value=new Date().toISOString().slice(0,10);
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);

@@ -189,6 +189,108 @@
   </div>
 </div>
 
+<!-- ===== MODAL TIPO DE MANUTENÇÃO (novo/editar) ===== -->
+<div class="modal-overlay" id="manutProgModalOverlay" onclick="if(event.target===this)closeManutProgModal()">
+  <div class="modal">
+    <h2 id="manutProgModalTitle">🔧 Novo Tipo de Manutenção</h2>
+    <div class="maq-grid" id="manutProgModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">Intervalo e alertas são opcionais — deixe em branco para um tipo "só de registro", sem controle de km.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeManutProgModal()">Cancelar</button>
+      <button class="btn btn-primary" id="manutProgSalvarBtn" onclick="salvarManutProg()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR TIPO DE MANUTENÇÃO ===== -->
+<div class="modal-overlay" id="manutProgDelOverlay" onclick="if(event.target===this)closeManutProgDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir tipo de manutenção?</h3>
+    <div id="manutProgDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeManutProgDelete()">Cancelar</button>
+      <button class="btn-danger" id="manutProgDelBtn" onclick="confirmManutProgDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL GARANTIA (novo/editar) ===== -->
+<div class="modal-overlay" id="garModalOverlay" onclick="if(event.target===this)closeGarantiaModal()">
+  <div class="modal">
+    <h2 id="garModalTitle">🛡️ Nova Garantia</h2>
+    <div class="maq-grid" id="garModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">Sai da garantia quando a data OU o km limite vencer — o que vier primeiro.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeGarantiaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="garSalvarBtn" onclick="salvarGarantia()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR GARANTIA ===== -->
+<div class="modal-overlay" id="garDelOverlay" onclick="if(event.target===this)closeGarantiaDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir garantia?</h3>
+    <div id="garDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeGarantiaDelete()">Cancelar</button>
+      <button class="btn-danger" id="garDelBtn" onclick="confirmGarantiaDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL INTERVALO DE GARANTIA POR PLACA (novo/editar) ===== -->
+<div class="modal-overlay" id="garPgModalOverlay" onclick="if(event.target===this)closeGarantiaPgModal()">
+  <div class="modal">
+    <h2 id="garPgModalTitle">📏 Novo Intervalo (Garantia)</h2>
+    <div class="maq-grid" id="garPgModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeGarantiaPgModal()">Cancelar</button>
+      <button class="btn btn-primary" id="garPgSalvarBtn" onclick="salvarGarantiaPg()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR INTERVALO DE GARANTIA ===== -->
+<div class="modal-overlay" id="garPgDelOverlay" onclick="if(event.target===this)closeGarantiaPgDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir intervalo?</h3>
+    <div id="garPgDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeGarantiaPgDelete()">Cancelar</button>
+      <button class="btn-danger" id="garPgDelBtn" onclick="confirmGarantiaPgDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EDITAR MANUTENÇÃO REALIZADA (Detalhamento) ===== -->
+<div class="modal-overlay" id="mrModalOverlay" onclick="if(event.target===this)closeManutRealModal()">
+  <div class="modal">
+    <h2>✏️ Editar Manutenção Realizada</h2>
+    <div class="maq-grid" id="mrModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeManutRealModal()">Cancelar</button>
+      <button class="btn btn-primary" id="mrSalvarBtn" onclick="salvarManutRealEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR MANUTENÇÃO REALIZADA ===== -->
+<div class="modal-overlay" id="mrDelOverlay" onclick="if(event.target===this)closeManutRealDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir manutenção realizada?</h3>
+    <div id="mrDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeManutRealDelete()">Cancelar</button>
+      <button class="btn-danger" id="mrDelBtn" onclick="confirmManutRealDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TANQUE (novo/editar) ===== -->
 <div class="modal-overlay" id="tanqueModalOverlay" onclick="if(event.target===this)closeTanqueModal()">
   <div class="modal">
@@ -316,6 +418,7 @@
           <div class="tab active" onclick="switchTab(this,'tabProdFin')">Produção / Financeiro</div>
           <div class="tab" onclick="switchTab(this,'tabManutReal')">Manutenção Realizada</div>
           <div class="tab" onclick="switchTab(this,'tabManutProg')">Manutenção Programada</div>
+          <div class="tab" onclick="switchTab(this,'tabGarantia')" id="tabGarantiaBtn" style="display:none">Garantia</div>
           <div class="tab" onclick="switchTab(this,'tabLocais')" id="tabLocaisBtn" style="display:none">Cadastro de Locais</div>
           <div class="tab" onclick="switchTab(this,'tabMotoristas')" id="tabMotoristasBtn" style="display:none">Motoristas</div>
           <div class="tab" onclick="switchTab(this,'tabCaminhoes')" id="tabCaminhoesBtn" style="display:none">Caminhões</div>
@@ -399,6 +502,11 @@
                 <div class="form-group"><label>KM na Manutenção *</label><input type="number" id="fmKM"></div>
               </div>
               <div class="form-row">
+                <div class="form-group"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="fmValor" placeholder="ex: 350,00"></div>
+                <div class="form-group"><label>Local do Serviço</label><input type="text" id="fmLocalServico" placeholder="ex: Oficina do Zé Diesel"></div>
+                <div class="form-group"><label>Nota Fiscal</label><input type="text" id="fmNotaFiscal" placeholder="ex: NF 12345"></div>
+              </div>
+              <div class="form-row">
                 <div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="fmObs" rows="2"></textarea></div>
               </div>
             </div>
@@ -412,8 +520,19 @@
 
         <div class="tab-content" id="tabManutProg">
           <div class="table-container">
-            <div class="table-header"><h3>Manutenções Programadas</h3><button class="btn btn-sm btn-secondary" onclick="addManutProg()">+ Adicionar Tipo</button></div>
+            <div class="table-header"><h3>Catálogo de Tipos de Manutenção</h3><button class="btn btn-sm btn-secondary" onclick="openManutProgModal()">+ Novo Tipo</button></div>
             <div class="table-scroll" id="tblManutProgContainer"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tabGarantia">
+          <div class="table-container">
+            <div class="table-header"><h3>🛡️ Caminhões em Garantia</h3><button class="btn btn-sm btn-secondary" onclick="openGarantiaModal()">+ Nova Garantia</button></div>
+            <div class="table-scroll" id="tblGarantiaContainer"></div>
+          </div>
+          <div class="table-container" style="margin-top:16px">
+            <div class="table-header"><h3>📏 Intervalos por Placa (Garantia)</h3><button class="btn btn-sm btn-secondary" onclick="openGarantiaPgModal()">+ Novo Intervalo</button></div>
+            <div class="table-scroll" id="tblGarantiaPgContainer"></div>
           </div>
         </div>
 
@@ -524,24 +643,46 @@
       <!-- MANUTENCAO PAGE -->
       <div class="page" id="pageManutencao">
         <div class="page-header"><h1 class="page-title">🔧 Manutenção</h1></div>
-        <div class="manut-filter-bar" id="filtersManut"></div>
-        <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
-        <div class="kpi-row" id="kpiManut"></div>
-        <div class="manut-main-grid">
-          <div class="manut-panel" id="manutMatrizPanel">
-            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+
+        <div class="manut-view-tabs">
+          <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
+          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
+        </div>
+
+        <div id="manutViewFora">
+          <div class="manut-filter-bar" id="filtersManut"></div>
+          <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
+          <div class="kpi-row" id="kpiManut"></div>
+          <div class="manut-main-grid">
+            <div class="manut-panel" id="manutMatrizPanel">
+              <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
+              <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+            </div>
+            <div class="manut-panel" id="manutKmPanel">
+              <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
+              <div id="manutKmList"></div>
+            </div>
           </div>
-          <div class="manut-panel" id="manutKmPanel">
-            <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
-            <div id="manutKmList"></div>
+          <div class="manut-bottom-grid">
+            <div class="manut-panel" id="manutHistPanel">
+              <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
+              <div id="manutHistList"></div>
+            </div>
           </div>
         </div>
-        <div class="manut-bottom-grid">
-          <div class="manut-panel" id="manutHistPanel">
-            <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
-            <div id="manutHistList"></div>
+
+        <div id="manutViewGarantia" style="display:none">
+          <div class="manut-filter-bar" id="filtersManutGar"></div>
+          <div class="kpi-row" id="kpiManutGar"></div>
+          <div class="table-container">
+            <div class="table-header"><h3>Matriz — Revisões em Garantia</h3><span class="chart-badge" id="manutGarBadgeTotal"></span></div>
+            <div class="table-scroll"><table><thead><tr><th>Placa</th><th>Garantia até</th><th>Tipo</th><th>Intervalo</th><th>KM Atual</th><th>Próxima Troca</th><th>Faltam</th><th>Status</th></tr></thead><tbody id="manutGarTableBody"></tbody></table></div>
           </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="filters" id="filtersManutDet"></div>
+          <div class="table-container" id="tblManutDet"></div>
         </div>
       </div>
 
@@ -898,6 +1039,7 @@
 <script src="js/maq-custo.js"></script>
 <script src="js/app-init.js"></script>
 <script src="js/cadastro.js"></script>
+<script src="js/garantia.js"></script>
 <script src="js/filters-common.js"></script>
 <script src="js/producao.js"></script>
 <script src="js/financeiro.js"></script>

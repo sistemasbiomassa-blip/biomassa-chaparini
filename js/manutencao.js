@@ -1,10 +1,27 @@
 // ==================== MANUTENCAO ====================
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
+var manutViewAtual='fora'; // 'fora' ou 'garantia'
 
+// Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
+// Detalhamento, que é comum às duas. Chamado por navigateTo/switchTab e por
+// qualquer tela que altera dados de manutenção (garantia, catálogo de tipos, etc).
 function buildManutencao(){
-  var colors=cc();
-  // Compute KM by placa
+  buildManutencaoFora();
+  buildManutencaoGarantia();
+  buildManutDetalhamento();
+}
+
+function showManutView(view){
+  manutViewAtual=view;
+  document.getElementById('manutViewFora').style.display=view==='fora'?'':'none';
+  document.getElementById('manutViewGarantia').style.display=view==='garantia'?'':'none';
+  document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
+  document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
+}
+
+// ---------- Helpers compartilhados entre Fora de Garantia e Em Garantia ----------
+function _manutCalcKmByPlaca(){
   var kmByPlaca={};
   DB.cadastro.forEach(function(r){
     if(!r.PLACA) return;
@@ -13,13 +30,37 @@ function buildManutencao(){
     var km=kmAtualPorPlaca(placa);
     if(km!==null) kmByPlaca[placa]=km;
   });
-  // Last maintenance per placa+type
+  return kmByPlaca;
+}
+function _manutCalcLastManut(){
   var lastManut={};
   DB.manutRealizada.forEach(function(r){
     var key=r.PLACA+'|'+r.TIPO_MANUTENCAO;
     if(!lastManut[key]||(r.DATA_MANUTENCAO>lastManut[key].DATA_MANUTENCAO)) lastManut[key]=r;
   });
-  var allPlacas=Object.keys(kmByPlaca).sort();
+  return lastManut;
+}
+// Status de um item (placa+tipo) dado o programa (intervalo/alertas), o último
+// registro de manutenção e o km atual da placa.
+function _manutStatusItem(prog,last,kmAtual){
+  var status,kmRest,proxM;
+  if(!last){status='x';kmRest=null;proxM=null;}
+  else{
+    proxM=num(last.KM_NA_MANUTENCAO)+num(prog.INTERVALO_KM);
+    kmRest=proxM-kmAtual;
+    if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
+    else if(kmRest<=num(prog['ALERTA ATENCAO'])) status='y';
+    else status='g';
+  }
+  return {status:status,kmRest:kmRest,proxM:proxM};
+}
+
+function buildManutencaoFora(){
+  var colors=cc();
+  var kmByPlaca=_manutCalcKmByPlaca();
+  var lastManut=_manutCalcLastManut();
+  // Fora de garantia = todas as placas com km conhecido, exceto as com garantia ainda ativa
+  var allPlacas=Object.keys(kmByPlaca).filter(function(p){return !placaEmGarantiaAtiva(p)}).sort();
   var progs=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO&&p.INTERVALO_KM});
 
   // Build alerts data
@@ -30,19 +71,11 @@ function buildManutencao(){
     progs.forEach(function(prog){
       var key=placa+'|'+prog.TIPO_MANUTENCAO;
       var last=lastManut[key];
-      var status,kmRest,proxM;
-      if(!last){status='x';kmRest=null;proxM=null;}
-      else{
-        hasOnlyX=false;
-        proxM=num(last.KM_NA_MANUTENCAO)+num(prog.INTERVALO_KM);
-        kmRest=proxM-kmAtual;
-        if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
-        else if(kmRest<=num(prog['ALERTA ATENCAO'])) status='y';
-        else status='g';
-      }
-      if(status==='r'){worst='r';}
-      else if(status==='y'&&worst!=='r'){worst='y';}
-      items.push({tipo:prog.TIPO_MANUTENCAO,status:status,kmRest:kmRest,proxM:proxM,intervalo:num(prog.INTERVALO_KM)});
+      var st=_manutStatusItem(prog,last,kmAtual);
+      if(last) hasOnlyX=false;
+      if(st.status==='r'){worst='r';}
+      else if(st.status==='y'&&worst!=='r'){worst='y';}
+      items.push({tipo:prog.TIPO_MANUTENCAO,status:st.status,kmRest:st.kmRest,proxM:st.proxM,intervalo:num(prog.INTERVALO_KM)});
     });
     if(hasOnlyX&&worst==='g') worst='x';
     alertsData.push({placa:placa,kmAtual:kmAtual,items:items,worst:worst});
@@ -247,11 +280,227 @@ function toggleManutTag(cor,el){
   var idx=manutFiltro.status.indexOf(cor);
   if(idx>=0) manutFiltro.status.splice(idx,1);
   else manutFiltro.status.push(cor);
-  buildManutencao();
+  buildManutencaoFora();
 }
 
 function resetManutFiltros(){
   manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
-  buildManutencao();
+  buildManutencaoFora();
+}
+
+// ==================== EM GARANTIA ====================
+var manutGarFiltro={placa:'',tipo:'',status:[]};
+
+function buildManutencaoGarantia(){
+  var kmByPlaca=_manutCalcKmByPlaca();
+  var lastManut=_manutCalcLastManut();
+  var garantiasAtivas=DB.garantiaCaminhoes.filter(garantiaEstaAtiva);
+
+  var fb=document.getElementById('filtersManutGar');
+  var savedPlaca=document.getElementById('fgDashPlaca')?document.getElementById('fgDashPlaca').value:manutGarFiltro.placa;
+  var savedTipo=document.getElementById('fgDashTipo')?document.getElementById('fgDashTipo').value:manutGarFiltro.tipo;
+  manutGarFiltro.placa=savedPlaca; manutGarFiltro.tipo=savedTipo;
+
+  var placasGar=garantiasAtivas.map(function(g){return g.PLACA}).sort();
+  var tiposGar=[],tipoSet={};
+  DB.manutProgramadaGarantia.forEach(function(m){ if(!tipoSet[m.TIPO_MANUTENCAO]){tipoSet[m.TIPO_MANUTENCAO]=1;tiposGar.push(m.TIPO_MANUTENCAO);} });
+  tiposGar.sort();
+
+  var fbH='<span class="filter-label">Filtros</span>';
+  fbH+='<select class="filter-select" id="fgDashPlaca" onchange="manutGarFiltro.placa=this.value;buildManutencaoGarantia()"><option value="">🚛 Todas as placas</option>';
+  placasGar.forEach(function(p){fbH+='<option value="'+p+'"'+(savedPlaca===p?' selected':'')+'>'+p+'</option>'});
+  fbH+='</select>';
+  fbH+='<select class="filter-select" id="fgDashTipo" onchange="manutGarFiltro.tipo=this.value;buildManutencaoGarantia()"><option value="">🔧 Todos os tipos</option>';
+  tiposGar.forEach(function(t){fbH+='<option value="'+t+'"'+(savedTipo===t?' selected':'')+'>'+t+'</option>'});
+  fbH+='</select>';
+  fbH+='<div class="filter-sep" style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>';
+  var urgTag=manutGarFiltro.status.indexOf('r')>=0;
+  var attTag=manutGarFiltro.status.indexOf('y')>=0;
+  var okTag=manutGarFiltro.status.indexOf('g')>=0;
+  fbH+='<div class="manut-filter-tag'+(urgTag?' active red':'')+'" onclick="toggleManutGarTag(&#39;r&#39;,this)"><span class="manut-tag-dot" style="background:var(--red)"></span>Urgente</div>';
+  fbH+='<div class="manut-filter-tag'+(attTag?' active':'')+'" onclick="toggleManutGarTag(&#39;y&#39;,this)"><span class="manut-tag-dot" style="background:var(--yellow)"></span>Atenção</div>';
+  fbH+='<div class="manut-filter-tag'+(okTag?' active green':'')+'" onclick="toggleManutGarTag(&#39;g&#39;,this)"><span class="manut-tag-dot" style="background:var(--green)"></span>OK</div>';
+  fbH+='<button class="manut-filter-reset" onclick="resetManutGarFiltros()">↺ Limpar filtros</button>';
+  fbH+='<button class="filter-btn-pdf" onclick="exportPagePDF(&#39;filtersManutGar&#39;)">📄 Exportar PDF</button>';
+  fb.innerHTML=fbH;
+
+  var rows=[];
+  garantiasAtivas.forEach(function(g){
+    if(manutGarFiltro.placa && g.PLACA!==manutGarFiltro.placa) return;
+    var kmAtual=kmByPlaca[g.PLACA]||0;
+    var intervals=DB.manutProgramadaGarantia.filter(function(m){return m.PLACA===g.PLACA});
+    intervals.forEach(function(prog){
+      if(manutGarFiltro.tipo && prog.TIPO_MANUTENCAO!==manutGarFiltro.tipo) return;
+      var key=g.PLACA+'|'+prog.TIPO_MANUTENCAO;
+      var last=lastManut[key];
+      var st=_manutStatusItem(prog,last,kmAtual);
+      if(manutGarFiltro.status.length>0 && manutGarFiltro.status.indexOf(st.status)<0) return;
+      rows.push({placa:g.PLACA,garantia:g,kmAtual:kmAtual,tipo:prog.TIPO_MANUTENCAO,intervalo:num(prog.INTERVALO_KM),status:st.status,kmRest:st.kmRest,proxM:st.proxM});
+    });
+  });
+
+  var urgCnt=rows.filter(function(r){return r.status==='r'}).length;
+  var attCnt=rows.filter(function(r){return r.status==='y'}).length;
+  var okCnt=rows.filter(function(r){return r.status==='g'}).length;
+  document.getElementById('kpiManutGar').innerHTML=
+    '<div class="kpi-card red"><div class="kpi-icon">🔴</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Urgentes</div></div>'+
+    '<div class="kpi-card yellow"><div class="kpi-icon">🟡</div><div class="kpi-value">'+attCnt+'</div><div class="kpi-label">Em Atenção</div></div>'+
+    '<div class="kpi-card green"><div class="kpi-icon">🟢</div><div class="kpi-value">'+okCnt+'</div><div class="kpi-label">OK</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">🛡️</div><div class="kpi-value">'+garantiasAtivas.length+'</div><div class="kpi-label">Caminhões em Garantia</div></div>';
+
+  var chipLabel={g:'OK',y:'Atenção',r:'Urgente',x:'Sem reg.'};
+  var mono='font-family:JetBrains Mono,monospace;font-size:11px';
+  rows.sort(function(a,b){ return (a.placa+a.tipo).localeCompare(b.placa+b.tipo); });
+  var tbody='';
+  rows.forEach(function(r){
+    var g=r.garantia;
+    var faltamTxt=r.kmRest!=null?Number(r.kmRest).toLocaleString('pt-BR')+' km':'N/A';
+    tbody+='<tr><td><span class="manut-placa-tag">'+r.placa+'</span></td>'+
+      '<td style="'+mono+'">'+formatDateBR(g.DATA_FIM)+' · '+Number(g.KM_LIMITE).toLocaleString('pt-BR')+' km</td>'+
+      '<td>'+r.tipo+'</td>'+
+      '<td style="'+mono+'">'+r.intervalo.toLocaleString('pt-BR')+' km</td>'+
+      '<td style="'+mono+'">'+Number(r.kmAtual).toLocaleString('pt-BR')+'</td>'+
+      '<td style="'+mono+'">'+(r.proxM?Number(r.proxM).toLocaleString('pt-BR'):'N/A')+'</td>'+
+      '<td style="'+mono+'">'+faltamTxt+'</td>'+
+      '<td><span class="manut-chip '+r.status+'"><span class="manut-chip-dot"></span>'+chipLabel[r.status]+'</span></td></tr>';
+  });
+  document.getElementById('manutGarTableBody').innerHTML=tbody||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text2)">Nenhum caminhão em garantia com intervalo cadastrado.</td></tr>';
+  document.getElementById('manutGarBadgeTotal').textContent=garantiasAtivas.length+' caminhões';
+}
+function toggleManutGarTag(cor,el){
+  var idx=manutGarFiltro.status.indexOf(cor);
+  if(idx>=0) manutGarFiltro.status.splice(idx,1);
+  else manutGarFiltro.status.push(cor);
+  buildManutencaoGarantia();
+}
+function resetManutGarFiltros(){
+  manutGarFiltro={placa:'',tipo:'',status:[]};
+  buildManutencaoGarantia();
+}
+
+// ==================== DETALHAMENTO DE MANUTENÇÃO ====================
+function buildManutDetalhamento(){
+  var uPlaca=[],uTipo=[],plaSet={},tipoSet={};
+  DB.manutRealizada.forEach(function(r){
+    if(r.PLACA&&!plaSet[r.PLACA]){plaSet[r.PLACA]=1;uPlaca.push(r.PLACA)}
+    if(r.TIPO_MANUTENCAO&&!tipoSet[r.TIPO_MANUTENCAO]){tipoSet[r.TIPO_MANUTENCAO]=1;uTipo.push(r.TIPO_MANUTENCAO)}
+  });
+  uPlaca.sort();uTipo.sort();
+
+  createFilters('filtersManutDet',[
+    {id:'fmdPlaca',label:'Placa',options:uPlaca,onChange:buildManutDetalhamento},
+    {id:'fmdTipo',label:'Tipo',options:uTipo,onChange:buildManutDetalhamento},
+    {type:'dateRange',idIni:'fmdDtIni',idFim:'fmdDtFim',onChange:buildManutDetalhamento}
+  ], '', function(){ clearFilters(['fmdPlaca','fmdTipo','fmdDtIni','fmdDtFim'],buildManutDetalhamento); });
+
+  var fPlaca=(document.getElementById('fmdPlaca')||{}).value||'';
+  var fTipo=(document.getElementById('fmdTipo')||{}).value||'';
+  var fDtIni=(document.getElementById('fmdDtIni')||{}).value||'';
+  var fDtFim=(document.getElementById('fmdDtFim')||{}).value||'';
+
+  var rows=DB.manutRealizada.filter(function(r){
+    if(fPlaca && r.PLACA!==fPlaca) return false;
+    if(fTipo && r.TIPO_MANUTENCAO!==fTipo) return false;
+    if((fDtIni||fDtFim) && !dateInRange(r.DATA_MANUTENCAO,fDtIni,fDtFim)) return false;
+    return true;
+  }).sort(function(a,b){return String(b.DATA_MANUTENCAO||'').localeCompare(String(a.DATA_MANUTENCAO||''))});
+
+  var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mono='font-family:JetBrains Mono,monospace;font-size:11px';
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var actCell='';
+    if(canEdit){
+      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openManutRealModal(\''+r.ID+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
+        (currentUserData.perfil==='ADMIN'?' <button class="btn-delete-row" onclick="openManutRealDelete(\''+r.ID+'\')" title="Excluir">🗑️</button>':'')+'</td>';
+    }
+    tH+='<tr><td style="'+mono+'">'+formatDateBR(r.DATA_MANUTENCAO)+'</td>'+
+      '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
+      '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
+      '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td>'+
+      '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
+      '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
+      '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
+      '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+actCell+'</tr>';
+  });
+  tH+='</tbody></table></div>';
+  document.getElementById('tblManutDet').innerHTML=tH;
+}
+
+function findManutRealById(id){ id=String(id); for(var i=0;i<DB.manutRealizada.length;i++){ if(String(DB.manutRealizada[i].ID)===id) return DB.manutRealizada[i]; } return null; }
+var _mrEditId=null,_mrDelId=null;
+function _mrBuildForm(row){
+  row=row||{};
+  var po='<option value="">Selecione...</option>';
+  (BASE.placas||[]).slice().sort().forEach(function(p){po+='<option value="'+p+'"'+(row.PLACA===p?' selected':'')+'>'+p+'</option>'});
+  var to='<option value="">Selecione...</option>';
+  (BASE.tipoManut||[]).slice().sort().forEach(function(t){to+='<option value="'+t+'"'+(row.TIPO_MANUTENCAO===t?' selected':'')+'>'+t+'</option>'});
+  return ''+
+    '<div class="form-group"><label>Placa *</label><select id="mr_placa">'+po+'</select></div>'+
+    '<div class="form-group"><label>Tipo *</label><select id="mr_tipo">'+to+'</select></div>'+
+    '<div class="form-group"><label>Data *</label><input id="mr_data" type="date" value="'+(row.DATA_MANUTENCAO?String(row.DATA_MANUTENCAO).slice(0,10):'')+'"></div>'+
+    '<div class="form-group"><label>KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
+    '<div class="form-group"><label>Valor (R$)</label><input id="mr_valor" type="number" step="0.01" value="'+(row.VALOR!=null&&row.VALOR!==''?num(row.VALOR):'')+'"></div>'+
+    '<div class="form-group"><label>Local do Serviço</label><input id="mr_local" type="text" value="'+(row.LOCAL_SERVICO?String(row.LOCAL_SERVICO).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div class="form-group"><label>Nota Fiscal</label><input id="mr_nota" type="text" value="'+(row.NOTA_FISCAL?String(row.NOTA_FISCAL).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="mr_obs" rows="2">'+(row['OBSERVAÇÃO']?String(row['OBSERVAÇÃO']).replace(/</g,'&lt;'):'')+'</textarea></div>';
+}
+function openManutRealModal(id){
+  var row=findManutRealById(id);
+  if(!row){showToast('Registro não encontrado',true);return;}
+  if(!currentUserData) return;
+  if(currentUserData.perfil!=='ADMIN'){
+    var owner=row.USUARIO;
+    if(currentUserData.perfil!=='ANALISTA'||(owner!==currentUserData.nome&&owner!==currentUserData.usuario)){
+      showToast('❌ Você só pode editar os seus próprios lançamentos',true); return;
+    }
+  }
+  _mrEditId=String(id);
+  document.getElementById('mrModalGrid').innerHTML=_mrBuildForm(row);
+  document.getElementById('mrModalOverlay').classList.add('show');
+}
+function closeManutRealModal(){ document.getElementById('mrModalOverlay').classList.remove('show'); _mrEditId=null; }
+function salvarManutRealEdit(){
+  if(!_mrEditId) return;
+  var placa=document.getElementById('mr_placa').value;
+  var tipo=document.getElementById('mr_tipo').value;
+  var data=document.getElementById('mr_data').value;
+  var km=document.getElementById('mr_km').value;
+  if(!placa||!tipo||!data||!km){showToast('Placa, Tipo, Data e KM são obrigatórios',true);return;}
+  var row={
+    placa:placa, tipo_manutencao:tipo, data_manutencao:data, km:num(km),
+    valor:document.getElementById('mr_valor').value?num(document.getElementById('mr_valor').value):null,
+    local_servico:document.getElementById('mr_local').value.trim()||null,
+    nota_fiscal:document.getElementById('mr_nota').value.trim()||null,
+    observacao:document.getElementById('mr_obs').value.trim()||null
+  };
+  var btn=document.getElementById('mrSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  saveToSheets('updateManutR',{id:_mrEditId,row:row},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Manutenção atualizada!');
+    closeManutRealModal();
+    loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
+}
+function openManutRealDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findManutRealById(id); if(!r){showToast('Registro não encontrado',true);return;}
+  _mrDelId=String(id);
+  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>';
+  document.getElementById('mrDelOverlay').classList.add('show');
+}
+function closeManutRealDelete(){ document.getElementById('mrDelOverlay').classList.remove('show'); _mrDelId=null; }
+function confirmManutRealDelete(){
+  if(!_mrDelId) return;
+  var btn=document.getElementById('mrDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteManutR',{id:_mrDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Manutenção excluída');
+    closeManutRealDelete();
+    loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
 }
 

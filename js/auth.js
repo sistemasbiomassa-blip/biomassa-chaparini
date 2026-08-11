@@ -89,7 +89,7 @@ function enterApp(){
   document.querySelectorAll('.diretor-only').forEach(function(el){el.style.display=(isAdmin||isDiretor)?'flex':'none'});
   document.querySelectorAll('.freq-visible').forEach(function(el){el.style.display='flex'}); // DIRETOR também enxerga Frequência (decisão de RLS)
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
-  ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn'].forEach(function(id){
+  ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn','tabGarantiaBtn'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
   });

@@ -73,5 +73,6 @@ function iniciarMascaras(){
   clonarEMascarar('fValorUnit', LIMITES_CAMPOS.valorUnit,  2);
   clonarEMascarar('fArla',      LIMITES_CAMPOS.arla,       2);
   clonarEMascarar('fValorDesp', LIMITES_CAMPOS.valorDesp,  2);
+  clonarEMascarar('fmValor',    LIMITES_CAMPOS.valorDesp,  2);
 }
 

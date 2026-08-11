@@ -70,10 +70,12 @@ function loadFromSheets(callback) {
     sbFetchAll('classes_despesa'), sbFetchAll('profiles'), sbFetchAll('maquinas'),
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
+    sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
-        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15];
+        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
+        garantiaR=r[16], manutPGR=r[17];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -90,12 +92,24 @@ function loadFromSheets(callback) {
 
     DB.manutRealizada = manutRR.map(function(x){ return {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
-      KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+      KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
+      NOTA_FISCAL:x.nota_fiscal, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
       ID:x.id, TIPO_MANUTENCAO:x.tipo_manutencao, INTERVALO_KM:x.intervalo_km,
       ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao
+    };});
+
+    DB.garantiaCaminhoes = garantiaR.map(function(x){ return {
+      ID:x.id, PLACA:x.placa, DATA_FIM:x.data_fim, KM_LIMITE:x.km_limite, OBS:x.obs,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+    };});
+
+    DB.manutProgramadaGarantia = manutPGR.map(function(x){ return {
+      ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, INTERVALO_KM:x.intervalo_km,
+      ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     LOCAIS_DATA = locaisR.map(function(x){ return {
@@ -254,7 +268,8 @@ function _rotearAction(action, data) {
     case 'addManutRealizada': {
       var mr={
         placa: data.PLACA, tipo_manutencao: data.TIPO_MANUTENCAO, data_manutencao: data['DATA MANUTENÇÃO'],
-        km: data.KM, observacao: data['OBSERVAÇÃO']
+        km: data.KM, observacao: data['OBSERVAÇÃO'], valor: data.VALOR,
+        local_servico: data.LOCAL_SERVICO, nota_fiscal: data.NOTA_FISCAL
       };
       return sb.from('manut_realizada').insert(_comUsuarioAtual(_limparPayload(mr))).select().then(_unwrap);
     }
@@ -277,6 +292,16 @@ function _rotearAction(action, data) {
     case 'deleteManutP': {
       return sb.from('manut_programada').delete().eq('id', data.id).then(_unwrap);
     }
+
+    // ---------- GARANTIA (caminhões em garantia) ----------
+    case 'addGarantia': return sb.from('garantia_caminhoes').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateGarantia': return sb.from('garantia_caminhoes').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteGarantia': return sb.from('garantia_caminhoes').delete().eq('id', data.id).then(_unwrap);
+
+    // ---------- MANUT_PROGRAMADA_GARANTIA (intervalo/alerta por placa em garantia) ----------
+    case 'addManutProgGarantia': return sb.from('manut_programada_garantia').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateManutProgGarantia': return sb.from('manut_programada_garantia').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteManutProgGarantia': return sb.from('manut_programada_garantia').delete().eq('id', data.id).then(_unwrap);
 
     // ---------- MAQUINÁRIOS ----------
     case 'addMaquina': return sb.from('maquinas').insert(_lowerKeys(data)).select().then(_unwrap);

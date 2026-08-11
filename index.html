@@ -188,6 +188,10 @@ tbody tr:hover{background:var(--surface2)}
 .status-ok{background:rgba(46,160,67,0.15);color:var(--green)}
 
 /* MANUT V2 MOCKUP STYLE */
+.manut-view-tabs{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;margin-bottom:16px}
+.manut-view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
+.manut-view-tab.active{background:var(--surface2);color:var(--text)}
+.manut-view-tab:hover:not(.active){color:var(--text)}
 .manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
 .manut-filter-bar .filter-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;margin-right:4px}
 .manut-filter-bar .filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px}
@@ -582,6 +586,108 @@ tbody tr:hover{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ===== MODAL TIPO DE MANUTENÇÃO (novo/editar) ===== -->
+<div class="modal-overlay" id="manutProgModalOverlay" onclick="if(event.target===this)closeManutProgModal()">
+  <div class="modal">
+    <h2 id="manutProgModalTitle">🔧 Novo Tipo de Manutenção</h2>
+    <div class="maq-grid" id="manutProgModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">Intervalo e alertas são opcionais — deixe em branco para um tipo "só de registro", sem controle de km.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeManutProgModal()">Cancelar</button>
+      <button class="btn btn-primary" id="manutProgSalvarBtn" onclick="salvarManutProg()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR TIPO DE MANUTENÇÃO ===== -->
+<div class="modal-overlay" id="manutProgDelOverlay" onclick="if(event.target===this)closeManutProgDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir tipo de manutenção?</h3>
+    <div id="manutProgDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeManutProgDelete()">Cancelar</button>
+      <button class="btn-danger" id="manutProgDelBtn" onclick="confirmManutProgDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL GARANTIA (novo/editar) ===== -->
+<div class="modal-overlay" id="garModalOverlay" onclick="if(event.target===this)closeGarantiaModal()">
+  <div class="modal">
+    <h2 id="garModalTitle">🛡️ Nova Garantia</h2>
+    <div class="maq-grid" id="garModalGrid"></div>
+    <div style="font-size:11px;color:var(--text2);margin-top:10px">Sai da garantia quando a data OU o km limite vencer — o que vier primeiro.</div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeGarantiaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="garSalvarBtn" onclick="salvarGarantia()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR GARANTIA ===== -->
+<div class="modal-overlay" id="garDelOverlay" onclick="if(event.target===this)closeGarantiaDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir garantia?</h3>
+    <div id="garDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeGarantiaDelete()">Cancelar</button>
+      <button class="btn-danger" id="garDelBtn" onclick="confirmGarantiaDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL INTERVALO DE GARANTIA POR PLACA (novo/editar) ===== -->
+<div class="modal-overlay" id="garPgModalOverlay" onclick="if(event.target===this)closeGarantiaPgModal()">
+  <div class="modal">
+    <h2 id="garPgModalTitle">📏 Novo Intervalo (Garantia)</h2>
+    <div class="maq-grid" id="garPgModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeGarantiaPgModal()">Cancelar</button>
+      <button class="btn btn-primary" id="garPgSalvarBtn" onclick="salvarGarantiaPg()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR INTERVALO DE GARANTIA ===== -->
+<div class="modal-overlay" id="garPgDelOverlay" onclick="if(event.target===this)closeGarantiaPgDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir intervalo?</h3>
+    <div id="garPgDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeGarantiaPgDelete()">Cancelar</button>
+      <button class="btn-danger" id="garPgDelBtn" onclick="confirmGarantiaPgDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EDITAR MANUTENÇÃO REALIZADA (Detalhamento) ===== -->
+<div class="modal-overlay" id="mrModalOverlay" onclick="if(event.target===this)closeManutRealModal()">
+  <div class="modal">
+    <h2>✏️ Editar Manutenção Realizada</h2>
+    <div class="maq-grid" id="mrModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeManutRealModal()">Cancelar</button>
+      <button class="btn btn-primary" id="mrSalvarBtn" onclick="salvarManutRealEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR MANUTENÇÃO REALIZADA ===== -->
+<div class="modal-overlay" id="mrDelOverlay" onclick="if(event.target===this)closeManutRealDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir manutenção realizada?</h3>
+    <div id="mrDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeManutRealDelete()">Cancelar</button>
+      <button class="btn-danger" id="mrDelBtn" onclick="confirmManutRealDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TANQUE (novo/editar) ===== -->
 <div class="modal-overlay" id="tanqueModalOverlay" onclick="if(event.target===this)closeTanqueModal()">
   <div class="modal">
@@ -709,6 +815,7 @@ tbody tr:hover{background:var(--surface2)}
           <div class="tab active" onclick="switchTab(this,'tabProdFin')">Produção / Financeiro</div>
           <div class="tab" onclick="switchTab(this,'tabManutReal')">Manutenção Realizada</div>
           <div class="tab" onclick="switchTab(this,'tabManutProg')">Manutenção Programada</div>
+          <div class="tab" onclick="switchTab(this,'tabGarantia')" id="tabGarantiaBtn" style="display:none">Garantia</div>
           <div class="tab" onclick="switchTab(this,'tabLocais')" id="tabLocaisBtn" style="display:none">Cadastro de Locais</div>
           <div class="tab" onclick="switchTab(this,'tabMotoristas')" id="tabMotoristasBtn" style="display:none">Motoristas</div>
           <div class="tab" onclick="switchTab(this,'tabCaminhoes')" id="tabCaminhoesBtn" style="display:none">Caminhões</div>
@@ -792,6 +899,11 @@ tbody tr:hover{background:var(--surface2)}
                 <div class="form-group"><label>KM na Manutenção *</label><input type="number" id="fmKM"></div>
               </div>
               <div class="form-row">
+                <div class="form-group"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="fmValor" placeholder="ex: 350,00"></div>
+                <div class="form-group"><label>Local do Serviço</label><input type="text" id="fmLocalServico" placeholder="ex: Oficina do Zé Diesel"></div>
+                <div class="form-group"><label>Nota Fiscal</label><input type="text" id="fmNotaFiscal" placeholder="ex: NF 12345"></div>
+              </div>
+              <div class="form-row">
                 <div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="fmObs" rows="2"></textarea></div>
               </div>
             </div>
@@ -805,8 +917,19 @@ tbody tr:hover{background:var(--surface2)}
 
         <div class="tab-content" id="tabManutProg">
           <div class="table-container">
-            <div class="table-header"><h3>Manutenções Programadas</h3><button class="btn btn-sm btn-secondary" onclick="addManutProg()">+ Adicionar Tipo</button></div>
+            <div class="table-header"><h3>Catálogo de Tipos de Manutenção</h3><button class="btn btn-sm btn-secondary" onclick="openManutProgModal()">+ Novo Tipo</button></div>
             <div class="table-scroll" id="tblManutProgContainer"></div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tabGarantia">
+          <div class="table-container">
+            <div class="table-header"><h3>🛡️ Caminhões em Garantia</h3><button class="btn btn-sm btn-secondary" onclick="openGarantiaModal()">+ Nova Garantia</button></div>
+            <div class="table-scroll" id="tblGarantiaContainer"></div>
+          </div>
+          <div class="table-container" style="margin-top:16px">
+            <div class="table-header"><h3>📏 Intervalos por Placa (Garantia)</h3><button class="btn btn-sm btn-secondary" onclick="openGarantiaPgModal()">+ Novo Intervalo</button></div>
+            <div class="table-scroll" id="tblGarantiaPgContainer"></div>
           </div>
         </div>
 
@@ -917,24 +1040,46 @@ tbody tr:hover{background:var(--surface2)}
       <!-- MANUTENCAO PAGE -->
       <div class="page" id="pageManutencao">
         <div class="page-header"><h1 class="page-title">🔧 Manutenção</h1></div>
-        <div class="manut-filter-bar" id="filtersManut"></div>
-        <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
-        <div class="kpi-row" id="kpiManut"></div>
-        <div class="manut-main-grid">
-          <div class="manut-panel" id="manutMatrizPanel">
-            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+
+        <div class="manut-view-tabs">
+          <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
+          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
+        </div>
+
+        <div id="manutViewFora">
+          <div class="manut-filter-bar" id="filtersManut"></div>
+          <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
+          <div class="kpi-row" id="kpiManut"></div>
+          <div class="manut-main-grid">
+            <div class="manut-panel" id="manutMatrizPanel">
+              <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
+              <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+            </div>
+            <div class="manut-panel" id="manutKmPanel">
+              <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
+              <div id="manutKmList"></div>
+            </div>
           </div>
-          <div class="manut-panel" id="manutKmPanel">
-            <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
-            <div id="manutKmList"></div>
+          <div class="manut-bottom-grid">
+            <div class="manut-panel" id="manutHistPanel">
+              <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
+              <div id="manutHistList"></div>
+            </div>
           </div>
         </div>
-        <div class="manut-bottom-grid">
-          <div class="manut-panel" id="manutHistPanel">
-            <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
-            <div id="manutHistList"></div>
+
+        <div id="manutViewGarantia" style="display:none">
+          <div class="manut-filter-bar" id="filtersManutGar"></div>
+          <div class="kpi-row" id="kpiManutGar"></div>
+          <div class="table-container">
+            <div class="table-header"><h3>Matriz — Revisões em Garantia</h3><span class="chart-badge" id="manutGarBadgeTotal"></span></div>
+            <div class="table-scroll"><table><thead><tr><th>Placa</th><th>Garantia até</th><th>Tipo</th><th>Intervalo</th><th>KM Atual</th><th>Próxima Troca</th><th>Faltam</th><th>Status</th></tr></thead><tbody id="manutGarTableBody"></tbody></table></div>
           </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div class="filters" id="filtersManutDet"></div>
+          <div class="table-container" id="tblManutDet"></div>
         </div>
       </div>
 
@@ -1282,7 +1427,7 @@ tbody tr:hover{background:var(--surface2)}
 
 <script>
 // ==================== DATA (carregado do Google Sheets) ====================
-var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [] };
+var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [] };
 var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
@@ -1374,10 +1519,12 @@ function loadFromSheets(callback) {
     sbFetchAll('classes_despesa'), sbFetchAll('profiles'), sbFetchAll('maquinas'),
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
+    sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
-        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15];
+        tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
+        garantiaR=r[16], manutPGR=r[17];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -1394,12 +1541,24 @@ function loadFromSheets(callback) {
 
     DB.manutRealizada = manutRR.map(function(x){ return {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
-      KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+      KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
+      NOTA_FISCAL:x.nota_fiscal, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
       ID:x.id, TIPO_MANUTENCAO:x.tipo_manutencao, INTERVALO_KM:x.intervalo_km,
       ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao
+    };});
+
+    DB.garantiaCaminhoes = garantiaR.map(function(x){ return {
+      ID:x.id, PLACA:x.placa, DATA_FIM:x.data_fim, KM_LIMITE:x.km_limite, OBS:x.obs,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+    };});
+
+    DB.manutProgramadaGarantia = manutPGR.map(function(x){ return {
+      ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, INTERVALO_KM:x.intervalo_km,
+      ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     LOCAIS_DATA = locaisR.map(function(x){ return {
@@ -1558,7 +1717,8 @@ function _rotearAction(action, data) {
     case 'addManutRealizada': {
       var mr={
         placa: data.PLACA, tipo_manutencao: data.TIPO_MANUTENCAO, data_manutencao: data['DATA MANUTENÇÃO'],
-        km: data.KM, observacao: data['OBSERVAÇÃO']
+        km: data.KM, observacao: data['OBSERVAÇÃO'], valor: data.VALOR,
+        local_servico: data.LOCAL_SERVICO, nota_fiscal: data.NOTA_FISCAL
       };
       return sb.from('manut_realizada').insert(_comUsuarioAtual(_limparPayload(mr))).select().then(_unwrap);
     }
@@ -1581,6 +1741,16 @@ function _rotearAction(action, data) {
     case 'deleteManutP': {
       return sb.from('manut_programada').delete().eq('id', data.id).then(_unwrap);
     }
+
+    // ---------- GARANTIA (caminhões em garantia) ----------
+    case 'addGarantia': return sb.from('garantia_caminhoes').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateGarantia': return sb.from('garantia_caminhoes').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteGarantia': return sb.from('garantia_caminhoes').delete().eq('id', data.id).then(_unwrap);
+
+    // ---------- MANUT_PROGRAMADA_GARANTIA (intervalo/alerta por placa em garantia) ----------
+    case 'addManutProgGarantia': return sb.from('manut_programada_garantia').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateManutProgGarantia': return sb.from('manut_programada_garantia').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteManutProgGarantia': return sb.from('manut_programada_garantia').delete().eq('id', data.id).then(_unwrap);
 
     // ---------- MAQUINÁRIOS ----------
     case 'addMaquina': return sb.from('maquinas').insert(_lowerKeys(data)).select().then(_unwrap);
@@ -2476,7 +2646,7 @@ function enterApp(){
   document.querySelectorAll('.diretor-only').forEach(function(el){el.style.display=(isAdmin||isDiretor)?'flex':'none'});
   document.querySelectorAll('.freq-visible').forEach(function(el){el.style.display='flex'}); // DIRETOR também enxerga Frequência (decisão de RLS)
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
-  ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn'].forEach(function(id){
+  ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn','tabGarantiaBtn'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
   });
@@ -3395,6 +3565,8 @@ function initApp(){
   populateSelects();
   renderManutRealTable();
   renderManutProgTable();
+  renderGarantiaTable();
+  renderGarantiaPgTable();
   renderLocaisTable();
   document.getElementById('fData').value=new Date().toISOString().slice(0,10);
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);
@@ -3629,8 +3801,12 @@ function salvarManutRealizada(){
   var d=document.getElementById('fmData').value;
   var k=document.getElementById('fmKM').value;
   if(!p||!t||!d||!k){showToast('Todos os campos com * são obrigatórios!',true);return;}
-  DB.manutRealizada.push({PLACA:p,TIPO_MANUTENCAO:t,DATA_MANUTENCAO:d,KM_NA_MANUTENCAO:num(k),'OBSERVAÇÃO':n(document.getElementById('fmObs').value),'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')});
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':n(document.getElementById('fmObs').value),'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok) {
+  var valor=num(document.getElementById('fmValor').value);
+  var localServico=n(document.getElementById('fmLocalServico').value);
+  var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
+  var obs=n(document.getElementById('fmObs').value);
+  DB.manutRealizada.push({PLACA:p,TIPO_MANUTENCAO:t,DATA_MANUTENCAO:d,KM_NA_MANUTENCAO:num(k),'OBSERVAÇÃO':obs,VALOR:valor||'',LOCAL_SERVICO:localServico,NOTA_FISCAL:notaFiscal,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')});
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok) {
     if (ok) showToast('✅ Manutenção salva! '+p+' - '+t);
     else showToast('⚠️ Salvo local, falha na planilha', true);
   })
@@ -3640,7 +3816,7 @@ function salvarManutRealizada(){
 
 function limparFormManutReal(){
   ['fmPlaca','fmTipo'].forEach(function(id){document.getElementById(id).value=''});
-  document.getElementById('fmKM').value='';
+  ['fmKM','fmValor','fmLocalServico','fmNotaFiscal'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('fmObs').value='';
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);
 }
@@ -3648,34 +3824,91 @@ function limparFormManutReal(){
 // ==================== RENDER TABLES ====================
 function renderManutRealTable(){
   var data=DB.manutRealizada;
-  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Observação</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutRealContainer').innerHTML=h;
 }
 
+function findManutProgById(id){
+  id=String(id);
+  for(var i=0;i<DB.manutProgramada.length;i++){ if(String(DB.manutProgramada[i].ID)===id) return DB.manutProgramada[i]; }
+  return null;
+}
+
 function renderManutProgTable(){
   var data=DB.manutProgramada;
-  var h='<table><thead><tr><th>ID</th><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th></tr></thead><tbody>';
+  var isAdmin=currentUserData&&currentUserData.perfil==='ADMIN';
+  var h='<table><thead><tr><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th>'+(isAdmin?'<th style="text-align:center">Ações</th>':'')+'</tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.ID||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td></tr>';
+    var acts=isAdmin?'<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openManutProgModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openManutProgDelete(\''+r.ID+'\')">🗑️</span></td>':'';
+    h+='<tr><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'<span style="color:var(--text2)">— sem controle —</span>')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td>'+acts+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutProgContainer').innerHTML=h;
 }
 
-function addManutProg(){
-  var tipo=prompt('Nome do novo tipo de manutenção:');
-  if(!tipo) return;
-  var intervalo=prompt('Intervalo KM:');
-  var urgente=prompt('Alerta Urgente (KM antes):');
-  var atencao=prompt('Alerta Atenção (KM antes):');
-  DB.manutProgramada.push({ID:DB.manutProgramada.length+1,TIPO_MANUTENCAO:tipo,INTERVALO_KM:num(intervalo),ALERTA_URGENTE:num(urgente),'ALERTA ATENCAO':num(atencao)});
-  if(!BASE.tipoManut.includes(tipo)) BASE.tipoManut.push(tipo);
-  renderManutProgTable();
-  showToast('✅ Tipo de manutenção adicionado!');
+var _manutProgEditId=null, _manutProgDelId=null;
+function _manutProgBuildForm(row){
+  row=row||{};
+  return ''+
+    '<div class="form-group" style="grid-column:1/-1"><label>Nome do Tipo *</label><input id="mp_nome" type="text" value="'+(row.TIPO_MANUTENCAO?String(row.TIPO_MANUTENCAO).replace(/"/g,'&quot;'):'')+'" placeholder="ex: Troca de Óleo Motor"></div>'+
+    '<div class="form-group"><label>Intervalo KM</label><input id="mp_intervalo" type="number" step="1" value="'+(row.INTERVALO_KM!=null&&row.INTERVALO_KM!==''?num(row.INTERVALO_KM):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Urgente (KM antes)</label><input id="mp_urgente" type="number" step="1" value="'+(row.ALERTA_URGENTE!=null&&row.ALERTA_URGENTE!==''?num(row.ALERTA_URGENTE):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Atenção (KM antes)</label><input id="mp_atencao" type="number" step="1" value="'+(row['ALERTA ATENCAO']!=null&&row['ALERTA ATENCAO']!==''?num(row['ALERTA ATENCAO']):'')+'"></div>';
+}
+function openManutProgModal(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode gerenciar tipos de manutenção',true);return;}
+  _manutProgEditId=(id!==undefined&&id!==null&&id!=='')?String(id):null;
+  var row=_manutProgEditId?findManutProgById(_manutProgEditId):{};
+  if(_manutProgEditId&&!row){showToast('Tipo não encontrado',true);return;}
+  document.getElementById('manutProgModalTitle').textContent=_manutProgEditId?'✏️ Editar Tipo de Manutenção':'🔧 Novo Tipo de Manutenção';
+  document.getElementById('manutProgModalGrid').innerHTML=_manutProgBuildForm(row);
+  document.getElementById('manutProgModalOverlay').classList.add('show');
+}
+function closeManutProgModal(){ document.getElementById('manutProgModalOverlay').classList.remove('show'); _manutProgEditId=null; }
+function salvarManutProg(){
+  var nome=document.getElementById('mp_nome').value.trim();
+  if(!nome){showToast('Informe o nome do tipo',true);return;}
+  var intervalo=document.getElementById('mp_intervalo').value;
+  var urgente=document.getElementById('mp_urgente').value;
+  var atencao=document.getElementById('mp_atencao').value;
+  var row={'TIPO MANUTENÇÃO':nome,'INTERVALO KM':intervalo?num(intervalo):'','ALERTA URGENTE':urgente?num(urgente):'','ALERTA ATENCAO':atencao?num(atencao):''};
+  var btn=document.getElementById('manutProgSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  function done(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Tipo de manutenção salvo!');
+    closeManutProgModal();
+    loadFromSheets(function(){ renderManutProgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  }
+  if(_manutProgEditId){
+    var rowU={TIPO_MANUTENCAO:nome,INTERVALO_KM:intervalo?num(intervalo):null,ALERTA_URGENTE:urgente?num(urgente):null,ALERTA_ATENCAO:atencao?num(atencao):null};
+    saveToSheets('updateManutP',{id:_manutProgEditId,row:rowU},done);
+  } else {
+    saveToSheets('addManutProgramada',row,done);
+  }
+}
+function openManutProgDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findManutProgById(id); if(!r){showToast('Tipo não encontrado',true);return;}
+  _manutProgDelId=String(id);
+  document.getElementById('manutProgDelDetails').innerHTML='<div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div>';
+  document.getElementById('manutProgDelOverlay').classList.add('show');
+}
+function closeManutProgDelete(){ document.getElementById('manutProgDelOverlay').classList.remove('show'); _manutProgDelId=null; }
+function confirmManutProgDelete(){
+  if(!_manutProgDelId) return;
+  var btn=document.getElementById('manutProgDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteManutP',{id:_manutProgDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido — verifique se o tipo não está em uso'),true);return;}
+    showToast('✅ Tipo excluído');
+    closeManutProgDelete();
+    loadFromSheets(function(){ renderManutProgTable(); });
+  });
 }
 
 
@@ -3776,6 +4009,211 @@ function limparFormLocal(){
   document.getElementById('btnSalvarLocal').textContent='💾 SALVAR LOCAL';
 }
 
+</script>
+<script>
+// ==================== GARANTIA (Cadastro) ====================
+// Duas tabelas: garantia_caminhoes (placa -> data fim / km limite) e
+// manut_programada_garantia (placa+tipo -> intervalo/alerta próprio, independente
+// do intervalo padrão do mesmo tipo fora de garantia). Só ADMIN gerencia (RLS garante,
+// isso aqui só evita abrir o modal à toa).
+function findGarantiaById(id){ id=String(id); for(var i=0;i<DB.garantiaCaminhoes.length;i++){ if(String(DB.garantiaCaminhoes[i].ID)===id) return DB.garantiaCaminhoes[i]; } return null; }
+function findGarantiaByPlaca(placa){ for(var i=0;i<DB.garantiaCaminhoes.length;i++){ if(DB.garantiaCaminhoes[i].PLACA===placa) return DB.garantiaCaminhoes[i]; } return null; }
+function findGarantiaPgById(id){ id=String(id); for(var i=0;i<DB.manutProgramadaGarantia.length;i++){ if(String(DB.manutProgramadaGarantia[i].ID)===id) return DB.manutProgramadaGarantia[i]; } return null; }
+
+function garantiaEstaAtiva(g){
+  if(!g) return false;
+  var hojeISO=new Date().toISOString().slice(0,10);
+  if(g.DATA_FIM && String(g.DATA_FIM).slice(0,10)<hojeISO) return false;
+  var kmAtual=kmAtualPorPlaca(g.PLACA);
+  if(g.KM_LIMITE && kmAtual!=null && kmAtual>=num(g.KM_LIMITE)) return false;
+  return true;
+}
+function placaEmGarantiaAtiva(placa){
+  var g=findGarantiaByPlaca(placa);
+  return !!(g && garantiaEstaAtiva(g));
+}
+
+// ---------- Tabela: Caminhões em Garantia ----------
+function renderGarantiaTable(){
+  var cont=document.getElementById('tblGarantiaContainer'); if(!cont) return;
+  var data=DB.garantiaCaminhoes.slice().sort(function(a,b){ return String(a.PLACA||'').localeCompare(String(b.PLACA||'')); });
+  if(!data.length){ cont.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2)">Nenhuma placa em garantia cadastrada.</div>'; return; }
+  var h='<table><thead><tr><th>Placa</th><th>Data Fim</th><th>Km Limite</th><th>Status</th><th>Obs.</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  data.forEach(function(r){
+    var ativa=garantiaEstaAtiva(r);
+    var status=ativa?'<span class="maq-chip maq-chip-g">🛡️ Ativa</span>':'<span class="maq-chip maq-chip-gray">Vencida</span>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+formatDateBR(r.DATA_FIM)+'</td><td>'+(r.KM_LIMITE?Number(r.KM_LIMITE).toLocaleString('pt-BR'):'-')+' km</td><td>'+status+'</td><td>'+(r.OBS||'-')+'</td>'+
+      '<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openGarantiaModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openGarantiaDelete(\''+r.ID+'\')">🗑️</span></td></tr>';
+  });
+  h+='</tbody></table>';
+  cont.innerHTML=h;
+}
+
+var _garEditId=null, _garDelId=null;
+function _garBuildForm(row){
+  row=row||{};
+  var po='<option value="">Selecione...</option>';
+  (BASE.placas||[]).slice().sort().forEach(function(p){ po+='<option value="'+p+'"'+(row.PLACA===p?' selected':'')+'>'+p+'</option>'; });
+  return ''+
+    '<div class="form-group"><label>Placa *</label><select id="gar_placa">'+po+'</select></div>'+
+    '<div class="form-group"><label>Data Fim *</label><input id="gar_datafim" type="date" value="'+(row.DATA_FIM?String(row.DATA_FIM).slice(0,10):'')+'"></div>'+
+    '<div class="form-group"><label>Km Limite *</label><input id="gar_kmlimite" type="number" step="1" value="'+(row.KM_LIMITE!=null?num(row.KM_LIMITE):'')+'"></div>'+
+    '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="gar_obs" type="text" value="'+(row.OBS?String(row.OBS).replace(/"/g,'&quot;'):'')+'"></div>';
+}
+function openGarantiaModal(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode gerenciar garantia',true);return;}
+  _garEditId=(id!==undefined&&id!==null&&id!=='')?String(id):null;
+  var row=_garEditId?findGarantiaById(_garEditId):{};
+  if(_garEditId&&!row){showToast('Garantia não encontrada',true);return;}
+  document.getElementById('garModalTitle').textContent=_garEditId?'✏️ Editar Garantia':'🛡️ Nova Garantia';
+  document.getElementById('garModalGrid').innerHTML=_garBuildForm(row);
+  document.getElementById('garModalOverlay').classList.add('show');
+}
+function closeGarantiaModal(){ document.getElementById('garModalOverlay').classList.remove('show'); _garEditId=null; }
+function salvarGarantia(){
+  var placa=document.getElementById('gar_placa').value;
+  var datafim=document.getElementById('gar_datafim').value;
+  var kmlimite=document.getElementById('gar_kmlimite').value;
+  if(!placa){showToast('Selecione a placa',true);return;}
+  if(!datafim){showToast('Informe a data fim',true);return;}
+  if(!kmlimite){showToast('Informe o km limite',true);return;}
+  var obs=document.getElementById('gar_obs').value.trim();
+  var btn=document.getElementById('garSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  function done(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Garantia salva!');
+    closeGarantiaModal();
+    loadFromSheets(function(){ renderGarantiaTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  }
+  if(_garEditId){
+    saveToSheets('updateGarantia',{id:_garEditId,row:{PLACA:placa,DATA_FIM:datafim,KM_LIMITE:num(kmlimite),OBS:obs||null}},done);
+  } else {
+    saveToSheets('addGarantia',{PLACA:placa,DATA_FIM:datafim,KM_LIMITE:num(kmlimite),OBS:obs||null},done);
+  }
+}
+function openGarantiaDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findGarantiaById(id); if(!r){showToast('Garantia não encontrada',true);return;}
+  _garDelId=String(id);
+  document.getElementById('garDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Data Fim:</strong> '+formatDateBR(r.DATA_FIM)+'</div>';
+  document.getElementById('garDelOverlay').classList.add('show');
+}
+function closeGarantiaDelete(){ document.getElementById('garDelOverlay').classList.remove('show'); _garDelId=null; }
+function confirmGarantiaDelete(){
+  if(!_garDelId) return;
+  var btn=document.getElementById('garDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteGarantia',{id:_garDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Garantia excluída');
+    closeGarantiaDelete();
+    loadFromSheets(function(){ renderGarantiaTable(); renderGarantiaPgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
+}
+
+// ---------- Tabela: Intervalos por Placa (Garantia) ----------
+function renderGarantiaPgTable(){
+  var cont=document.getElementById('tblGarantiaPgContainer'); if(!cont) return;
+  var data=DB.manutProgramadaGarantia.slice().sort(function(a,b){ return String(a.PLACA||'').localeCompare(String(b.PLACA||'')); });
+  if(!data.length){ cont.innerHTML='<div style="padding:20px;text-align:center;color:var(--text2)">Nenhum intervalo de garantia cadastrado.</div>'; return; }
+  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  data.forEach(function(r){
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+Number(r.INTERVALO_KM).toLocaleString('pt-BR')+'</td><td>'+Number(r.ALERTA_URGENTE).toLocaleString('pt-BR')+'</td><td>'+Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR')+'</td>'+
+      '<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openGarantiaPgModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openGarantiaPgDelete(\''+r.ID+'\')">🗑️</span></td></tr>';
+  });
+  h+='</tbody></table>';
+  cont.innerHTML=h;
+}
+
+var _garPgEditId=null, _garPgDelId=null;
+function _garPgBuildForm(row){
+  row=row||{};
+  var po='<option value="">Selecione...</option>';
+  DB.garantiaCaminhoes.slice().sort(function(a,b){return String(a.PLACA).localeCompare(String(b.PLACA))}).forEach(function(g){
+    po+='<option value="'+g.PLACA+'"'+(row.PLACA===g.PLACA?' selected':'')+'>'+g.PLACA+'</option>';
+  });
+  var to='<option value="">Selecione...</option>';
+  (BASE.tipoManut||[]).slice().sort().forEach(function(t){ to+='<option value="'+t+'"'+(row.TIPO_MANUTENCAO===t?' selected':'')+'>'+t+'</option>'; });
+  to+='<option value="__novo__">+ novo tipo...</option>';
+  return ''+
+    '<div class="form-group"><label>Placa *</label><select id="gpg_placa">'+po+'</select></div>'+
+    '<div class="form-group"><label>Tipo *</label><select id="gpg_tipo" onchange="_gpgToggleNovoTipo()">'+to+'</select></div>'+
+    '<div class="form-group" id="gpg_novoTipoGrp" style="display:none;grid-column:1/-1"><label>Nome do novo tipo *</label><input id="gpg_novoTipo" type="text" placeholder="ex: Troca de Amortecedor"></div>'+
+    '<div class="form-group"><label>Intervalo KM *</label><input id="gpg_intervalo" type="number" step="1" value="'+(row.INTERVALO_KM!=null?num(row.INTERVALO_KM):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Urgente *</label><input id="gpg_urgente" type="number" step="1" value="'+(row.ALERTA_URGENTE!=null?num(row.ALERTA_URGENTE):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Atenção *</label><input id="gpg_atencao" type="number" step="1" value="'+(row['ALERTA ATENCAO']!=null?num(row['ALERTA ATENCAO']):'')+'"></div>';
+}
+function _gpgToggleNovoTipo(){
+  var v=document.getElementById('gpg_tipo').value;
+  document.getElementById('gpg_novoTipoGrp').style.display=(v==='__novo__')?'':'none';
+}
+function openGarantiaPgModal(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode gerenciar garantia',true);return;}
+  if(!DB.garantiaCaminhoes.length){showToast('Cadastre uma placa em garantia primeiro',true);return;}
+  _garPgEditId=(id!==undefined&&id!==null&&id!=='')?String(id):null;
+  var row=_garPgEditId?findGarantiaPgById(_garPgEditId):{};
+  if(_garPgEditId&&!row){showToast('Intervalo não encontrado',true);return;}
+  document.getElementById('garPgModalTitle').textContent=_garPgEditId?'✏️ Editar Intervalo':'📏 Novo Intervalo (Garantia)';
+  document.getElementById('garPgModalGrid').innerHTML=_garPgBuildForm(row);
+  document.getElementById('garPgModalOverlay').classList.add('show');
+}
+function closeGarantiaPgModal(){ document.getElementById('garPgModalOverlay').classList.remove('show'); _garPgEditId=null; }
+function salvarGarantiaPg(){
+  var placa=document.getElementById('gpg_placa').value;
+  var tipoSel=document.getElementById('gpg_tipo').value;
+  var intervalo=document.getElementById('gpg_intervalo').value;
+  var urgente=document.getElementById('gpg_urgente').value;
+  var atencao=document.getElementById('gpg_atencao').value;
+  if(!placa){showToast('Selecione a placa',true);return;}
+  if(!tipoSel){showToast('Selecione o tipo',true);return;}
+  if(!intervalo||!urgente||!atencao){showToast('Intervalo e alertas são obrigatórios aqui',true);return;}
+  if(num(urgente)>num(atencao)){showToast('Alerta Urgente não pode ser maior que Alerta Atenção',true);return;}
+  var btn=document.getElementById('garPgSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  function salvarIntervalo(tipoFinal){
+    var row={PLACA:placa,TIPO_MANUTENCAO:tipoFinal,INTERVALO_KM:num(intervalo),ALERTA_URGENTE:num(urgente),ALERTA_ATENCAO:num(atencao)};
+    function done(ok,res){
+      if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+      if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+      showToast('✅ Intervalo salvo!');
+      closeGarantiaPgModal();
+      loadFromSheets(function(){ renderGarantiaPgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+    }
+    if(_garPgEditId) saveToSheets('updateManutProgGarantia',{id:_garPgEditId,row:row},done);
+    else saveToSheets('addManutProgGarantia',row,done);
+  }
+  if(tipoSel==='__novo__'){
+    var novoTipo=document.getElementById('gpg_novoTipo').value.trim();
+    if(!novoTipo){ if(btn){btn.disabled=false;btn.textContent='💾 Salvar';} showToast('Informe o nome do novo tipo',true); return; }
+    saveToSheets('addManutProgramada',{'TIPO MANUTENÇÃO':novoTipo},function(ok,res){
+      if(!ok){ if(btn){btn.disabled=false;btn.textContent='💾 Salvar';} showToast('❌ Erro ao criar tipo: '+((res&&res.error)||'desconhecido'),true); return; }
+      if(!BASE.tipoManut.includes(novoTipo)) BASE.tipoManut.push(novoTipo);
+      salvarIntervalo(novoTipo);
+    });
+  } else {
+    salvarIntervalo(tipoSel);
+  }
+}
+function openGarantiaPgDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findGarantiaPgById(id); if(!r){showToast('Intervalo não encontrado',true);return;}
+  _garPgDelId=String(id);
+  document.getElementById('garPgDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div>';
+  document.getElementById('garPgDelOverlay').classList.add('show');
+}
+function closeGarantiaPgDelete(){ document.getElementById('garPgDelOverlay').classList.remove('show'); _garPgDelId=null; }
+function confirmGarantiaPgDelete(){
+  if(!_garPgDelId) return;
+  var btn=document.getElementById('garPgDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteManutProgGarantia',{id:_garPgDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Intervalo excluído');
+    closeGarantiaPgDelete();
+    loadFromSheets(function(){ renderGarantiaPgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
+}
+// ===== FIM MÓDULO GARANTIA =====
 </script>
 <script>
 // ==================== FILTER HELPER ====================
@@ -4250,10 +4688,27 @@ function buildFinanceiro(){
 // ==================== MANUTENCAO ====================
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
+var manutViewAtual='fora'; // 'fora' ou 'garantia'
 
+// Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
+// Detalhamento, que é comum às duas. Chamado por navigateTo/switchTab e por
+// qualquer tela que altera dados de manutenção (garantia, catálogo de tipos, etc).
 function buildManutencao(){
-  var colors=cc();
-  // Compute KM by placa
+  buildManutencaoFora();
+  buildManutencaoGarantia();
+  buildManutDetalhamento();
+}
+
+function showManutView(view){
+  manutViewAtual=view;
+  document.getElementById('manutViewFora').style.display=view==='fora'?'':'none';
+  document.getElementById('manutViewGarantia').style.display=view==='garantia'?'':'none';
+  document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
+  document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
+}
+
+// ---------- Helpers compartilhados entre Fora de Garantia e Em Garantia ----------
+function _manutCalcKmByPlaca(){
   var kmByPlaca={};
   DB.cadastro.forEach(function(r){
     if(!r.PLACA) return;
@@ -4262,13 +4717,37 @@ function buildManutencao(){
     var km=kmAtualPorPlaca(placa);
     if(km!==null) kmByPlaca[placa]=km;
   });
-  // Last maintenance per placa+type
+  return kmByPlaca;
+}
+function _manutCalcLastManut(){
   var lastManut={};
   DB.manutRealizada.forEach(function(r){
     var key=r.PLACA+'|'+r.TIPO_MANUTENCAO;
     if(!lastManut[key]||(r.DATA_MANUTENCAO>lastManut[key].DATA_MANUTENCAO)) lastManut[key]=r;
   });
-  var allPlacas=Object.keys(kmByPlaca).sort();
+  return lastManut;
+}
+// Status de um item (placa+tipo) dado o programa (intervalo/alertas), o último
+// registro de manutenção e o km atual da placa.
+function _manutStatusItem(prog,last,kmAtual){
+  var status,kmRest,proxM;
+  if(!last){status='x';kmRest=null;proxM=null;}
+  else{
+    proxM=num(last.KM_NA_MANUTENCAO)+num(prog.INTERVALO_KM);
+    kmRest=proxM-kmAtual;
+    if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
+    else if(kmRest<=num(prog['ALERTA ATENCAO'])) status='y';
+    else status='g';
+  }
+  return {status:status,kmRest:kmRest,proxM:proxM};
+}
+
+function buildManutencaoFora(){
+  var colors=cc();
+  var kmByPlaca=_manutCalcKmByPlaca();
+  var lastManut=_manutCalcLastManut();
+  // Fora de garantia = todas as placas com km conhecido, exceto as com garantia ainda ativa
+  var allPlacas=Object.keys(kmByPlaca).filter(function(p){return !placaEmGarantiaAtiva(p)}).sort();
   var progs=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO&&p.INTERVALO_KM});
 
   // Build alerts data
@@ -4279,19 +4758,11 @@ function buildManutencao(){
     progs.forEach(function(prog){
       var key=placa+'|'+prog.TIPO_MANUTENCAO;
       var last=lastManut[key];
-      var status,kmRest,proxM;
-      if(!last){status='x';kmRest=null;proxM=null;}
-      else{
-        hasOnlyX=false;
-        proxM=num(last.KM_NA_MANUTENCAO)+num(prog.INTERVALO_KM);
-        kmRest=proxM-kmAtual;
-        if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
-        else if(kmRest<=num(prog['ALERTA ATENCAO'])) status='y';
-        else status='g';
-      }
-      if(status==='r'){worst='r';}
-      else if(status==='y'&&worst!=='r'){worst='y';}
-      items.push({tipo:prog.TIPO_MANUTENCAO,status:status,kmRest:kmRest,proxM:proxM,intervalo:num(prog.INTERVALO_KM)});
+      var st=_manutStatusItem(prog,last,kmAtual);
+      if(last) hasOnlyX=false;
+      if(st.status==='r'){worst='r';}
+      else if(st.status==='y'&&worst!=='r'){worst='y';}
+      items.push({tipo:prog.TIPO_MANUTENCAO,status:st.status,kmRest:st.kmRest,proxM:st.proxM,intervalo:num(prog.INTERVALO_KM)});
     });
     if(hasOnlyX&&worst==='g') worst='x';
     alertsData.push({placa:placa,kmAtual:kmAtual,items:items,worst:worst});
@@ -4496,12 +4967,228 @@ function toggleManutTag(cor,el){
   var idx=manutFiltro.status.indexOf(cor);
   if(idx>=0) manutFiltro.status.splice(idx,1);
   else manutFiltro.status.push(cor);
-  buildManutencao();
+  buildManutencaoFora();
 }
 
 function resetManutFiltros(){
   manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
-  buildManutencao();
+  buildManutencaoFora();
+}
+
+// ==================== EM GARANTIA ====================
+var manutGarFiltro={placa:'',tipo:'',status:[]};
+
+function buildManutencaoGarantia(){
+  var kmByPlaca=_manutCalcKmByPlaca();
+  var lastManut=_manutCalcLastManut();
+  var garantiasAtivas=DB.garantiaCaminhoes.filter(garantiaEstaAtiva);
+
+  var fb=document.getElementById('filtersManutGar');
+  var savedPlaca=document.getElementById('fgDashPlaca')?document.getElementById('fgDashPlaca').value:manutGarFiltro.placa;
+  var savedTipo=document.getElementById('fgDashTipo')?document.getElementById('fgDashTipo').value:manutGarFiltro.tipo;
+  manutGarFiltro.placa=savedPlaca; manutGarFiltro.tipo=savedTipo;
+
+  var placasGar=garantiasAtivas.map(function(g){return g.PLACA}).sort();
+  var tiposGar=[],tipoSet={};
+  DB.manutProgramadaGarantia.forEach(function(m){ if(!tipoSet[m.TIPO_MANUTENCAO]){tipoSet[m.TIPO_MANUTENCAO]=1;tiposGar.push(m.TIPO_MANUTENCAO);} });
+  tiposGar.sort();
+
+  var fbH='<span class="filter-label">Filtros</span>';
+  fbH+='<select class="filter-select" id="fgDashPlaca" onchange="manutGarFiltro.placa=this.value;buildManutencaoGarantia()"><option value="">🚛 Todas as placas</option>';
+  placasGar.forEach(function(p){fbH+='<option value="'+p+'"'+(savedPlaca===p?' selected':'')+'>'+p+'</option>'});
+  fbH+='</select>';
+  fbH+='<select class="filter-select" id="fgDashTipo" onchange="manutGarFiltro.tipo=this.value;buildManutencaoGarantia()"><option value="">🔧 Todos os tipos</option>';
+  tiposGar.forEach(function(t){fbH+='<option value="'+t+'"'+(savedTipo===t?' selected':'')+'>'+t+'</option>'});
+  fbH+='</select>';
+  fbH+='<div class="filter-sep" style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>';
+  var urgTag=manutGarFiltro.status.indexOf('r')>=0;
+  var attTag=manutGarFiltro.status.indexOf('y')>=0;
+  var okTag=manutGarFiltro.status.indexOf('g')>=0;
+  fbH+='<div class="manut-filter-tag'+(urgTag?' active red':'')+'" onclick="toggleManutGarTag(&#39;r&#39;,this)"><span class="manut-tag-dot" style="background:var(--red)"></span>Urgente</div>';
+  fbH+='<div class="manut-filter-tag'+(attTag?' active':'')+'" onclick="toggleManutGarTag(&#39;y&#39;,this)"><span class="manut-tag-dot" style="background:var(--yellow)"></span>Atenção</div>';
+  fbH+='<div class="manut-filter-tag'+(okTag?' active green':'')+'" onclick="toggleManutGarTag(&#39;g&#39;,this)"><span class="manut-tag-dot" style="background:var(--green)"></span>OK</div>';
+  fbH+='<button class="manut-filter-reset" onclick="resetManutGarFiltros()">↺ Limpar filtros</button>';
+  fbH+='<button class="filter-btn-pdf" onclick="exportPagePDF(&#39;filtersManutGar&#39;)">📄 Exportar PDF</button>';
+  fb.innerHTML=fbH;
+
+  var rows=[];
+  garantiasAtivas.forEach(function(g){
+    if(manutGarFiltro.placa && g.PLACA!==manutGarFiltro.placa) return;
+    var kmAtual=kmByPlaca[g.PLACA]||0;
+    var intervals=DB.manutProgramadaGarantia.filter(function(m){return m.PLACA===g.PLACA});
+    intervals.forEach(function(prog){
+      if(manutGarFiltro.tipo && prog.TIPO_MANUTENCAO!==manutGarFiltro.tipo) return;
+      var key=g.PLACA+'|'+prog.TIPO_MANUTENCAO;
+      var last=lastManut[key];
+      var st=_manutStatusItem(prog,last,kmAtual);
+      if(manutGarFiltro.status.length>0 && manutGarFiltro.status.indexOf(st.status)<0) return;
+      rows.push({placa:g.PLACA,garantia:g,kmAtual:kmAtual,tipo:prog.TIPO_MANUTENCAO,intervalo:num(prog.INTERVALO_KM),status:st.status,kmRest:st.kmRest,proxM:st.proxM});
+    });
+  });
+
+  var urgCnt=rows.filter(function(r){return r.status==='r'}).length;
+  var attCnt=rows.filter(function(r){return r.status==='y'}).length;
+  var okCnt=rows.filter(function(r){return r.status==='g'}).length;
+  document.getElementById('kpiManutGar').innerHTML=
+    '<div class="kpi-card red"><div class="kpi-icon">🔴</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Urgentes</div></div>'+
+    '<div class="kpi-card yellow"><div class="kpi-icon">🟡</div><div class="kpi-value">'+attCnt+'</div><div class="kpi-label">Em Atenção</div></div>'+
+    '<div class="kpi-card green"><div class="kpi-icon">🟢</div><div class="kpi-value">'+okCnt+'</div><div class="kpi-label">OK</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">🛡️</div><div class="kpi-value">'+garantiasAtivas.length+'</div><div class="kpi-label">Caminhões em Garantia</div></div>';
+
+  var chipLabel={g:'OK',y:'Atenção',r:'Urgente',x:'Sem reg.'};
+  var mono='font-family:JetBrains Mono,monospace;font-size:11px';
+  rows.sort(function(a,b){ return (a.placa+a.tipo).localeCompare(b.placa+b.tipo); });
+  var tbody='';
+  rows.forEach(function(r){
+    var g=r.garantia;
+    var faltamTxt=r.kmRest!=null?Number(r.kmRest).toLocaleString('pt-BR')+' km':'N/A';
+    tbody+='<tr><td><span class="manut-placa-tag">'+r.placa+'</span></td>'+
+      '<td style="'+mono+'">'+formatDateBR(g.DATA_FIM)+' · '+Number(g.KM_LIMITE).toLocaleString('pt-BR')+' km</td>'+
+      '<td>'+r.tipo+'</td>'+
+      '<td style="'+mono+'">'+r.intervalo.toLocaleString('pt-BR')+' km</td>'+
+      '<td style="'+mono+'">'+Number(r.kmAtual).toLocaleString('pt-BR')+'</td>'+
+      '<td style="'+mono+'">'+(r.proxM?Number(r.proxM).toLocaleString('pt-BR'):'N/A')+'</td>'+
+      '<td style="'+mono+'">'+faltamTxt+'</td>'+
+      '<td><span class="manut-chip '+r.status+'"><span class="manut-chip-dot"></span>'+chipLabel[r.status]+'</span></td></tr>';
+  });
+  document.getElementById('manutGarTableBody').innerHTML=tbody||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text2)">Nenhum caminhão em garantia com intervalo cadastrado.</td></tr>';
+  document.getElementById('manutGarBadgeTotal').textContent=garantiasAtivas.length+' caminhões';
+}
+function toggleManutGarTag(cor,el){
+  var idx=manutGarFiltro.status.indexOf(cor);
+  if(idx>=0) manutGarFiltro.status.splice(idx,1);
+  else manutGarFiltro.status.push(cor);
+  buildManutencaoGarantia();
+}
+function resetManutGarFiltros(){
+  manutGarFiltro={placa:'',tipo:'',status:[]};
+  buildManutencaoGarantia();
+}
+
+// ==================== DETALHAMENTO DE MANUTENÇÃO ====================
+function buildManutDetalhamento(){
+  var uPlaca=[],uTipo=[],plaSet={},tipoSet={};
+  DB.manutRealizada.forEach(function(r){
+    if(r.PLACA&&!plaSet[r.PLACA]){plaSet[r.PLACA]=1;uPlaca.push(r.PLACA)}
+    if(r.TIPO_MANUTENCAO&&!tipoSet[r.TIPO_MANUTENCAO]){tipoSet[r.TIPO_MANUTENCAO]=1;uTipo.push(r.TIPO_MANUTENCAO)}
+  });
+  uPlaca.sort();uTipo.sort();
+
+  createFilters('filtersManutDet',[
+    {id:'fmdPlaca',label:'Placa',options:uPlaca,onChange:buildManutDetalhamento},
+    {id:'fmdTipo',label:'Tipo',options:uTipo,onChange:buildManutDetalhamento},
+    {type:'dateRange',idIni:'fmdDtIni',idFim:'fmdDtFim',onChange:buildManutDetalhamento}
+  ], '', function(){ clearFilters(['fmdPlaca','fmdTipo','fmdDtIni','fmdDtFim'],buildManutDetalhamento); });
+
+  var fPlaca=(document.getElementById('fmdPlaca')||{}).value||'';
+  var fTipo=(document.getElementById('fmdTipo')||{}).value||'';
+  var fDtIni=(document.getElementById('fmdDtIni')||{}).value||'';
+  var fDtFim=(document.getElementById('fmdDtFim')||{}).value||'';
+
+  var rows=DB.manutRealizada.filter(function(r){
+    if(fPlaca && r.PLACA!==fPlaca) return false;
+    if(fTipo && r.TIPO_MANUTENCAO!==fTipo) return false;
+    if((fDtIni||fDtFim) && !dateInRange(r.DATA_MANUTENCAO,fDtIni,fDtFim)) return false;
+    return true;
+  }).sort(function(a,b){return String(b.DATA_MANUTENCAO||'').localeCompare(String(a.DATA_MANUTENCAO||''))});
+
+  var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mono='font-family:JetBrains Mono,monospace;font-size:11px';
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var actCell='';
+    if(canEdit){
+      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openManutRealModal(\''+r.ID+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
+        (currentUserData.perfil==='ADMIN'?' <button class="btn-delete-row" onclick="openManutRealDelete(\''+r.ID+'\')" title="Excluir">🗑️</button>':'')+'</td>';
+    }
+    tH+='<tr><td style="'+mono+'">'+formatDateBR(r.DATA_MANUTENCAO)+'</td>'+
+      '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
+      '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
+      '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td>'+
+      '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
+      '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
+      '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
+      '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+actCell+'</tr>';
+  });
+  tH+='</tbody></table></div>';
+  document.getElementById('tblManutDet').innerHTML=tH;
+}
+
+function findManutRealById(id){ id=String(id); for(var i=0;i<DB.manutRealizada.length;i++){ if(String(DB.manutRealizada[i].ID)===id) return DB.manutRealizada[i]; } return null; }
+var _mrEditId=null,_mrDelId=null;
+function _mrBuildForm(row){
+  row=row||{};
+  var po='<option value="">Selecione...</option>';
+  (BASE.placas||[]).slice().sort().forEach(function(p){po+='<option value="'+p+'"'+(row.PLACA===p?' selected':'')+'>'+p+'</option>'});
+  var to='<option value="">Selecione...</option>';
+  (BASE.tipoManut||[]).slice().sort().forEach(function(t){to+='<option value="'+t+'"'+(row.TIPO_MANUTENCAO===t?' selected':'')+'>'+t+'</option>'});
+  return ''+
+    '<div class="form-group"><label>Placa *</label><select id="mr_placa">'+po+'</select></div>'+
+    '<div class="form-group"><label>Tipo *</label><select id="mr_tipo">'+to+'</select></div>'+
+    '<div class="form-group"><label>Data *</label><input id="mr_data" type="date" value="'+(row.DATA_MANUTENCAO?String(row.DATA_MANUTENCAO).slice(0,10):'')+'"></div>'+
+    '<div class="form-group"><label>KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
+    '<div class="form-group"><label>Valor (R$)</label><input id="mr_valor" type="number" step="0.01" value="'+(row.VALOR!=null&&row.VALOR!==''?num(row.VALOR):'')+'"></div>'+
+    '<div class="form-group"><label>Local do Serviço</label><input id="mr_local" type="text" value="'+(row.LOCAL_SERVICO?String(row.LOCAL_SERVICO).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div class="form-group"><label>Nota Fiscal</label><input id="mr_nota" type="text" value="'+(row.NOTA_FISCAL?String(row.NOTA_FISCAL).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="mr_obs" rows="2">'+(row['OBSERVAÇÃO']?String(row['OBSERVAÇÃO']).replace(/</g,'&lt;'):'')+'</textarea></div>';
+}
+function openManutRealModal(id){
+  var row=findManutRealById(id);
+  if(!row){showToast('Registro não encontrado',true);return;}
+  if(!currentUserData) return;
+  if(currentUserData.perfil!=='ADMIN'){
+    var owner=row.USUARIO;
+    if(currentUserData.perfil!=='ANALISTA'||(owner!==currentUserData.nome&&owner!==currentUserData.usuario)){
+      showToast('❌ Você só pode editar os seus próprios lançamentos',true); return;
+    }
+  }
+  _mrEditId=String(id);
+  document.getElementById('mrModalGrid').innerHTML=_mrBuildForm(row);
+  document.getElementById('mrModalOverlay').classList.add('show');
+}
+function closeManutRealModal(){ document.getElementById('mrModalOverlay').classList.remove('show'); _mrEditId=null; }
+function salvarManutRealEdit(){
+  if(!_mrEditId) return;
+  var placa=document.getElementById('mr_placa').value;
+  var tipo=document.getElementById('mr_tipo').value;
+  var data=document.getElementById('mr_data').value;
+  var km=document.getElementById('mr_km').value;
+  if(!placa||!tipo||!data||!km){showToast('Placa, Tipo, Data e KM são obrigatórios',true);return;}
+  var row={
+    placa:placa, tipo_manutencao:tipo, data_manutencao:data, km:num(km),
+    valor:document.getElementById('mr_valor').value?num(document.getElementById('mr_valor').value):null,
+    local_servico:document.getElementById('mr_local').value.trim()||null,
+    nota_fiscal:document.getElementById('mr_nota').value.trim()||null,
+    observacao:document.getElementById('mr_obs').value.trim()||null
+  };
+  var btn=document.getElementById('mrSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  saveToSheets('updateManutR',{id:_mrEditId,row:row},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Manutenção atualizada!');
+    closeManutRealModal();
+    loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
+}
+function openManutRealDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findManutRealById(id); if(!r){showToast('Registro não encontrado',true);return;}
+  _mrDelId=String(id);
+  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>';
+  document.getElementById('mrDelOverlay').classList.add('show');
+}
+function closeManutRealDelete(){ document.getElementById('mrDelOverlay').classList.remove('show'); _mrDelId=null; }
+function confirmManutRealDelete(){
+  if(!_mrDelId) return;
+  var btn=document.getElementById('mrDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteManutR',{id:_mrDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Manutenção excluída');
+    closeManutRealDelete();
+    loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  });
 }
 
 </script>
@@ -6920,6 +7607,7 @@ function iniciarMascaras(){
   clonarEMascarar('fValorUnit', LIMITES_CAMPOS.valorUnit,  2);
   clonarEMascarar('fArla',      LIMITES_CAMPOS.arla,       2);
   clonarEMascarar('fValorDesp', LIMITES_CAMPOS.valorDesp,  2);
+  clonarEMascarar('fmValor',    LIMITES_CAMPOS.valorDesp,  2);
 }
 
 </script>

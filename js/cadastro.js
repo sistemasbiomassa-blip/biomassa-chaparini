@@ -206,8 +206,12 @@ function salvarManutRealizada(){
   var d=document.getElementById('fmData').value;
   var k=document.getElementById('fmKM').value;
   if(!p||!t||!d||!k){showToast('Todos os campos com * são obrigatórios!',true);return;}
-  DB.manutRealizada.push({PLACA:p,TIPO_MANUTENCAO:t,DATA_MANUTENCAO:d,KM_NA_MANUTENCAO:num(k),'OBSERVAÇÃO':n(document.getElementById('fmObs').value),'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')});
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':n(document.getElementById('fmObs').value),'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok) {
+  var valor=num(document.getElementById('fmValor').value);
+  var localServico=n(document.getElementById('fmLocalServico').value);
+  var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
+  var obs=n(document.getElementById('fmObs').value);
+  DB.manutRealizada.push({PLACA:p,TIPO_MANUTENCAO:t,DATA_MANUTENCAO:d,KM_NA_MANUTENCAO:num(k),'OBSERVAÇÃO':obs,VALOR:valor||'',LOCAL_SERVICO:localServico,NOTA_FISCAL:notaFiscal,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')});
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok) {
     if (ok) showToast('✅ Manutenção salva! '+p+' - '+t);
     else showToast('⚠️ Salvo local, falha na planilha', true);
   })
@@ -217,7 +221,7 @@ function salvarManutRealizada(){
 
 function limparFormManutReal(){
   ['fmPlaca','fmTipo'].forEach(function(id){document.getElementById(id).value=''});
-  document.getElementById('fmKM').value='';
+  ['fmKM','fmValor','fmLocalServico','fmNotaFiscal'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('fmObs').value='';
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);
 }
@@ -225,34 +229,91 @@ function limparFormManutReal(){
 // ==================== RENDER TABLES ====================
 function renderManutRealTable(){
   var data=DB.manutRealizada;
-  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Observação</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutRealContainer').innerHTML=h;
 }
 
+function findManutProgById(id){
+  id=String(id);
+  for(var i=0;i<DB.manutProgramada.length;i++){ if(String(DB.manutProgramada[i].ID)===id) return DB.manutProgramada[i]; }
+  return null;
+}
+
 function renderManutProgTable(){
   var data=DB.manutProgramada;
-  var h='<table><thead><tr><th>ID</th><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th></tr></thead><tbody>';
+  var isAdmin=currentUserData&&currentUserData.perfil==='ADMIN';
+  var h='<table><thead><tr><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th>'+(isAdmin?'<th style="text-align:center">Ações</th>':'')+'</tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.ID||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td></tr>';
+    var acts=isAdmin?'<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openManutProgModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openManutProgDelete(\''+r.ID+'\')">🗑️</span></td>':'';
+    h+='<tr><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'<span style="color:var(--text2)">— sem controle —</span>')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td>'+acts+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutProgContainer').innerHTML=h;
 }
 
-function addManutProg(){
-  var tipo=prompt('Nome do novo tipo de manutenção:');
-  if(!tipo) return;
-  var intervalo=prompt('Intervalo KM:');
-  var urgente=prompt('Alerta Urgente (KM antes):');
-  var atencao=prompt('Alerta Atenção (KM antes):');
-  DB.manutProgramada.push({ID:DB.manutProgramada.length+1,TIPO_MANUTENCAO:tipo,INTERVALO_KM:num(intervalo),ALERTA_URGENTE:num(urgente),'ALERTA ATENCAO':num(atencao)});
-  if(!BASE.tipoManut.includes(tipo)) BASE.tipoManut.push(tipo);
-  renderManutProgTable();
-  showToast('✅ Tipo de manutenção adicionado!');
+var _manutProgEditId=null, _manutProgDelId=null;
+function _manutProgBuildForm(row){
+  row=row||{};
+  return ''+
+    '<div class="form-group" style="grid-column:1/-1"><label>Nome do Tipo *</label><input id="mp_nome" type="text" value="'+(row.TIPO_MANUTENCAO?String(row.TIPO_MANUTENCAO).replace(/"/g,'&quot;'):'')+'" placeholder="ex: Troca de Óleo Motor"></div>'+
+    '<div class="form-group"><label>Intervalo KM</label><input id="mp_intervalo" type="number" step="1" value="'+(row.INTERVALO_KM!=null&&row.INTERVALO_KM!==''?num(row.INTERVALO_KM):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Urgente (KM antes)</label><input id="mp_urgente" type="number" step="1" value="'+(row.ALERTA_URGENTE!=null&&row.ALERTA_URGENTE!==''?num(row.ALERTA_URGENTE):'')+'"></div>'+
+    '<div class="form-group"><label>Alerta Atenção (KM antes)</label><input id="mp_atencao" type="number" step="1" value="'+(row['ALERTA ATENCAO']!=null&&row['ALERTA ATENCAO']!==''?num(row['ALERTA ATENCAO']):'')+'"></div>';
+}
+function openManutProgModal(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode gerenciar tipos de manutenção',true);return;}
+  _manutProgEditId=(id!==undefined&&id!==null&&id!=='')?String(id):null;
+  var row=_manutProgEditId?findManutProgById(_manutProgEditId):{};
+  if(_manutProgEditId&&!row){showToast('Tipo não encontrado',true);return;}
+  document.getElementById('manutProgModalTitle').textContent=_manutProgEditId?'✏️ Editar Tipo de Manutenção':'🔧 Novo Tipo de Manutenção';
+  document.getElementById('manutProgModalGrid').innerHTML=_manutProgBuildForm(row);
+  document.getElementById('manutProgModalOverlay').classList.add('show');
+}
+function closeManutProgModal(){ document.getElementById('manutProgModalOverlay').classList.remove('show'); _manutProgEditId=null; }
+function salvarManutProg(){
+  var nome=document.getElementById('mp_nome').value.trim();
+  if(!nome){showToast('Informe o nome do tipo',true);return;}
+  var intervalo=document.getElementById('mp_intervalo').value;
+  var urgente=document.getElementById('mp_urgente').value;
+  var atencao=document.getElementById('mp_atencao').value;
+  var row={'TIPO MANUTENÇÃO':nome,'INTERVALO KM':intervalo?num(intervalo):'','ALERTA URGENTE':urgente?num(urgente):'','ALERTA ATENCAO':atencao?num(atencao):''};
+  var btn=document.getElementById('manutProgSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  function done(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
+    showToast('✅ Tipo de manutenção salvo!');
+    closeManutProgModal();
+    loadFromSheets(function(){ renderManutProgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  }
+  if(_manutProgEditId){
+    var rowU={TIPO_MANUTENCAO:nome,INTERVALO_KM:intervalo?num(intervalo):null,ALERTA_URGENTE:urgente?num(urgente):null,ALERTA_ATENCAO:atencao?num(atencao):null};
+    saveToSheets('updateManutP',{id:_manutProgEditId,row:rowU},done);
+  } else {
+    saveToSheets('addManutProgramada',row,done);
+  }
+}
+function openManutProgDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
+  var r=findManutProgById(id); if(!r){showToast('Tipo não encontrado',true);return;}
+  _manutProgDelId=String(id);
+  document.getElementById('manutProgDelDetails').innerHTML='<div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div>';
+  document.getElementById('manutProgDelOverlay').classList.add('show');
+}
+function closeManutProgDelete(){ document.getElementById('manutProgDelOverlay').classList.remove('show'); _manutProgDelId=null; }
+function confirmManutProgDelete(){
+  if(!_manutProgDelId) return;
+  var btn=document.getElementById('manutProgDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteManutP',{id:_manutProgDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido — verifique se o tipo não está em uso'),true);return;}
+    showToast('✅ Tipo excluído');
+    closeManutProgDelete();
+    loadFromSheets(function(){ renderManutProgTable(); });
+  });
 }
 
 
