@@ -303,6 +303,19 @@
   </div>
 </div>
 
+<!-- ===== MODAL EXCLUIR CAMINHÃO ===== -->
+<div class="modal-overlay" id="cmDelOverlay" onclick="if(event.target===this)closeCaminhaoDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir caminhão?</h3>
+    <div id="cmDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeCaminhaoDelete()">Cancelar</button>
+      <button class="btn-danger" id="cmDelBtn" onclick="confirmCaminhaoDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TANQUE (novo/editar) ===== -->
 <div class="modal-overlay" id="tanqueModalOverlay" onclick="if(event.target===this)closeTanqueModal()">
   <div class="modal">
@@ -704,7 +717,7 @@
         </div>
 
         <div class="table-container" style="margin-top:16px">
-          <div class="table-header"><h3>🛞 Consulta de Pneu</h3></div>
+          <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
           <div style="padding:16px">
             <div class="pneu-search-bar">
               <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">

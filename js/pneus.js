@@ -114,6 +114,115 @@ function coletarItensPneu(containerId){
   return itens;
 }
 
+// ==================== FOLHA DE CAMPO (IMPRESSÃO) ====================
+// Folha em branco pra anotar na garagem (pneu removido/instalado por posição)
+// e depois passar pro sistema. Uma página por tipo de veículo, mesmo diagrama
+// de eixos do formulário digital (PNEU_CONFIGS), sem interatividade.
+var PNEU_TIPOS_FOLHA=[
+  {key:'cavalo', nome:'Cavalo Mecânico'},
+  {key:'carreta_3_eixos', nome:'Carreta 3 Eixos'},
+  {key:'carreta_4_eixos', nome:'Carreta 4 Eixos'}
+];
+
+function _folhaWheelHtml(axle,lado){
+  var ladoTxt=lado==='E'?'Esq.':'Dir.';
+  if(!axle.duplo){
+    return '<div class="folha-wpos"><div class="folha-tire">'+ladoTxt+'</div></div>';
+  }
+  var ext='<div class="folha-tire">'+ladoTxt+' ext</div>';
+  var int='<div class="folha-tire">'+ladoTxt+' int</div>';
+  // Empilhado verticalmente (não lado a lado) — mesma visão de corte do eixo usada no sistema:
+  // externa sempre na ponta de fora, interna sempre encostada no diferencial/eixo de arraste.
+  return '<div class="folha-wpos">'+(lado==='E'?ext+int:int+ext)+'</div>';
+}
+function _folhaAxleColHtml(axle){
+  var mid=axle.driven?'<div class="folha-diff" title="Diferencial (tração)"></div>':'<div class="folha-beam" title="Eixo de arraste"></div>';
+  // Eixo desenhado como uma barra contínua (stub+centro+stub sem espaço entre si) ligando
+  // as duas rodas — mesma leitura do diagrama do sistema, só que em traço sólido pro papel.
+  var shaft='<div class="folha-shaft-assy"><div class="folha-stub"></div>'+mid+'<div class="folha-stub"></div></div>';
+  return '<div class="folha-eixo-col"><div class="folha-eixo-nome">'+axle.nome+'</div>'+
+    _folhaWheelHtml(axle,'E')+shaft+_folhaWheelHtml(axle,'D')+'</div>';
+}
+function _folhaRowHtml(posLabel){
+  return '<tr><td>'+posLabel+'</td><td class="folha-blank"></td><td class="folha-blank"></td></tr>';
+}
+function _folhaSheetHtml(tipoKey,tipoNome,logoSrc){
+  var axles=PNEU_CONFIGS[tipoKey];
+  var diag='<div class="folha-diagrama">';
+  axles.forEach(function(axle,i){
+    diag+=_folhaAxleColHtml(axle);
+    if(i<axles.length-1) diag+='<div class="'+(axle.driven?'folha-shaft':'folha-frame')+'"></div>';
+  });
+  diag+='</div>';
+  var rows='';
+  axles.forEach(function(axle){
+    if(axle.duplo){
+      rows+=_folhaRowHtml(axle.nome+' · Esquerdo externo');
+      rows+=_folhaRowHtml(axle.nome+' · Esquerdo interno');
+      rows+=_folhaRowHtml(axle.nome+' · Direito interno');
+      rows+=_folhaRowHtml(axle.nome+' · Direito externo');
+    } else {
+      rows+=_folhaRowHtml(axle.nome+' · Esquerdo');
+      rows+=_folhaRowHtml(axle.nome+' · Direito');
+    }
+  });
+  var h='<div class="folha-sheet">';
+  h+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Folha de Troca de Pneus — '+tipoNome+'</div><div class="gen">Preencher na garagem e lançar depois no sistema (Manutenção → Pneus)</div></div></div>';
+  h+='<div class="folha-campos">';
+  h+='<div class="folha-campo folha-campo-lg"><label>Placa</label><div class="folha-linha"></div></div>';
+  h+='<div class="folha-campo"><label>Data</label><div class="folha-linha"></div></div>';
+  h+='<div class="folha-campo folha-campo-lg"><label>Motorista / Operador</label><div class="folha-linha"></div></div>';
+  h+='<div class="folha-campo"><label>KM atual</label><div class="folha-linha"></div></div>';
+  h+='</div>';
+  h+=diag;
+  h+='<div class="folha-legenda"><span><i class="folha-leg-dot folha-leg-diff"></i>Diferencial (tração)</span><span><i class="folha-leg-dot folha-leg-beam"></i>Eixo de arraste</span></div>';
+  h+='<table class="folha-table"><thead><tr><th>Posição</th><th>Pneu removido (nº)</th><th>Pneu instalado (nº)</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  h+='<div class="folha-campo" style="margin-top:14px;max-width:340px"><label>Observações</label><div class="folha-linha"></div><div class="folha-linha" style="margin-top:16px"></div></div>';
+  h+='</div>';
+  return h;
+}
+function imprimirFolhaPneus(){
+  var logoEl=document.querySelector('.sidebar-logo img');
+  var logoSrc=logoEl?logoEl.src:'';
+  var win=window.open('','_blank');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Folhas de Pneus — Biomassa Chaparini</title><style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:11px}';
+  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:14px}';
+  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}.rep-head h1{font-size:18px;color:#085425;line-height:1.1}';
+  html+='.rep-head .sub{font-size:12px;color:#444;margin-top:2px;font-weight:bold}.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
+  html+='.folha-sheet{page-break-after:always;padding-bottom:10px}.folha-sheet:last-child{page-break-after:auto}';
+  html+='.folha-campos{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:18px}';
+  html+='.folha-campo{flex:1;min-width:110px}.folha-campo-lg{flex:2;min-width:220px}';
+  html+='.folha-campo label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#666;margin-bottom:4px}';
+  html+='.folha-linha{border-bottom:1.3px solid #333;height:20px}';
+  html+='.folha-diagrama{display:flex;align-items:center;justify-content:center;gap:0;margin:10px 0 6px;padding:26px 6px 14px;border:1px solid #ddd;border-radius:8px;background:#fafafa}';
+  html+='.folha-eixo-col{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}';
+  html+='.folha-eixo-nome{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:6px;font-size:8.5px;color:#555;white-space:nowrap}';
+  html+='.folha-wpos{display:flex;flex-direction:column;gap:3px}';
+  html+='.folha-tire{width:40px;height:22px;border:1.4px solid #333;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7.5px;line-height:1.1;color:#333;text-align:center}';
+  html+='.folha-shaft-assy{display:flex;flex-direction:column;align-items:center}';
+  html+='.folha-stub{width:0;height:12px;border-left:3px solid #333}';
+  html+='.folha-diff{width:22px;height:22px;border:2.5px solid #222;border-radius:50%}';
+  html+='.folha-beam{width:22px;height:8px;border:2px solid #333;border-radius:2px}';
+  html+='.folha-shaft{width:36px;height:0;border-top:4px solid #333;align-self:center}';
+  html+='.folha-frame{width:36px;height:0;border-top:2px solid #999;align-self:center}';
+  html+='.folha-legenda{display:flex;gap:16px;justify-content:center;font-size:9px;color:#666;margin-bottom:10px}';
+  html+='.folha-leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}';
+  html+='.folha-leg-diff{background:#e8e8e8;border:1.4px solid #333}.folha-leg-beam{background:#999}';
+  html+='.folha-table{width:100%;border-collapse:collapse;margin-top:4px}';
+  html+='.folha-table th{background:#0D692C;color:#fff;text-transform:uppercase;font-size:8.5px;padding:5px 8px;text-align:left}';
+  html+='.folha-table td{border:1px solid #ccc;padding:0;font-size:9px}';
+  html+='.folha-table td:first-child{padding:6px 8px}';
+  html+='.folha-blank{height:26px}';
+  html+='@page{size:portrait;margin:10mm}@media print{body{padding:0}}';
+  html+='</style></head><body>';
+  PNEU_TIPOS_FOLHA.forEach(function(t){ html+=_folhaSheetHtml(t.key,t.nome,logoSrc); });
+  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>';
+  html+='</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+
 // ==================== CONSULTA DE PNEU ====================
 function _pneuPosLabel(it){
   var ladoTxt=it.LADO==='E'?'Esquerdo':'Direito';

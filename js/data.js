@@ -272,6 +272,9 @@ function _rotearAction(action, data) {
     case 'updateCaminhao': {
       return sb.from('caminhoes').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     }
+    case 'deleteCaminhao': {
+      return sb.from('caminhoes').delete().eq('id', data.id).then(_unwrap);
+    }
 
     // ---------- MANUTENÇÃO ----------
     case 'addManutRealizada': {

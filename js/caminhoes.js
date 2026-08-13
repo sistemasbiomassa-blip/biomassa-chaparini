@@ -9,7 +9,7 @@ function renderCaminhoesTable(){
   var lista=CAMINHOES_DATA.slice().sort(function(a,b){return String(a.PLACA||'').localeCompare(String(b.PLACA||''),'pt-BR',{sensitivity:'base'})});
   lista.forEach(function(r){
     var tipoTxt=r.TIPO_VEICULO?TIPO_VEICULO_LABEL[r.TIPO_VEICULO]||r.TIPO_VEICULO:'<span style="color:var(--text2)">— não cadastrado —</span>';
-    var acts=isAdmin?'<td style="text-align:center"><span class="maq-act" title="Editar" onclick="openCaminhaoModal(\''+r.ID+'\')">✏️</span></td>':'';
+    var acts=isAdmin?'<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openCaminhaoModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openCaminhaoDelete(\''+r.ID+'\')">🗑️</span></td>':'';
     h+='<tr><td style="color:var(--accent);font-weight:600;font-family:JetBrains Mono,monospace">'+(r.PLACA||'-')+'</td><td>'+(r.MARCA||'-')+'</td><td>'+(r.MODELO||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.ANO||'-')+'</td><td>'+tipoTxt+'</td>'+acts+'</tr>';
   });
   h+='</tbody></table>';
@@ -77,6 +77,29 @@ function salvarCaminhaoEdit(){
     if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
     showToast('✅ Caminhão atualizado!');
     closeCaminhaoModal();
+    loadFromSheets(function(){ renderCaminhoesTable(); });
+  });
+}
+
+// ---------- Exclusão ----------
+var _cmDelId=null;
+function openCaminhaoDelete(id){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir caminhões',true);return;}
+  var row=findCaminhaoById(id);
+  if(!row){showToast('Caminhão não encontrado',true);return;}
+  _cmDelId=String(id);
+  document.getElementById('cmDelDetails').innerHTML='<div><strong>Placa:</strong> '+(row.PLACA||'-')+'</div><div><strong>Marca/Modelo:</strong> '+(row.MARCA||'-')+' '+(row.MODELO||'')+'</div><div style="margin-top:8px;color:var(--text2);font-size:12px">⚠️ Se essa placa já tiver lançamentos (Cadastro, Manutenção, Garantia), a exclusão vai falhar — nesse caso não é possível remover, só deixar de usar a placa.</div>';
+  document.getElementById('cmDelOverlay').classList.add('show');
+}
+function closeCaminhaoDelete(){ document.getElementById('cmDelOverlay').classList.remove('show'); _cmDelId=null; }
+function confirmCaminhaoDelete(){
+  if(!_cmDelId) return;
+  var btn=document.getElementById('cmDelBtn'); if(btn){btn.disabled=true;btn.textContent='Excluindo...';}
+  saveToSheets('deleteCaminhao',{id:_cmDelId},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='🗑️ Excluir';}
+    if(!ok){showToast('❌ Não foi possível excluir: '+((res&&res.error)||'essa placa já tem lançamentos vinculados'),true);return;}
+    showToast('✅ Caminhão excluído');
+    closeCaminhaoDelete();
     loadFromSheets(function(){ renderCaminhoesTable(); });
   });
 }
