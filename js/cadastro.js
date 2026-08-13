@@ -210,13 +210,26 @@ function salvarManutRealizada(){
   var localServico=n(document.getElementById('fmLocalServico').value);
   var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
   var obs=n(document.getElementById('fmObs').value);
-  DB.manutRealizada.push({PLACA:p,TIPO_MANUTENCAO:t,DATA_MANUTENCAO:d,KM_NA_MANUTENCAO:num(k),'OBSERVAÇÃO':obs,VALOR:valor||'',LOCAL_SERVICO:localServico,NOTA_FISCAL:notaFiscal,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')});
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok) {
-    if (ok) showToast('✅ Manutenção salva! '+p+' - '+t);
-    else showToast('⚠️ Salvo local, falha na planilha', true);
+  var mostraDiagrama=document.getElementById('fmPneuWrap').style.display!=='none';
+  var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
+    if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
+    var novoId=res&&res[0]&&res[0].id;
+    function finalizar(){
+      showToast('✅ Manutenção salva! '+p+' - '+t);
+      limparFormManutReal();
+      loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+    }
+    if(itensPneu.length && novoId){
+      itensPneu.forEach(function(it){ it.manut_realizada_id=novoId; });
+      saveToSheets('addManutPneuItens',{itens:itensPneu},function(ok2,res2){
+        if(!ok2) showToast('⚠️ Manutenção salva, mas falha ao salvar as posições de pneu: '+((res2&&res2.error)||'desconhecido'),true);
+        finalizar();
+      });
+    } else {
+      finalizar();
+    }
   })
-  limparFormManutReal();
-  renderManutRealTable();
 }
 
 function limparFormManutReal(){
@@ -224,6 +237,24 @@ function limparFormManutReal(){
   ['fmKM','fmValor','fmLocalServico','fmNotaFiscal'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('fmObs').value='';
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);
+  _atualizarDiagramaPneuForm();
+}
+
+// Mostra/esconde o diagrama de eixos conforme o tipo de manutenção selecionado
+// (CONTROLA_PNEUS) e o Tipo de Veículo cadastrado na placa escolhida.
+function _atualizarDiagramaPneuForm(){
+  var placaEl=document.getElementById('fmPlaca'), tipoEl=document.getElementById('fmTipo');
+  var wrap=document.getElementById('fmPneuWrap'), aviso=document.getElementById('fmPneuAviso');
+  if(!placaEl||!tipoEl||!wrap||!aviso) return;
+  var placa=placaEl.value, tipoNome=tipoEl.value;
+  var tipoProg=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO===tipoNome})[0];
+  if(!tipoProg||!tipoProg.CONTROLA_PNEUS||!placa){ wrap.style.display='none'; aviso.style.display='none'; return; }
+  var cam=CAMINHOES_DATA.filter(function(c){return c.PLACA===placa})[0];
+  var tipoVeiculo=cam?cam.TIPO_VEICULO:null;
+  if(!tipoVeiculo){ wrap.style.display='none'; aviso.style.display=''; return; }
+  aviso.style.display='none';
+  wrap.style.display='';
+  renderDiagramaEixos('fmPneuDiagram',tipoVeiculo,[]);
 }
 
 // ==================== RENDER TABLES ====================
@@ -246,10 +277,10 @@ function findManutProgById(id){
 function renderManutProgTable(){
   var data=DB.manutProgramada;
   var isAdmin=currentUserData&&currentUserData.perfil==='ADMIN';
-  var h='<table><thead><tr><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th>'+(isAdmin?'<th style="text-align:center">Ações</th>':'')+'</tr></thead><tbody>';
+  var h='<table><thead><tr><th>Tipo</th><th>Intervalo KM</th><th>Alerta Urgente</th><th>Alerta Atenção</th><th>Pneus</th>'+(isAdmin?'<th style="text-align:center">Ações</th>':'')+'</tr></thead><tbody>';
   data.forEach(function(r){
     var acts=isAdmin?'<td style="text-align:center;white-space:nowrap"><span class="maq-act" title="Editar" onclick="openManutProgModal(\''+r.ID+'\')">✏️</span> <span class="maq-act" title="Excluir" onclick="openManutProgDelete(\''+r.ID+'\')">🗑️</span></td>':'';
-    h+='<tr><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'<span style="color:var(--text2)">— sem controle —</span>')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td>'+acts+'</tr>';
+    h+='<tr><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+(r.INTERVALO_KM?Number(r.INTERVALO_KM).toLocaleString('pt-BR'):'<span style="color:var(--text2)">— sem controle —</span>')+'</td><td>'+(r.ALERTA_URGENTE?Number(r.ALERTA_URGENTE).toLocaleString('pt-BR'):'-')+'</td><td>'+(r['ALERTA ATENCAO']?Number(r['ALERTA ATENCAO']).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.CONTROLA_PNEUS?'🛞 sim':'<span style="color:var(--text2)">não</span>')+'</td>'+acts+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutProgContainer').innerHTML=h;
@@ -262,7 +293,8 @@ function _manutProgBuildForm(row){
     '<div class="form-group" style="grid-column:1/-1"><label>Nome do Tipo *</label><input id="mp_nome" type="text" value="'+(row.TIPO_MANUTENCAO?String(row.TIPO_MANUTENCAO).replace(/"/g,'&quot;'):'')+'" placeholder="ex: Troca de Óleo Motor"></div>'+
     '<div class="form-group"><label>Intervalo KM</label><input id="mp_intervalo" type="number" step="1" value="'+(row.INTERVALO_KM!=null&&row.INTERVALO_KM!==''?num(row.INTERVALO_KM):'')+'"></div>'+
     '<div class="form-group"><label>Alerta Urgente (KM antes)</label><input id="mp_urgente" type="number" step="1" value="'+(row.ALERTA_URGENTE!=null&&row.ALERTA_URGENTE!==''?num(row.ALERTA_URGENTE):'')+'"></div>'+
-    '<div class="form-group"><label>Alerta Atenção (KM antes)</label><input id="mp_atencao" type="number" step="1" value="'+(row['ALERTA ATENCAO']!=null&&row['ALERTA ATENCAO']!==''?num(row['ALERTA ATENCAO']):'')+'"></div>';
+    '<div class="form-group"><label>Alerta Atenção (KM antes)</label><input id="mp_atencao" type="number" step="1" value="'+(row['ALERTA ATENCAO']!=null&&row['ALERTA ATENCAO']!==''?num(row['ALERTA ATENCAO']):'')+'"></div>'+
+    '<div class="form-group" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:7px;text-transform:none;font-weight:400;letter-spacing:normal"><input type="checkbox" id="mp_controlaPneus" style="width:auto"'+(row.CONTROLA_PNEUS?' checked':'')+'> 🛞 Controla pneus por posição (mostra o diagrama de eixos ao lançar este tipo)</label></div>';
 }
 function openManutProgModal(id){
   if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode gerenciar tipos de manutenção',true);return;}
@@ -280,17 +312,18 @@ function salvarManutProg(){
   var intervalo=document.getElementById('mp_intervalo').value;
   var urgente=document.getElementById('mp_urgente').value;
   var atencao=document.getElementById('mp_atencao').value;
-  var row={'TIPO MANUTENÇÃO':nome,'INTERVALO KM':intervalo?num(intervalo):'','ALERTA URGENTE':urgente?num(urgente):'','ALERTA ATENCAO':atencao?num(atencao):''};
+  var controlaPneus=document.getElementById('mp_controlaPneus').checked;
+  var row={'TIPO MANUTENÇÃO':nome,'INTERVALO KM':intervalo?num(intervalo):'','ALERTA URGENTE':urgente?num(urgente):'','ALERTA ATENCAO':atencao?num(atencao):'',CONTROLA_PNEUS:controlaPneus};
   var btn=document.getElementById('manutProgSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
   function done(ok,res){
     if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
     if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
     showToast('✅ Tipo de manutenção salvo!');
     closeManutProgModal();
-    loadFromSheets(function(){ renderManutProgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+    loadFromSheets(function(){ renderManutProgTable(); refreshSelectOptions('fmTipo',BASE.tipoManut); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
   }
   if(_manutProgEditId){
-    var rowU={TIPO_MANUTENCAO:nome,INTERVALO_KM:intervalo?num(intervalo):null,ALERTA_URGENTE:urgente?num(urgente):null,ALERTA_ATENCAO:atencao?num(atencao):null};
+    var rowU={TIPO_MANUTENCAO:nome,INTERVALO_KM:intervalo?num(intervalo):null,ALERTA_URGENTE:urgente?num(urgente):null,ALERTA_ATENCAO:atencao?num(atencao):null,CONTROLA_PNEUS:controlaPneus};
     saveToSheets('updateManutP',{id:_manutProgEditId,row:rowU},done);
   } else {
     saveToSheets('addManutProgramada',row,done);
@@ -312,7 +345,7 @@ function confirmManutProgDelete(){
     if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido — verifique se o tipo não está em uso'),true);return;}
     showToast('✅ Tipo excluído');
     closeManutProgDelete();
-    loadFromSheets(function(){ renderManutProgTable(); });
+    loadFromSheets(function(){ renderManutProgTable(); refreshSelectOptions('fmTipo',BASE.tipoManut); });
   });
 }
 

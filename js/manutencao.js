@@ -407,7 +407,8 @@ function buildManutDetalhamento(){
 
   var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
-  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  var colCount=canEdit?10:9;
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   rows.forEach(function(r){
     var actCell='';
     if(canEdit){
@@ -415,6 +416,8 @@ function buildManutDetalhamento(){
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openManutRealModal(\''+r.ID+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
         (currentUserData.perfil==='ADMIN'?' <button class="btn-delete-row" onclick="openManutRealDelete(\''+r.ID+'\')" title="Excluir">🗑️</button>':'')+'</td>';
     }
+    var itensPneu=DB.manutPneusItens.filter(function(it){return String(it.MANUT_REALIZADA_ID)===String(r.ID)});
+    var pneuCell=itensPneu.length?'<span class="pneu-count-badge" onclick="_toggleManutDetPneu(\''+r.ID+'\')">🛞 '+itensPneu.length+' ▾</span>':'<span style="color:var(--text2)">—</span>';
     tH+='<tr><td style="'+mono+'">'+formatDateBR(r.DATA_MANUTENCAO)+'</td>'+
       '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
       '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
@@ -422,10 +425,21 @@ function buildManutDetalhamento(){
       '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
       '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
       '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
-      '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+actCell+'</tr>';
+      '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+
+      '<td>'+pneuCell+'</td>'+actCell+'</tr>';
+    if(itensPneu.length){
+      tH+='<tr id="mdPneuExp_'+r.ID+'" style="display:none"><td colspan="'+colCount+'" style="background:var(--surface2);padding:14px 20px">'+
+        '<table class="pneu-mini-tbl"><thead><tr><th>Posição</th><th>Pneu removido</th><th>Pneu instalado</th></tr></thead><tbody>'+
+        itensPneu.map(function(it){return '<tr><td>'+_pneuPosLabel(it)+'</td><td style="'+mono+'">'+(it.PNEU_REMOVIDO||'-')+'</td><td style="'+mono+';color:var(--green)">'+(it.PNEU_INSTALADO||'-')+'</td></tr>';}).join('')+
+        '</tbody></table></td></tr>';
+    }
   });
   tH+='</tbody></table></div>';
   document.getElementById('tblManutDet').innerHTML=tH;
+}
+function _toggleManutDetPneu(id){
+  var row=document.getElementById('mdPneuExp_'+id);
+  if(row) row.style.display=row.style.display==='none'?'table-row':'none';
 }
 
 function findManutRealById(id){ id=String(id); for(var i=0;i<DB.manutRealizada.length;i++){ if(String(DB.manutRealizada[i].ID)===id) return DB.manutRealizada[i]; } return null; }
@@ -437,14 +451,34 @@ function _mrBuildForm(row){
   var to='<option value="">Selecione...</option>';
   (BASE.tipoManut||[]).slice().sort().forEach(function(t){to+='<option value="'+t+'"'+(row.TIPO_MANUTENCAO===t?' selected':'')+'>'+t+'</option>'});
   return ''+
-    '<div class="form-group"><label>Placa *</label><select id="mr_placa">'+po+'</select></div>'+
-    '<div class="form-group"><label>Tipo *</label><select id="mr_tipo">'+to+'</select></div>'+
+    '<div class="form-group"><label>Placa *</label><select id="mr_placa" onchange="_atualizarDiagramaPneuEdit(false)">'+po+'</select></div>'+
+    '<div class="form-group"><label>Tipo *</label><select id="mr_tipo" onchange="_atualizarDiagramaPneuEdit(false)">'+to+'</select></div>'+
     '<div class="form-group"><label>Data *</label><input id="mr_data" type="date" value="'+(row.DATA_MANUTENCAO?String(row.DATA_MANUTENCAO).slice(0,10):'')+'"></div>'+
     '<div class="form-group"><label>KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
     '<div class="form-group"><label>Valor (R$)</label><input id="mr_valor" type="number" step="0.01" value="'+(row.VALOR!=null&&row.VALOR!==''?num(row.VALOR):'')+'"></div>'+
     '<div class="form-group"><label>Local do Serviço</label><input id="mr_local" type="text" value="'+(row.LOCAL_SERVICO?String(row.LOCAL_SERVICO).replace(/"/g,'&quot;'):'')+'"></div>'+
     '<div class="form-group"><label>Nota Fiscal</label><input id="mr_nota" type="text" value="'+(row.NOTA_FISCAL?String(row.NOTA_FISCAL).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div id="mrPneuAviso" style="display:none;grid-column:1/-1;font-size:12px;color:var(--yellow);background:rgba(210,153,34,0.08);border:1px solid rgba(210,153,34,0.25);border-radius:8px;padding:9px 12px">⚠️ Cadastre o Tipo de Veículo dessa placa em Cadastro → Caminhões pra habilitar o diagrama de pneus.</div>'+
+    '<div id="mrPneuWrap" style="display:none;grid-column:1/-1">'+
+      '<label style="font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:8px">🛞 Posições trocadas</label>'+
+      '<div id="mrPneuDiagram"></div>'+
+    '</div>'+
     '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="mr_obs" rows="2">'+(row['OBSERVAÇÃO']?String(row['OBSERVAÇÃO']).replace(/</g,'&lt;'):'')+'</textarea></div>';
+}
+function _atualizarDiagramaPneuEdit(carregarExistentes){
+  var placaEl=document.getElementById('mr_placa'), tipoEl=document.getElementById('mr_tipo');
+  var wrap=document.getElementById('mrPneuWrap'), aviso=document.getElementById('mrPneuAviso');
+  if(!placaEl||!tipoEl||!wrap||!aviso) return;
+  var placa=placaEl.value, tipoNome=tipoEl.value;
+  var tipoProg=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO===tipoNome})[0];
+  if(!tipoProg||!tipoProg.CONTROLA_PNEUS||!placa){ wrap.style.display='none'; aviso.style.display='none'; return; }
+  var cam=CAMINHOES_DATA.filter(function(c){return c.PLACA===placa})[0];
+  var tipoVeiculo=cam?cam.TIPO_VEICULO:null;
+  if(!tipoVeiculo){ wrap.style.display='none'; aviso.style.display=''; return; }
+  aviso.style.display='none';
+  wrap.style.display='';
+  var itensExistentes=(carregarExistentes&&_mrEditId)?DB.manutPneusItens.filter(function(it){return String(it.MANUT_REALIZADA_ID)===String(_mrEditId)}):[];
+  renderDiagramaEixos('mrPneuDiagram',tipoVeiculo,itensExistentes);
 }
 function openManutRealModal(id){
   var row=findManutRealById(id);
@@ -458,6 +492,7 @@ function openManutRealModal(id){
   }
   _mrEditId=String(id);
   document.getElementById('mrModalGrid').innerHTML=_mrBuildForm(row);
+  _atualizarDiagramaPneuEdit(true);
   document.getElementById('mrModalOverlay').classList.add('show');
 }
 function closeManutRealModal(){ document.getElementById('mrModalOverlay').classList.remove('show'); _mrEditId=null; }
@@ -475,13 +510,26 @@ function salvarManutRealEdit(){
     nota_fiscal:document.getElementById('mr_nota').value.trim()||null,
     observacao:document.getElementById('mr_obs').value.trim()||null
   };
+  var mostraDiagrama=document.getElementById('mrPneuWrap').style.display!=='none';
+  var itensPneu=mostraDiagrama?coletarItensPneu('mrPneuDiagram'):null;
+  var editId=_mrEditId;
   var btn=document.getElementById('mrSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
-  saveToSheets('updateManutR',{id:_mrEditId,row:row},function(ok,res){
-    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
-    if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
-    showToast('✅ Manutenção atualizada!');
-    closeManutRealModal();
-    loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+  saveToSheets('updateManutR',{id:editId,row:row},function(ok,res){
+    if(!ok){ if(btn){btn.disabled=false;btn.textContent='💾 Salvar';} showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true); return; }
+    function finalizar(){
+      if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+      showToast('✅ Manutenção atualizada!');
+      closeManutRealModal();
+      loadFromSheets(function(){ renderManutRealTable(); if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+    }
+    if(itensPneu!==null){
+      saveToSheets('setManutPneuItens',{manutRealizadaId:editId,itens:itensPneu},function(ok2,res2){
+        if(!ok2) showToast('⚠️ Manutenção atualizada, mas falha ao salvar as posições de pneu: '+((res2&&res2.error)||'desconhecido'),true);
+        finalizar();
+      });
+    } else {
+      finalizar();
+    }
   });
 }
 function openManutRealDelete(id){

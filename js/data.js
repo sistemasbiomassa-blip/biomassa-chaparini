@@ -70,12 +70,12 @@ function loadFromSheets(callback) {
     sbFetchAll('classes_despesa'), sbFetchAll('profiles'), sbFetchAll('maquinas'),
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
-    sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'),
+    sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'), sbFetchAll('manut_pneus_itens'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
         tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
-        garantiaR=r[16], manutPGR=r[17];
+        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -98,7 +98,13 @@ function loadFromSheets(callback) {
 
     DB.manutProgramada = manutPR.map(function(x){ return {
       ID:x.id, TIPO_MANUTENCAO:x.tipo_manutencao, INTERVALO_KM:x.intervalo_km,
-      ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao
+      ALERTA_URGENTE:x.alerta_urgente, 'ALERTA ATENCAO':x.alerta_atencao, CONTROLA_PNEUS:!!x.controla_pneus
+    };});
+
+    DB.manutPneusItens = manutPneusR.map(function(x){ return {
+      ID:x.id, MANUT_REALIZADA_ID:x.manut_realizada_id, EIXO:x.eixo, LADO:x.lado, POSICAO:x.posicao,
+      PNEU_REMOVIDO:x.pneu_removido, PNEU_INSTALADO:x.pneu_instalado,
+      USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     DB.garantiaCaminhoes = garantiaR.map(function(x){ return {
@@ -122,7 +128,7 @@ function loadFromSheets(callback) {
       DATA_ADMISSAO:x.data_admissao, DATA_DESLIGAMENTO:x.data_desligamento
     };});
 
-    CAMINHOES_DATA = caminhoesR.map(function(x){ return { PLACA:x.placa, MARCA:x.marca, MODELO:x.modelo, ANO:x.ano }; });
+    CAMINHOES_DATA = caminhoesR.map(function(x){ return { ID:x.id, PLACA:x.placa, MARCA:x.marca, MODELO:x.modelo, ANO:x.ano, TIPO_VEICULO:x.tipo_veiculo }; });
 
     USUARIOS = profilesR.map(function(x){ return {
       _id:x.id, USUARIO:x.usuario||x.nome, NOME:x.nome, PERFIL:x.perfil, EMAIL:x.email,
@@ -263,6 +269,9 @@ function _rotearAction(action, data) {
     case 'addCaminhao': {
       return sb.from('caminhoes').insert(_lowerKeys(data)).select().then(_unwrap);
     }
+    case 'updateCaminhao': {
+      return sb.from('caminhoes').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    }
 
     // ---------- MANUTENÇÃO ----------
     case 'addManutRealizada': {
@@ -282,7 +291,8 @@ function _rotearAction(action, data) {
     }
     case 'addManutProgramada': {
       var mp={ tipo_manutencao:data['TIPO MANUTENÇÃO']||data.TIPO_MANUTENCAO, intervalo_km:data['INTERVALO KM'],
-        alerta_urgente:data['ALERTA URGENTE'], alerta_atencao:data['ALERTA ATENCAO'] };
+        alerta_urgente:data['ALERTA URGENTE'], alerta_atencao:data['ALERTA ATENCAO'],
+        controla_pneus:!!data.CONTROLA_PNEUS };
       return sb.from('manut_programada').insert(_limparPayload(mp)).select().then(_unwrap);
     }
     case 'updateManutP': {
@@ -302,6 +312,23 @@ function _rotearAction(action, data) {
     case 'addManutProgGarantia': return sb.from('manut_programada_garantia').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
     case 'updateManutProgGarantia': return sb.from('manut_programada_garantia').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     case 'deleteManutProgGarantia': return sb.from('manut_programada_garantia').delete().eq('id', data.id).then(_unwrap);
+
+    // ---------- MANUT_PNEUS_ITENS (posições de troca de pneu) ----------
+    case 'addManutPneuItens': {
+      var itensAdd=(data.itens||[]).map(function(it){ return _comUsuarioAtual(_lowerKeys(it)); });
+      if(!itensAdd.length) return Promise.resolve([]);
+      return sb.from('manut_pneus_itens').insert(itensAdd).select().then(_unwrap);
+    }
+    case 'setManutPneuItens': {
+      var manutId=data.manutRealizadaId;
+      if(!manutId) return Promise.reject(new Error('setManutPneuItens sem manutRealizadaId'));
+      return sb.from('manut_pneus_itens').delete().eq('manut_realizada_id', manutId).then(function(delRes){
+        if(delRes.error) return Promise.reject(delRes.error);
+        var itensSet=(data.itens||[]).map(function(it){ return _comUsuarioAtual(_lowerKeys(it)); });
+        if(!itensSet.length) return [];
+        return sb.from('manut_pneus_itens').insert(itensSet).select().then(_unwrap);
+      });
+    }
 
     // ---------- MAQUINÁRIOS ----------
     case 'addMaquina': return sb.from('maquinas').insert(_lowerKeys(data)).select().then(_unwrap);

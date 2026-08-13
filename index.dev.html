@@ -291,6 +291,18 @@
   </div>
 </div>
 
+<!-- ===== MODAL CAMINHÃO (editar) ===== -->
+<div class="modal-overlay" id="cmModalOverlay" onclick="if(event.target===this)closeCaminhaoModal()">
+  <div class="modal">
+    <h2>✏️ Editar Caminhão</h2>
+    <div class="maq-grid" id="cmModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeCaminhaoModal()">Cancelar</button>
+      <button class="btn btn-primary" id="cmSalvarBtn" onclick="salvarCaminhaoEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TANQUE (novo/editar) ===== -->
 <div class="modal-overlay" id="tanqueModalOverlay" onclick="if(event.target===this)closeTanqueModal()">
   <div class="modal">
@@ -496,15 +508,20 @@
             <div class="form-section">
               <div class="form-section-title">🔧 Registrar Manutenção Realizada</div>
               <div class="form-row">
-                <div class="form-group"><label>Placa *</label><select id="fmPlaca"></select></div>
-                <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo"></select></div>
+                <div class="form-group"><label>Placa *</label><select id="fmPlaca" onchange="_atualizarDiagramaPneuForm()"></select></div>
+                <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Data da Manutenção *</label><input type="date" id="fmData"></div>
-                <div class="form-group"><label>KM na Manutenção *</label><input type="number" id="fmKM"></div>
+                <div class="form-group"><label>KM na Manutenção *</label><input type="text" inputmode="decimal" id="fmKM" placeholder="ex: 230.565,60"></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Valor (R$)</label><input type="text" inputmode="decimal" id="fmValor" placeholder="ex: 350,00"></div>
                 <div class="form-group"><label>Local do Serviço</label><input type="text" id="fmLocalServico" placeholder="ex: Oficina do Zé Diesel"></div>
                 <div class="form-group"><label>Nota Fiscal</label><input type="text" id="fmNotaFiscal" placeholder="ex: NF 12345"></div>
+              </div>
+              <div id="fmPneuAviso" style="display:none;font-size:12px;color:var(--yellow);background:rgba(210,153,34,0.08);border:1px solid rgba(210,153,34,0.25);border-radius:8px;padding:9px 12px;margin-bottom:12px">⚠️ Cadastre o Tipo de Veículo dessa placa em Cadastro → Caminhões pra habilitar o diagrama de pneus.</div>
+              <div id="fmPneuWrap" style="display:none;margin-bottom:12px">
+                <label style="font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;display:block;margin-bottom:8px">🛞 Posições trocadas</label>
+                <div id="fmPneuDiagram"></div>
               </div>
               <div class="form-row">
                 <div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="fmObs" rows="2"></textarea></div>
@@ -608,6 +625,7 @@
               <div class="form-row">
                 <div class="form-group"><label>Modelo</label><input type="text" id="fcmModelo" placeholder="Ex: FH 540"></div>
                 <div class="form-group"><label>Ano</label><input type="number" id="fcmAno" placeholder="Ex: 2023" min="1990" max="2030"></div>
+                <div class="form-group"><label>Tipo de Veículo</label><select id="fcmTipoVeiculo"><option value="">— não cadastrado —</option><option value="cavalo">Cavalo Mecânico</option><option value="carreta_3_eixos">Carreta 3 eixos</option><option value="carreta_4_eixos">Carreta 4 eixos</option></select></div>
               </div>
             </div>
             <div class="form-actions">
@@ -683,6 +701,17 @@
         <div style="margin-top:16px">
           <div class="filters" id="filtersManutDet"></div>
           <div class="table-container" id="tblManutDet"></div>
+        </div>
+
+        <div class="table-container" style="margin-top:16px">
+          <div class="table-header"><h3>🛞 Consulta de Pneu</h3></div>
+          <div style="padding:16px">
+            <div class="pneu-search-bar">
+              <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">
+              <button onclick="buscarPneu()">Buscar</button>
+            </div>
+            <div id="pneuBuscaResultado"></div>
+          </div>
         </div>
       </div>
 
@@ -1040,6 +1069,7 @@
 <script src="js/app-init.js"></script>
 <script src="js/cadastro.js"></script>
 <script src="js/garantia.js"></script>
+<script src="js/pneus.js"></script>
 <script src="js/filters-common.js"></script>
 <script src="js/producao.js"></script>
 <script src="js/financeiro.js"></script>

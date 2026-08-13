@@ -29,3 +29,17 @@ function populateSelects(){
   fill('fmTipo',BASE.tipoManut);
 }
 
+// Reaplica as opções de um <select> específico sem mexer nos outros campos do
+// formulário — usado depois de cadastrar/editar/excluir um tipo de manutenção
+// (ou outra lista usada em BASE), pra não perder o que já estava preenchido
+// no resto do Cadastro (populateSelects() reseta a tela toda).
+function refreshSelectOptions(id,arr,ph){
+  var sel=document.getElementById(id);
+  if(!sel) return;
+  var atual=sel.value;
+  var sorted=arr.slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
+  sel.innerHTML='<option value="">'+(ph||'Selecione')+'</option>';
+  sorted.forEach(function(v){sel.innerHTML+='<option value="'+v+'">'+v+'</option>'});
+  if(atual && arr.indexOf(atual)>=0) sel.value=atual;
+}
+

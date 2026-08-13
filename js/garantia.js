@@ -164,7 +164,7 @@ function salvarGarantiaPg(){
       if(!ok){showToast('❌ Erro: '+((res&&res.error)||'desconhecido'),true);return;}
       showToast('✅ Intervalo salvo!');
       closeGarantiaPgModal();
-      loadFromSheets(function(){ renderGarantiaPgTable(); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
+      loadFromSheets(function(){ renderGarantiaPgTable(); refreshSelectOptions('fmTipo',BASE.tipoManut); if(typeof buildManutencao==='function'&&document.getElementById('pageManutencao').classList.contains('active')) buildManutencao(); });
     }
     if(_garPgEditId) saveToSheets('updateManutProgGarantia',{id:_garPgEditId,row:row},done);
     else saveToSheets('addManutProgGarantia',row,done);
