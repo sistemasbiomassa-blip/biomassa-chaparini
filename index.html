@@ -1992,33 +1992,40 @@ var EDIT_FIELDS=[
   {key:'OBSERVAÇÃO', label:'Observação', type:'textarea'}
 ];
 
-function openEditModal(key){
+var _editingComplementar=false;
+
+function openEditModal(key, complementar){
   var found=findRowByKey(key);
   if(!found){ showToast('Registro não encontrado',true); return; }
-  // Permissão (a garantia de verdade é o RLS no banco; isso aqui só evita abrir o modal à toa)
+  // Permissão (a garantia de verdade é o RLS/trigger no banco; isso aqui só evita abrir o modal à toa)
   if(!currentUserData) return;
   if(currentUserData.perfil!=='ADMIN'){
     if(currentUserData.perfil!=='ANALISTA' && currentUserData.perfil!=='DIRETOR'){ showToast('Sem permissão para editar',true); return; }
-    var owner=found.row.USUARIO;
-    if(owner!==currentUserData.nome && owner!==currentUserData.usuario){
-      showToast('❌ Você só pode editar os seus próprios lançamentos',true);
-      return;
+    if(!complementar){
+      var owner=found.row.USUARIO;
+      if(owner!==currentUserData.nome && owner!==currentUserData.usuario){
+        showToast('❌ Você só pode editar os seus próprios lançamentos',true);
+        return;
+      }
     }
   }
   _editingKey=key;
+  _editingComplementar=!!complementar;
   var r=found.row;
-  document.getElementById('editSub').textContent='Motorista: '+(r.MOTORISTA||'-')+'  •  Data: '+formatDateBR(r.DATA)+'  •  Registrado em: '+(r.DATA_REGISTRO||'-');
+  document.getElementById('editSub').textContent=(complementar?'🔒 Complementando — campos já preenchidos ficam travados. ':'')+'Motorista: '+(r.MOTORISTA||'-')+'  •  Data: '+formatDateBR(r.DATA)+'  •  Registrado em: '+(r.DATA_REGISTRO||'-');
   var grid=document.getElementById('editGrid');
   var html='';
   EDIT_FIELDS.forEach(function(f){
     var val=r[f.key];
     if(val==null) val='';
+    var locked=complementar && val!=='';
+    var dis=locked?' disabled':'';
     var id='ed_'+f.key.replace(/[^a-zA-Z0-9]/g,'_');
-    html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+'>';
-    html+='<label>'+f.label+'</label>';
+    html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+(locked?' title="Já preenchido — só quem lançou ou um ADMIN pode alterar"':'')+'>';
+    html+='<label>'+f.label+(locked?' 🔒':'')+'</label>';
     if(f.type==='select'){
       var opts=(BASE[f.src]||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
-      html+='<select id="'+id+'"><option value="">—</option>';
+      html+='<select id="'+id+'"'+dis+'><option value="">—</option>';
       opts.forEach(function(o){
         var sel=String(o)===String(val)?' selected':'';
         html+='<option value="'+String(o).replace(/"/g,'&quot;')+'"'+sel+'>'+o+'</option>';
@@ -2029,11 +2036,11 @@ function openEditModal(key){
       }
       html+='</select>';
     } else if(f.type==='textarea'){
-      html+='<textarea id="'+id+'" rows="2" style="width:100%;resize:vertical">'+String(val).replace(/</g,'&lt;')+'</textarea>';
+      html+='<textarea id="'+id+'" rows="2" style="width:100%;resize:vertical"'+dis+'>'+String(val).replace(/</g,'&lt;')+'</textarea>';
     } else if(f.type==='date'){
       // val pode estar em YYYY-MM-DD ou ISO
       var dval=String(val).slice(0,10);
-      html+='<input type="date" id="'+id+'" value="'+dval+'">';
+      html+='<input type="date" id="'+id+'" value="'+dval+'"'+dis+'>';
     } else if(f.type==='time'){
       // val pode ter formatos variados — normalizar pra HH:MM
       var tval='';
@@ -2041,14 +2048,14 @@ function openEditModal(key){
         var nd=normalizeTimeDisplay(val);
         if(nd && nd!=='-' && /^\d{2}:\d{2}$/.test(nd)) tval=nd;
       }
-      html+='<input type="time" id="'+id+'" value="'+tval+'">';
+      html+='<input type="time" id="'+id+'" value="'+tval+'"'+dis+'>';
     } else if(f.type==='number'){
-      html+='<input type="number" id="'+id+'" '+(f.step?'step="'+f.step+'"':'')+' value="'+(val===''?'':val)+'">';
+      html+='<input type="number" id="'+id+'" '+(f.step?'step="'+f.step+'"':'')+' value="'+(val===''?'':val)+'"'+dis+'>';
     } else if(f.type==='moneynum'){
       var mval=(val===''||val==null)?'':fmt(val,2);
-      html+='<input type="text" inputmode="decimal" id="'+id+'" value="'+mval+'">';
+      html+='<input type="text" inputmode="decimal" id="'+id+'" value="'+mval+'"'+dis+'>';
     } else {
-      html+='<input type="text" id="'+id+'" value="'+String(val).replace(/"/g,'&quot;')+'">';
+      html+='<input type="text" id="'+id+'" value="'+String(val).replace(/"/g,'&quot;')+'"'+dis+'>';
     }
     html+='</div>';
   });
@@ -2085,6 +2092,7 @@ function _aplicarMascaraQuantidadeEdit(limpar){
 function closeEditModal(){
   document.getElementById('editOverlay').classList.remove('show');
   _editingKey=null;
+  _editingComplementar=false;
 }
 
 function saveEdit(){
@@ -3815,7 +3823,7 @@ function dupCadastroNovaViagem(){
 function dupCadastroComplementar(key){
   closeDupCadastroModal();
   limparFormCadastro();
-  openEditModal(key);
+  openEditModal(key, true);
 }
 
 // ==================== SAVE ====================

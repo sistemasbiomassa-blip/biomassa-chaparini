@@ -84,7 +84,7 @@ function dupCadastroNovaViagem(){
 function dupCadastroComplementar(key){
   closeDupCadastroModal();
   limparFormCadastro();
-  openEditModal(key);
+  openEditModal(key, true);
 }
 
 // ==================== SAVE ====================

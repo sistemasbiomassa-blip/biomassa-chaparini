@@ -148,11 +148,13 @@ create policy cadastro_select on public.cadastro
 create policy cadastro_insert on public.cadastro
   for insert with check (public.is_admin() or public.is_analista() or public.is_diretor());
 
+-- Atualizada em 0013_complementar_cadastro.sql: qualquer ANALISTA/DIRETOR pode dar UPDATE
+-- em lançamento de outro usuário (fluxo "Complementar"), mas a trigger
+-- cadastro_protect_owner_fields() barra sobrescrever campo já preenchido por quem não é
+-- o dono nem ADMIN — só deixa preencher o que estava vazio.
 create policy cadastro_update on public.cadastro
   for update using (
-    public.is_admin()
-    or (public.is_analista() and usuario_id = auth.uid())
-    or (public.is_diretor() and usuario_id = auth.uid())
+    public.is_admin() or public.is_analista() or public.is_diretor()
   );
 
 create policy cadastro_delete on public.cadastro
