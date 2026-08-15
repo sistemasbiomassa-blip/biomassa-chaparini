@@ -4898,18 +4898,39 @@ function buildProducao(){
   var entregas=data.filter(function(r){return r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0});
   var totalViagens=entregas.length;
   var totalTON=0,totalM3=0;
-  var motAtivos={},camAtivos={};
+  var motAtivos={},camAtivos={},qtdEntregasTON=0,qtdEntregasM3=0;
   entregas.forEach(function(r){
     if(r.QUANTIDADE){
-      if(BASE.clientesM3.includes(r['LOCAL DESCARGA'])) totalM3+=r.QUANTIDADE;
-      else totalTON+=r.QUANTIDADE;
+      if(BASE.clientesM3.includes(r['LOCAL DESCARGA'])){ totalM3+=r.QUANTIDADE; qtdEntregasM3++; }
+      else { totalTON+=r.QUANTIDADE; qtdEntregasTON++; }
     }
     if(r.MOTORISTA) motAtivos[r.MOTORISTA]=1;
     if(r.PLACA) camAtivos[r.PLACA]=1;
   });
+  var mediaTonPlaca=qtdEntregasTON?totalTON/qtdEntregasTON:0;
+  var mediaM3Placa=qtdEntregasM3?totalM3/qtdEntregasM3:0;
 
-  // Calculate month-over-month trends (from ALL data, comparing selected month vs previous)
-  var allEntregas=DB.cadastro.filter(function(r){return r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0});
+  // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência
+  // e no gráfico dos últimos 15 dias — assim ambos respeitam Placa/Motorista/Local/Unidade/Nota.
+  function _filtrarEntregasSemPeriodo(){
+    return DB.cadastro.filter(function(r){
+      if(!(r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0)) return false;
+      if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
+      if(fM&&r.MOTORISTA!==fM) return false;
+      if(fP&&r.PLACA!==fP) return false;
+      if(fC&&r['LOCAL CARGA']!==fC) return false;
+      if(fD&&r['LOCAL DESCARGA']!==fD) return false;
+      if(fUnid&&r['LOCAL DESCARGA']){
+        var isM3f=BASE.clientesM3.includes(r['LOCAL DESCARGA']);
+        if(fUnid==='TON'&&isM3f) return false;
+        if(fUnid==='M³'&&!isM3f) return false;
+      }
+      return true;
+    });
+  }
+
+  // Calculate month-over-month trends (respeitando os filtros ativos, exceto período)
+  var allEntregas=_filtrarEntregasSemPeriodo();
   var trendMonth=fMes||null;
   var trendViagens=calcMonthTrend(allEntregas,null,null,trendMonth);
   var trendTON=calcMonthTrend(allEntregas,'QUANTIDADE',function(r){return r.QUANTIDADE&&!BASE.clientesM3.includes(r['LOCAL DESCARGA'])},trendMonth);
@@ -4920,11 +4941,17 @@ function buildProducao(){
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendTON.current,trendTON.previous)+'</div><div class="kpi-value">'+numBR(totalTON,1)+'</div><div class="kpi-label">Total (TON)</div></div>'+
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendM3.current,trendM3.previous)+'</div><div class="kpi-value">'+numBR(totalM3,1)+'</div><div class="kpi-label">Total (M³)</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-value">'+Object.keys(motAtivos).length+'</div><div class="kpi-label">Motoristas Ativos</div></div>'+
-    '<div class="kpi-card"><div class="kpi-icon">🚛</div><div class="kpi-value">'+Object.keys(camAtivos).length+'</div><div class="kpi-label">Caminhões Ativos</div></div>';
+    '<div class="kpi-card"><div class="kpi-icon">🚛</div><div class="kpi-value">'+Object.keys(camAtivos).length+'</div><div class="kpi-label">Caminhões Ativos</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">⚖️</div><div class="kpi-value">'+numBR(mediaTonPlaca,1)+'</div><div class="kpi-label">Média TON/Entrega</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">⚖️</div><div class="kpi-value">'+numBR(mediaM3Placa,1)+'</div><div class="kpi-label">Média M³/Entrega</div></div>';
+
+  var hasPeriodoFiltro = !!(fMes||fSemP||fDia||hasRange);
+  var badgeDiario = hasPeriodoFiltro ? 'período filtrado' : 'últimos 15 dias';
 
   var colors=cc();
   document.getElementById('chartsProd').innerHTML=
     '<div class="chart-card full"><div class="chart-title">Quantidade Entregue por Mês <span class="chart-badge">TON + M³</span></div><div class="chart-container"><canvas id="cProdMensal"></canvas></div></div>'+
+    '<div class="chart-card full"><div class="chart-title">Entregas por Dia <span class="chart-badge">'+badgeDiario+'</span></div><div class="chart-container"><canvas id="cProdDiario15"></canvas></div></div>'+
     '<div class="chart-card"><div class="chart-title">Top Motoristas <span class="chart-badge">por entregas</span></div><div class="chart-container"><canvas id="cProdMotoristas"></canvas></div></div>'+
     '<div class="chart-card"><div class="chart-title">Top 5 Clientes <span class="chart-badge">volume total</span></div><div class="chart-container"><canvas id="cProdPizza"></canvas></div></div>'+
     '<div class="chart-card full"><div class="chart-title">Quantidade por Cliente <span class="chart-badge">ranking</span></div><div class="chart-container"><canvas id="cProdClientes"></canvas></div></div>';
@@ -4940,6 +4967,48 @@ function buildProducao(){
   destroyChart('cProdMensal');
   var ctxM=document.getElementById('cProdMensal').getContext('2d');
   chartInstances['cProdMensal']=new Chart(ctxM,{type:'bar',data:{labels:mL.map(getMonthLabel),datasets:[{label:'TON',data:mL.map(function(m){return md[m].ton}),backgroundColor:makeGrad(ctxM,'rgba(59,130,246,0.85)','rgba(59,130,246,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6},{label:'M³',data:mL.map(function(m){return md[m].m3}),backgroundColor:makeGrad(ctxM,'rgba(249,115,22,0.85)','rgba(249,115,22,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}}}}});
+
+  // Entregas por dia — por padrão, últimos 15 dias corridos (independe do filtro de mês/semana/data,
+  // mas respeita os demais filtros: placa, motorista, local, nota, unidade). Se algum filtro de período
+  // (mês, semana, dia ou intervalo de datas) estiver ativo, mostra os dias daquele período em vez disso.
+  var dias15,entregas15;
+  if(hasPeriodoFiltro){
+    entregas15=entregas; // já filtrado com período incluso
+    var dIni,dFim;
+    if(hasRange){
+      dIni=fDtIni||null;dFim=fDtFim||null;
+    } else if(fDia){
+      dIni=fDia;dFim=fDia;
+    } else if(fSemP){
+      var wp=fSemP.split('-S'),wy=parseInt(wp[0]),wn=parseInt(wp[1]);
+      var jan1=new Date(wy,0,1);
+      var startDay=new Date(jan1.getTime()+((wn-1)*7-jan1.getDay()+1)*86400000);
+      var endDay=new Date(startDay.getTime()+6*86400000);
+      dIni=startDay.toISOString().slice(0,10);dFim=endDay.toISOString().slice(0,10);
+    } else if(fMes){
+      var mp=fMes.split('-'),my_=parseInt(mp[0]),mm_=parseInt(mp[1]);
+      dIni=fMes+'-01';
+      dFim=fMes+'-'+String(new Date(my_,mm_,0).getDate()).padStart(2,'0');
+    }
+    if(!dIni||!dFim){
+      var datasPresentes=Object.keys(entregas15.reduce(function(acc,r){if(r.DATA)acc[String(r.DATA).slice(0,10)]=1;return acc},{})).sort();
+      dIni=dIni||datasPresentes[0];dFim=dFim||datasPresentes[datasPresentes.length-1];
+    }
+    dias15=[];
+    if(dIni&&dFim){
+      var cur=new Date(dIni+'T12:00:00'),end=new Date(dFim+'T12:00:00');
+      while(cur<=end){dias15.push(cur.toISOString().slice(0,10));cur.setDate(cur.getDate()+1);}
+    }
+  } else {
+    entregas15=_filtrarEntregasSemPeriodo();
+    dias15=[];var hoje=new Date();hoje.setHours(0,0,0,0);
+    for(var i=14;i>=0;i--){var d=new Date(hoje);d.setDate(d.getDate()-i);dias15.push(d.toISOString().slice(0,10));}
+  }
+  var contagem15={};dias15.forEach(function(d){contagem15[d]=0});
+  entregas15.forEach(function(r){var dd=String(r.DATA||'').slice(0,10);if(contagem15.hasOwnProperty(dd))contagem15[dd]++;});
+  destroyChart('cProdDiario15');
+  var ctx15=document.getElementById('cProdDiario15').getContext('2d');
+  chartInstances['cProdDiario15']=new Chart(ctx15,{type:'line',data:{labels:dias15.map(function(d){return formatDateBR(d)}),datasets:[{label:'Entregas',data:dias15.map(function(d){return contagem15[d]}),borderColor:'rgba(59,130,246,0.9)',backgroundColor:makeGrad(ctx15,'rgba(59,130,246,0.35)','rgba(59,130,246,0.02)'),fill:true,tension:0.35,pointRadius:3,pointBackgroundColor:'rgba(59,130,246,1)',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{beginAtZero:true,ticks:{color:colors.text,precision:0},grid:{color:colors.grid}}}}});
 
   // Top Drivers with horizontal gradient
   var mc={};entregas.forEach(function(r){if(r.MOTORISTA)mc[r.MOTORISTA]=(mc[r.MOTORISTA]||0)+1});
