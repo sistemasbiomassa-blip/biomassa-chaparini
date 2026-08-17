@@ -4539,7 +4539,7 @@ function _folhaAxleColHtml(axle){
     _folhaWheelHtml(axle,'E')+shaft+_folhaWheelHtml(axle,'D')+'</div>';
 }
 function _folhaRowHtml(posLabel){
-  return '<tr><td>'+posLabel+'</td><td class="folha-blank"></td><td class="folha-blank"></td></tr>';
+  return '<tr><td>'+posLabel+'</td><td class="folha-blank"></td><td class="folha-blank"></td><td class="folha-blank"></td></tr>';
 }
 function _folhaSheetHtml(tipoKey,tipoNome,logoSrc){
   var axles=PNEU_CONFIGS[tipoKey];
@@ -4571,7 +4571,7 @@ function _folhaSheetHtml(tipoKey,tipoNome,logoSrc){
   h+='</div>';
   h+=diag;
   h+='<div class="folha-legenda"><span><i class="folha-leg-dot folha-leg-diff"></i>Diferencial (tração)</span><span><i class="folha-leg-dot folha-leg-beam"></i>Eixo de arraste</span></div>';
-  h+='<table class="folha-table"><thead><tr><th>Posição</th><th>Pneu removido (nº)</th><th>Pneu instalado (nº)</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  h+='<table class="folha-table"><thead><tr><th>Posição</th><th>Pneu removido (nº)</th><th>Pneu instalado (nº)</th><th>Marca/Modelo (instalado)</th></tr></thead><tbody>'+rows+'</tbody></table>';
   h+='<div class="folha-campo" style="margin-top:14px;max-width:340px"><label>Observações</label><div class="folha-linha"></div><div class="folha-linha" style="margin-top:16px"></div></div>';
   h+='</div>';
   return h;
