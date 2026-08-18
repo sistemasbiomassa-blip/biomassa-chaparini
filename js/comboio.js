@@ -537,7 +537,7 @@ function openTanqueModal(id){
   var row=_tanqueEditId?findTanqueById(_tanqueEditId):{};
   if(_tanqueEditId&&!row){ showToast('Tanque não encontrado',true); return; }
   document.getElementById('tanqueModalTitle').textContent=_tanqueEditId?'✏️ Editar Tanque':'🛢️ Novo Tanque';
-  var postos=(BASE.localAbast||[]);
+  var postos=locaisFiltrados(BASE.localAbast||[],'Ativos');
   var html='';
   TANQUE_FIELDS.forEach(function(f){
     var val=(row&&row[f.key]!=null)?row[f.key]:'';
@@ -546,6 +546,7 @@ function openTanqueModal(id){
     if(f.type==='selectPosto'){
       html+='<select id="'+fid+'"><option value="">—</option>';
       postos.forEach(function(o){ html+='<option'+(_cbNorm(val)===_cbNorm(o)?' selected':'')+'>'+_cbEsc(o)+'</option>'; });
+      if(val && postos.every(function(o){return _cbNorm(o)!==_cbNorm(val)})) html+='<option selected>'+_cbEsc(val)+' (inativo)</option>';
       html+='</select>';
     } else if(f.type==='textarea'){
       html+='<textarea id="'+fid+'" rows="2">'+_cbEsc(val)+'</textarea>';

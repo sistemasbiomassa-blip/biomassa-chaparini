@@ -20,10 +20,10 @@ function populateSelects(){
     sorted.forEach(function(v){sel.innerHTML+='<option value="'+v+'">'+v+'</option>'});
   }
   fill('fMotorista',motoristasFiltrados(BASE.motoristas,'Ativos'));
-  fill('fLocalCarga',BASE.localCarga);
-  fill('fLocalDescarga',BASE.localDescarga);
+  fill('fLocalCarga',locaisFiltrados(BASE.localCarga,'Ativos'));
+  fill('fLocalDescarga',locaisFiltrados(BASE.localDescarga,'Ativos'));
   fill('fPlaca',BASE.placas);
-  fill('fLocalAbast',BASE.localAbast);
+  fill('fLocalAbast',locaisFiltrados(BASE.localAbast,'Ativos'));
   fill('fClasseDesp',BASE.classeDesp);
   fill('fmPlaca',BASE.placas);
   fill('fmTipo',BASE.tipoManut);

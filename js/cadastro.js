@@ -351,9 +351,32 @@ function confirmManutProgDelete(){
 
 
 // ==================== LOCAIS ====================
+// ---------- FILTRO ATIVOS/INATIVOS (mesmo padrão de motoristasFiltrados) ----------
+// Local "sai de uso" (ex: cliente cuja unidade mudou de TON pra M³) sem apagar o
+// histórico: fica inativo, some das listas de seleção pra lançamento novo, mas
+// segue existindo normalmente pra tudo que já foi lançado com ele.
+function localEstaInativo(nome){
+  var alvo=String(nome||'').trim().toUpperCase();
+  if(!alvo) return false;
+  for(var i=0;i<(LOCAIS_DATA||[]).length;i++){
+    if(String(LOCAIS_DATA[i].NOME||'').trim().toUpperCase()===alvo){
+      return LOCAIS_DATA[i].ATIVO===false;
+    }
+  }
+  return false; // sem ficha -> tratado como ativo
+}
+// modo: 'Ativos' (padrão) | 'Inativos' | 'Todos'
+function locaisFiltrados(lista,modo){
+  lista=lista||[];
+  if(modo==='Todos') return lista.slice();
+  if(modo==='Inativos') return lista.filter(function(n){ return localEstaInativo(n); });
+  return lista.filter(function(n){ return !localEstaInativo(n); }); // Ativos (default)
+}
+
 function renderLocaisTable(){
+  var isAdmin=(currentUserData && currentUserData.perfil==='ADMIN');
   var data = LOCAIS_DATA;
-  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Ações</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
   data.forEach(function(r){
     var tipo = r['TIPO'] || r.tipo || '-';
     var badge = '';
@@ -363,10 +386,51 @@ function renderLocaisTable(){
     else badge='<span style="color:var(--purple)">●</span> ';
     var unid=r['UNIDADE']||'-';
     var nomeAttr=String(r['NOME']||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td><td><button class="btn btn-sm btn-secondary" onclick="editLocal(\''+nomeAttr+'\')">✏️ Editar</button></td></tr>';
+    var inativo=r.ATIVO===false;
+    var statusCol=inativo?'<span style="color:var(--red);font-weight:600">🔴 Inativo</span>':'<span style="color:var(--green);font-weight:600">🟢 Ativo</span>';
+    var acoesCol='<button class="btn btn-sm btn-secondary" onclick="editLocal(\''+nomeAttr+'\')">✏️ Editar</button>';
+    if(isAdmin){
+      acoesCol+=inativo
+        ? ' <button class="btn btn-sm btn-secondary" onclick="reativarLocal(\''+nomeAttr+'\')">↩️ Reativar</button>'
+        : ' <button class="btn btn-sm btn-secondary" onclick="inativarLocal(\''+nomeAttr+'\')">🔴 Inativar</button>';
+    }
+    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td><td>'+statusCol+'</td><td style="white-space:nowrap">'+acoesCol+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblLocaisContainer').innerHTML=h;
+}
+
+function _acharLocalPorNome(nome){
+  var alvo=String(nome||'').trim().toUpperCase();
+  for(var i=0;i<LOCAIS_DATA.length;i++){
+    if(String(LOCAIS_DATA[i].NOME||'').trim().toUpperCase()===alvo) return LOCAIS_DATA[i];
+  }
+  return null;
+}
+function inativarLocal(nome){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode inativar locais',true);return;}
+  var rec=_acharLocalPorNome(nome);
+  if(!rec){showToast('Local não encontrado',true);return;}
+  if(!confirm('Inativar "'+nome+'"? Ele some das listas de seleção pra lançamento novo, mas o histórico continua intacto.')) return;
+  rec.ATIVO=false;
+  saveToSheets('updateLocal',{nomeOriginal:nome,row:{ATIVO:false}},function(ok){
+    if(ok) showToast('🔴 '+nome+' inativado');
+    else { rec.ATIVO=true; showToast('⚠️ Falha ao salvar na planilha',true); }
+    renderLocaisTable();
+  });
+  renderLocaisTable();
+}
+function reativarLocal(nome){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode reativar locais',true);return;}
+  var rec=_acharLocalPorNome(nome);
+  if(!rec){showToast('Local não encontrado',true);return;}
+  rec.ATIVO=true;
+  saveToSheets('updateLocal',{nomeOriginal:nome,row:{ATIVO:true}},function(ok){
+    if(ok) showToast('↩️ '+nome+' reativado');
+    else { rec.ATIVO=false; showToast('⚠️ Falha ao salvar na planilha',true); }
+    renderLocaisTable();
+  });
+  renderLocaisTable();
 }
 
 var _editandoLocalNome=null;

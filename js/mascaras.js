@@ -43,7 +43,8 @@ var LIMITES_CAMPOS = {
   litros:        3,  // Litros: 999,99
   valorUnit:     2,  // Valor Unitário: 9,99 (usa 2 inteiros para funcionar corretamente)
   arla:          3,  // Arla: 999,99
-  valorDesp:     5   // Valor Despesa: 99.999,99
+  valorDesp:     5,  // Valor Despesa: 99.999,99
+  contratoMeta:  7   // Quantidade contratada: 9.999.999,99
 };
 
 function aplicarMascaraQuantidade(){

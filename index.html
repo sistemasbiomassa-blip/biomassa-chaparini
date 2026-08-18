@@ -556,6 +556,31 @@ tbody tr:hover{background:var(--surface2)}
   </div>
 </div>
 
+<!-- ===== MODAL CONTRATO (novo/editar) ===== -->
+<div class="modal-overlay" id="contratoModalOverlay" onclick="if(event.target===this)closeContratoModal()">
+  <div class="modal">
+    <h2 id="contratoModalTitle">📑 Novo Contrato</h2>
+    <div class="maq-grid" id="contratoModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeContratoModal()">Cancelar</button>
+      <button class="btn btn-primary" id="ctrSalvarBtn" onclick="salvarContrato()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR CONTRATO ===== -->
+<div class="modal-overlay" id="contratoDelOverlay" onclick="if(event.target===this)closeContratoDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir contrato?</h3>
+    <div id="contratoDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeContratoDelete()">Cancelar</button>
+      <button class="btn-danger" id="contratoDelBtn" onclick="confirmContratoDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TRANSFERÊNCIA (novo/editar) ===== -->
 <div class="modal-overlay" id="maqLocModalOverlay" onclick="if(event.target===this)closeMaqLocalModal()">
   <div class="modal">
@@ -871,6 +896,7 @@ tbody tr:hover{background:var(--surface2)}
       <div class="nav-item" data-page="comboio" onclick="navigateTo('comboio')"><span class="icon">🛢️</span><span>Comboio</span></div>
       <div class="nav-item" data-page="alertas" onclick="navigateTo('alertas')"><span class="icon">🔔</span><span>Alertas</span></div>
       <div class="nav-item freq-visible" data-page="frequencia" onclick="navigateTo('frequencia')" style="display:none"><span class="icon">📅</span><span>Frequência</span></div>
+      <div class="nav-item diretor-only" data-page="contratos" onclick="navigateTo('contratos')" style="display:none"><span class="icon">📑</span><span>Contratos</span></div>
       <div class="nav-item diretor-only" data-page="historico" onclick="navigateTo('historico')" style="display:none"><span class="icon">📋</span><span>Histórico</span></div>
       <div class="nav-item admin-only" data-page="usuarios" onclick="navigateTo('usuarios')" style="display:none"><span class="icon">👥</span><span>Usuários</span></div>
       </div>
@@ -1256,6 +1282,15 @@ tbody tr:hover{background:var(--surface2)}
         </div>
       </div>
 
+      <!-- CONTRATOS PAGE (diretor/admin only) -->
+      <div class="page" id="pageContratos">
+        <div class="page-header">
+          <h1 class="page-title">📑 Contratos</h1>
+          <button class="btn btn-primary btn-sm" id="ctrAddBtn" onclick="openContratoModal()" style="display:none">➕ Novo Contrato</button>
+        </div>
+        <div id="contratosCards"></div>
+      </div>
+
       <!-- HISTORICO PAGE (admin only) -->
       <div class="page" id="pageHistorico">
         <div class="page-header"><h1 class="page-title">📋 Histórico de Lançamentos</h1></div>
@@ -1519,7 +1554,7 @@ tbody tr:hover{background:var(--surface2)}
 
 <script>
 // ==================== DATA (carregado do Google Sheets) ====================
-var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [] };
+var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [], contratos: [] };
 var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
@@ -1612,11 +1647,12 @@ function loadFromSheets(callback) {
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
     sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'), sbFetchAll('manut_pneus_itens'),
+    sbFetchAll('contratos'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
         tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
-        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18];
+        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -1661,7 +1697,7 @@ function loadFromSheets(callback) {
 
     LOCAIS_DATA = locaisR.map(function(x){ return {
       NOME:x.nome, TIPO:x.tipo, 'ENDEREÇO':x.endereco, MUNICIPIO:x.municipio, ESTADO:x.estado,
-      LATITUDE:x.latitude, LONGITUDE:x.longitude, UNIDADE:x.unidade
+      LATITUDE:x.latitude, LONGITUDE:x.longitude, UNIDADE:x.unidade, ATIVO:x.ativo!==false
     };});
 
     MOTORISTAS_DATA = motoristasR.map(function(x){ return {
@@ -1721,6 +1757,13 @@ function loadFromSheets(callback) {
       ID:x.id, DESCRICAO:x.descricao, TIPO_GATILHO:x.tipo_gatilho, DATA_ALVO:x.data_alvo,
       PLACA:x.placa, KM_ALVO:x.km_alvo, STATUS:x.status, MOTIVO:x.motivo_nao_concluido,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id, CRIADO_EM:x.criado_em
+    };});
+
+    DB.contratos = contratosR.map(function(x){ return {
+      ID:x.id, NOME:x.nome, LOCAL_DESCARGA:x.local_descarga, PERIODICIDADE:x.periodicidade,
+      QUANTIDADE_META:x.quantidade_meta, DIA_INICIO_SEMANA:x.dia_inicio_semana,
+      DATA_INICIO:x.data_inicio, DATA_FIM:x.data_fim,
+      USUARIO:x.usuario_nome_legado, CRIADO_EM:x.criado_em
     };});
 
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
@@ -1926,6 +1969,11 @@ function _rotearAction(action, data) {
     case 'updateAlerta': return sb.from('alertas').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     case 'deleteAlerta': return sb.from('alertas').delete().eq('id', data.id).then(_unwrap);
 
+    // ---------- CONTRATOS ----------
+    case 'addContrato': return sb.from('contratos').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateContrato': return sb.from('contratos').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteContrato': return sb.from('contratos').delete().eq('id', data.id).then(_unwrap);
+
     // ---------- USUÁRIOS (gestão de contas via Edge Function, única peça com acesso à service_role) ----------
     case 'addUsuario':
     case 'updateUsuario':
@@ -2024,7 +2072,9 @@ function openEditModal(key, complementar){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+(locked?' title="Já preenchido — só quem lançou ou um ADMIN pode alterar"':'')+'>';
     html+='<label>'+f.label+(locked?' 🔒':'')+'</label>';
     if(f.type==='select'){
-      var opts=(BASE[f.src]||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
+      var isLocalSrc=(f.src==='localCarga'||f.src==='localDescarga'||f.src==='localAbast');
+      var optsBase=isLocalSrc?locaisFiltrados(BASE[f.src],'Ativos'):(BASE[f.src]||[]);
+      var opts=optsBase.slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
       html+='<select id="'+id+'"'+dis+'><option value="">—</option>';
       opts.forEach(function(o){
         var sel=String(o)===String(val)?' selected':'';
@@ -2833,7 +2883,7 @@ function navigateTo(page){
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
-  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas'};
+  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas',contratos:'pageContratos'};
   document.getElementById(map[page]).classList.add('active');
   if(page==='producao') buildProducao();
   else if(page==='financeiro') buildFinanceiro();
@@ -2848,6 +2898,7 @@ function navigateTo(page){
   else if(page==='comboio') buildComboio();
   else if(page==='frequencia') buildFrequencia();
   else if(page==='alertas') buildAlertas();
+  else if(page==='contratos') buildContratos();
   if(page==='cadastro') setTimeout(iniciarMascaras,100);
 }
 
@@ -3130,7 +3181,8 @@ function _maqLocBuildForm(row){
   var mo='<option value="">—</option>';
   DB.maquinas.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
   var fo='<option value="">—</option>';
-  (BASE.localCarga||[]).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  locaisFiltrados(BASE.localCarga,'Ativos').forEach(function(fl){ fo+='<option'+(String(row.FLORESTA)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  if(row.FLORESTA && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA)+' (inativo)</option>';
   return '<div class="form-group"><label>Máquina *</label><select id="mlf_maq">'+mo+'</select></div>'+
     '<div class="form-group"><label>Floresta (local de carga) *</label><select id="mlf_fl">'+fo+'</select></div>'+
     '<div class="form-group"><label>Data de entrada *</label><input id="mlf_data" type="date" value="'+_maqEsc(row.DATA_ENTRADA||'')+'"></div>'+
@@ -3270,10 +3322,11 @@ function _maqAbBuildForm(row){
   var co=''; MAQ_COMBUSTIVEIS.forEach(function(c){ co+='<option'+(String(row.TIPO_COMBUSTIVEL||'Diesel S10')===c?' selected':'')+'>'+c+'</option>'; });
   var curPosto=row.TANQUE_POSTO||''; var achouPosto=false;
   var to='<option value="">—</option>';
-  _maqOrdAlfa(BASE.localAbast).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
-  if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo)
+  _maqOrdAlfa(locaisFiltrados(BASE.localAbast,'Ativos')).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
+  if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo, ou posto inativado depois)
   var fo='<option value="">— automático (pela localização) —</option>';
-  _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  _maqOrdAlfa(locaisFiltrados(BASE.localCarga,'Ativos')).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  if(row.FLORESTA_OPC && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA_OPC)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA_OPC)+' (inativo)</option>';
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?fmt(num(row.LITROS),2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?fmt(num(row.PRECO_LITRO),2):'';
@@ -3439,7 +3492,8 @@ function _maqMtBuildForm(row){
   var to='<option value="">—</option>';
   MAQ_MANUT_TIPOS.forEach(function(t){ to+='<option'+(String(row.TIPO)===t?' selected':'')+'>'+t+'</option>'; });
   var fo='<option value="">— automático (pela localização) —</option>';
-  (BASE.localCarga||[]).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  locaisFiltrados(BASE.localCarga,'Ativos').forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  if(row.FLORESTA_OPC && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA_OPC)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA_OPC)+' (inativo)</option>';
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var pecVal=(row.CUSTO_PECAS!=null&&row.CUSTO_PECAS!=='')?fmt(num(row.CUSTO_PECAS),2):'';
   var maoVal=(row.CUSTO_MAO_OBRA!=null&&row.CUSTO_MAO_OBRA!=='')?fmt(num(row.CUSTO_MAO_OBRA),2):'';
@@ -3712,10 +3766,10 @@ function populateSelects(){
     sorted.forEach(function(v){sel.innerHTML+='<option value="'+v+'">'+v+'</option>'});
   }
   fill('fMotorista',motoristasFiltrados(BASE.motoristas,'Ativos'));
-  fill('fLocalCarga',BASE.localCarga);
-  fill('fLocalDescarga',BASE.localDescarga);
+  fill('fLocalCarga',locaisFiltrados(BASE.localCarga,'Ativos'));
+  fill('fLocalDescarga',locaisFiltrados(BASE.localDescarga,'Ativos'));
   fill('fPlaca',BASE.placas);
-  fill('fLocalAbast',BASE.localAbast);
+  fill('fLocalAbast',locaisFiltrados(BASE.localAbast,'Ativos'));
   fill('fClasseDesp',BASE.classeDesp);
   fill('fmPlaca',BASE.placas);
   fill('fmTipo',BASE.tipoManut);
@@ -4090,9 +4144,32 @@ function confirmManutProgDelete(){
 
 
 // ==================== LOCAIS ====================
+// ---------- FILTRO ATIVOS/INATIVOS (mesmo padrão de motoristasFiltrados) ----------
+// Local "sai de uso" (ex: cliente cuja unidade mudou de TON pra M³) sem apagar o
+// histórico: fica inativo, some das listas de seleção pra lançamento novo, mas
+// segue existindo normalmente pra tudo que já foi lançado com ele.
+function localEstaInativo(nome){
+  var alvo=String(nome||'').trim().toUpperCase();
+  if(!alvo) return false;
+  for(var i=0;i<(LOCAIS_DATA||[]).length;i++){
+    if(String(LOCAIS_DATA[i].NOME||'').trim().toUpperCase()===alvo){
+      return LOCAIS_DATA[i].ATIVO===false;
+    }
+  }
+  return false; // sem ficha -> tratado como ativo
+}
+// modo: 'Ativos' (padrão) | 'Inativos' | 'Todos'
+function locaisFiltrados(lista,modo){
+  lista=lista||[];
+  if(modo==='Todos') return lista.slice();
+  if(modo==='Inativos') return lista.filter(function(n){ return localEstaInativo(n); });
+  return lista.filter(function(n){ return !localEstaInativo(n); }); // Ativos (default)
+}
+
 function renderLocaisTable(){
+  var isAdmin=(currentUserData && currentUserData.perfil==='ADMIN');
   var data = LOCAIS_DATA;
-  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Ações</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
   data.forEach(function(r){
     var tipo = r['TIPO'] || r.tipo || '-';
     var badge = '';
@@ -4102,10 +4179,51 @@ function renderLocaisTable(){
     else badge='<span style="color:var(--purple)">●</span> ';
     var unid=r['UNIDADE']||'-';
     var nomeAttr=String(r['NOME']||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td><td><button class="btn btn-sm btn-secondary" onclick="editLocal(\''+nomeAttr+'\')">✏️ Editar</button></td></tr>';
+    var inativo=r.ATIVO===false;
+    var statusCol=inativo?'<span style="color:var(--red);font-weight:600">🔴 Inativo</span>':'<span style="color:var(--green);font-weight:600">🟢 Ativo</span>';
+    var acoesCol='<button class="btn btn-sm btn-secondary" onclick="editLocal(\''+nomeAttr+'\')">✏️ Editar</button>';
+    if(isAdmin){
+      acoesCol+=inativo
+        ? ' <button class="btn btn-sm btn-secondary" onclick="reativarLocal(\''+nomeAttr+'\')">↩️ Reativar</button>'
+        : ' <button class="btn btn-sm btn-secondary" onclick="inativarLocal(\''+nomeAttr+'\')">🔴 Inativar</button>';
+    }
+    h+='<tr><td>'+(r['NOME']||'-')+'</td><td>'+badge+(tipo)+'</td><td>'+unid+'</td><td>'+(r['ENDEREÇO']||r['ENDERECO']||'-')+'</td><td>'+(r['MUNICIPIO']||'-')+'</td><td>'+(r['ESTADO']||'-')+'</td><td>'+(r['LATITUDE']||'-')+'</td><td>'+(r['LONGITUDE']||'-')+'</td><td>'+statusCol+'</td><td style="white-space:nowrap">'+acoesCol+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblLocaisContainer').innerHTML=h;
+}
+
+function _acharLocalPorNome(nome){
+  var alvo=String(nome||'').trim().toUpperCase();
+  for(var i=0;i<LOCAIS_DATA.length;i++){
+    if(String(LOCAIS_DATA[i].NOME||'').trim().toUpperCase()===alvo) return LOCAIS_DATA[i];
+  }
+  return null;
+}
+function inativarLocal(nome){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode inativar locais',true);return;}
+  var rec=_acharLocalPorNome(nome);
+  if(!rec){showToast('Local não encontrado',true);return;}
+  if(!confirm('Inativar "'+nome+'"? Ele some das listas de seleção pra lançamento novo, mas o histórico continua intacto.')) return;
+  rec.ATIVO=false;
+  saveToSheets('updateLocal',{nomeOriginal:nome,row:{ATIVO:false}},function(ok){
+    if(ok) showToast('🔴 '+nome+' inativado');
+    else { rec.ATIVO=true; showToast('⚠️ Falha ao salvar na planilha',true); }
+    renderLocaisTable();
+  });
+  renderLocaisTable();
+}
+function reativarLocal(nome){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode reativar locais',true);return;}
+  var rec=_acharLocalPorNome(nome);
+  if(!rec){showToast('Local não encontrado',true);return;}
+  rec.ATIVO=true;
+  saveToSheets('updateLocal',{nomeOriginal:nome,row:{ATIVO:true}},function(ok){
+    if(ok) showToast('↩️ '+nome+' reativado');
+    else { rec.ATIVO=false; showToast('⚠️ Falha ao salvar na planilha',true); }
+    renderLocaisTable();
+  });
+  renderLocaisTable();
 }
 
 var _editandoLocalNome=null;
@@ -8205,7 +8323,8 @@ var LIMITES_CAMPOS = {
   litros:        3,  // Litros: 999,99
   valorUnit:     2,  // Valor Unitário: 9,99 (usa 2 inteiros para funcionar corretamente)
   arla:          3,  // Arla: 999,99
-  valorDesp:     5   // Valor Despesa: 99.999,99
+  valorDesp:     5,  // Valor Despesa: 99.999,99
+  contratoMeta:  7   // Quantidade contratada: 9.999.999,99
 };
 
 function aplicarMascaraQuantidade(){
@@ -8780,7 +8899,7 @@ function openTanqueModal(id){
   var row=_tanqueEditId?findTanqueById(_tanqueEditId):{};
   if(_tanqueEditId&&!row){ showToast('Tanque não encontrado',true); return; }
   document.getElementById('tanqueModalTitle').textContent=_tanqueEditId?'✏️ Editar Tanque':'🛢️ Novo Tanque';
-  var postos=(BASE.localAbast||[]);
+  var postos=locaisFiltrados(BASE.localAbast||[],'Ativos');
   var html='';
   TANQUE_FIELDS.forEach(function(f){
     var val=(row&&row[f.key]!=null)?row[f.key]:'';
@@ -8789,6 +8908,7 @@ function openTanqueModal(id){
     if(f.type==='selectPosto'){
       html+='<select id="'+fid+'"><option value="">—</option>';
       postos.forEach(function(o){ html+='<option'+(_cbNorm(val)===_cbNorm(o)?' selected':'')+'>'+_cbEsc(o)+'</option>'; });
+      if(val && postos.every(function(o){return _cbNorm(o)!==_cbNorm(val)})) html+='<option selected>'+_cbEsc(val)+' (inativo)</option>';
       html+='</select>';
     } else if(f.type==='textarea'){
       html+='<textarea id="'+fid+'" rows="2">'+_cbEsc(val)+'</textarea>';
@@ -9104,6 +9224,245 @@ function confirmarResolverAlerta(){
   });
 }
 // ===== FIM MÓDULO ALERTAS =====
+</script>
+<script>
+// ============================================================
+// ===== MÓDULO CONTRATOS =====================================
+// Acompanhamento de meta de entrega por contrato (mensal ou semanal),
+// vinculado a um Local Descarga. Visível pra DIRETOR e ADMIN; só ADMIN
+// cadastra/edita/exclui (RLS em supabase/migrations/0014_contratos.sql).
+// "Quantidade entregue" nunca é digitada — é sempre calculada ao vivo
+// somando DB.cadastro (QUANTIDADE) do local vinculado, dentro do período
+// vigente (mês ou semana corrente).
+// ============================================================
+var CONTRATO_FIELDS=[
+  {key:'NOME', label:'Nome do Contrato *', type:'text', ph:'ex: Contrato Serraria XYZ'},
+  {key:'LOCAL_DESCARGA', label:'Local Descarga *', type:'select', srcBase:'localDescarga'},
+  {key:'PERIODICIDADE', label:'Periodicidade *', type:'select', opts:['mensal','semanal','personalizado']},
+  {key:'DIA_INICIO_SEMANA', label:'Início da semana do contrato', type:'select', opts:[0,1,2,3,4,5,6], def:1, grupo:'semanal'},
+  {key:'DATA_INICIO', label:'Data início *', type:'date', grupo:'personalizado'},
+  {key:'DATA_FIM', label:'Data fim *', type:'date', grupo:'personalizado'},
+  {key:'QUANTIDADE_META', label:'Quantidade contratada (por período) *', type:'moneynum'}
+];
+var WEEKDAY_NOMES=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+var WEEKDAY_ABREV=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+var _ctrEditId=null, _ctrDelId=null;
+
+function findContratoById(id){
+  id=String(id);
+  for(var i=0;i<DB.contratos.length;i++){ if(String(DB.contratos[i].ID)===id) return DB.contratos[i]; }
+  return null;
+}
+function _ctrEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function _ctrISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+// Período vigente (mensal): 1º ao último dia do mês corrente.
+function _ctrMonthRange(hoje){
+  var y=hoje.getFullYear(), m=hoje.getMonth();
+  var iniD=new Date(y,m,1), fimD=new Date(y,m+1,0);
+  var diasNoMes=fimD.getDate();
+  var elapsedFrac=Math.min(1,Math.max(0,hoje.getDate()/diasNoMes));
+  return {ini:_ctrISO(iniD), fim:_ctrISO(fimD), elapsedFrac:elapsedFrac, label:getMonthLabel(getMonthYear(_ctrISO(hoje)))};
+}
+// Período vigente (semanal): semana "customizada" começando no dia da semana
+// configurado no contrato (0=domingo..6=sábado; padrão segunda-feira). Cobre
+// tanto semana civil quanto casos como o contrato Cargill (quarta a terça).
+function _ctrWeekRange(hoje,diaInicio){
+  diaInicio=(diaInicio==null)?1:Number(diaInicio);
+  var diff=(hoje.getDay()-diaInicio+7)%7; // dias desde o último "diaInicio"
+  var iniD=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()-diff);
+  var fimD=new Date(iniD.getFullYear(),iniD.getMonth(),iniD.getDate()+6);
+  var elapsedFrac=Math.min(1,Math.max(0,(diff+1)/7));
+  var label=WEEKDAY_ABREV[iniD.getDay()]+' '+String(iniD.getDate()).padStart(2,'0')+'/'+String(iniD.getMonth()+1).padStart(2,'0')+
+    ' a '+WEEKDAY_ABREV[fimD.getDay()]+' '+String(fimD.getDate()).padStart(2,'0')+'/'+String(fimD.getMonth()+1).padStart(2,'0');
+  return {ini:_ctrISO(iniD), fim:_ctrISO(fimD), elapsedFrac:elapsedFrac, label:label};
+}
+// Período fixo (personalizado): data início/fim cadastradas no contrato, sem
+// recalcular a cada mês/semana. Antes do início, nada é esperado ainda (0%);
+// depois do fim, o prazo já era 100% (mostra o resultado final, não some).
+function _ctrPersonalizadoRange(contrato,hoje){
+  var iniD=new Date(contrato.DATA_INICIO+'T12:00:00');
+  var fimD=new Date(contrato.DATA_FIM+'T12:00:00');
+  var hojeD=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate(),12,0,0);
+  var totalDias=Math.max(1,Math.round((fimD-iniD)/86400000)+1);
+  var diasPassados=Math.round((hojeD-iniD)/86400000)+1;
+  var elapsedFrac=Math.min(1,Math.max(0,diasPassados/totalDias));
+  var label=formatDateBR(contrato.DATA_INICIO)+' a '+formatDateBR(contrato.DATA_FIM);
+  return {ini:contrato.DATA_INICIO, fim:contrato.DATA_FIM, elapsedFrac:elapsedFrac, label:label};
+}
+function _ctrPeriodoAtual(contrato,hoje){
+  if(contrato.PERIODICIDADE==='semanal') return _ctrWeekRange(hoje,contrato.DIA_INICIO_SEMANA);
+  if(contrato.PERIODICIDADE==='personalizado') return _ctrPersonalizadoRange(contrato,hoje);
+  return _ctrMonthRange(hoje);
+}
+
+// Soma QUANTIDADE de DB.cadastro pro local do contrato, dentro do período.
+function calcContratoEntregue(contrato,ini,fim){
+  var total=0;
+  DB.cadastro.forEach(function(r){
+    if(!r['LOCAL DESCARGA'] || r['LOCAL DESCARGA']!==contrato.LOCAL_DESCARGA) return;
+    if(!dateInRange(r.DATA,ini,fim)) return;
+    if(r.QUANTIDADE) total+=num(r.QUANTIDADE);
+  });
+  return total;
+}
+
+// Ritmo linear: compara % já entregue com % do prazo já passado.
+function contratoStatus(pctEntregue,elapsedFrac){
+  if(pctEntregue>=elapsedFrac) return {cor:'#22c55e', label:'No ritmo'};
+  if(pctEntregue>=elapsedFrac*0.7) return {cor:'#f59e0b', label:'Atenção'};
+  return {cor:'#ef4444', label:'Atrasado'};
+}
+
+function buildContratos(){ renderContratosCards(); }
+
+function renderContratosCards(){
+  var cont=document.getElementById('contratosCards');
+  if(!cont) return;
+  var admin=maqIsAdmin();
+  var addBtn=document.getElementById('ctrAddBtn');
+  if(addBtn) addBtn.style.display=admin?'inline-flex':'none';
+  var lista=DB.contratos.slice().sort(function(a,b){return String(a.NOME||'').localeCompare(String(b.NOME||''),'pt-BR',{sensitivity:'base'})});
+  if(!lista.length){
+    cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhum contrato cadastrado'+(admin?'. Clique em "Novo Contrato".':'.')+'</div>';
+    return;
+  }
+  var hoje=new Date();
+  var h='';
+  lista.forEach(function(c){
+    var periodo=_ctrPeriodoAtual(c,hoje);
+    var entregue=calcContratoEntregue(c,periodo.ini,periodo.fim);
+    var meta=num(c.QUANTIDADE_META);
+    var pct=meta>0?entregue/meta:0;
+    var st=contratoStatus(pct,periodo.elapsedFrac);
+    var unidade=getUnit(c.LOCAL_DESCARGA);
+    var barWidth=Math.min(100,pct*100);
+    h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;position:relative">';
+    if(admin){
+      h+='<div style="position:absolute;top:14px;right:14px;display:flex;gap:8px">'+
+        '<span class="maq-act" title="Editar" onclick="openContratoModal(\''+c.ID+'\')">✏️</span>'+
+        '<span class="maq-act" title="Excluir" onclick="openContratoDelete(\''+c.ID+'\')">🗑️</span>'+
+      '</div>';
+    }
+    h+='<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding-right:'+(admin?'60px':'0')+'">';
+    h+='<div style="font-weight:700;font-size:14px">'+_ctrEsc(c.NOME)+'</div>';
+    h+='<div style="font-size:11px;color:var(--text2)">'+_ctrEsc(c.LOCAL_DESCARGA)+' · '+periodo.label+'</div>';
+    h+='</div>';
+    h+='<div style="height:12px;border-radius:6px;background:var(--surface2);overflow:hidden;margin:10px 0 8px">';
+    h+='<div style="height:100%;width:'+barWidth+'%;border-radius:6px;background:'+st.cor+'"></div>';
+    h+='</div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px">';
+    h+='<div style="font-family:JetBrains Mono,monospace">'+numBR(entregue,0)+' / '+numBR(meta,0)+' '+unidade+' ('+Math.round(pct*100)+'%)</div>';
+    h+='<div style="font-weight:600;color:'+st.cor+'">'+st.label+'</div>';
+    h+='</div>';
+    h+='</div>';
+  });
+  cont.innerHTML=h;
+}
+
+function openContratoModal(id){
+  if(!maqIsAdmin()){ showToast('Apenas ADMIN pode cadastrar/editar contratos',true); return; }
+  _ctrEditId=(id!==undefined&&id!==null&&id!=='')?String(id):null;
+  var row=_ctrEditId?findContratoById(_ctrEditId):{};
+  if(_ctrEditId&&!row){ showToast('Contrato não encontrado',true); return; }
+  document.getElementById('contratoModalTitle').textContent=_ctrEditId?'✏️ Editar Contrato':'📑 Novo Contrato';
+  var periodicidadeAtual=(row&&row.PERIODICIDADE)||'';
+  var PERIODICIDADE_LABELS={mensal:'Mensal',semanal:'Semanal',personalizado:'Personalizado'};
+  var html='';
+  CONTRATO_FIELDS.forEach(function(f){
+    var val=(row&&row[f.key]!=null)?row[f.key]:(f.def!=null?f.def:'');
+    var fid='ctrf_'+f.key;
+    var isDiaInicio=f.key==='DIA_INICIO_SEMANA';
+    var grpAttrs=f.grupo?' data-ctr-grupo="'+f.grupo+'"'+(periodicidadeAtual!==f.grupo?' style="display:none"':''):'';
+    html+='<div class="form-group"'+grpAttrs+'><label>'+f.label+'</label>';
+    if(f.type==='select'){
+      var opts=f.srcBase?locaisFiltrados(BASE[f.srcBase],'Ativos').slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})}):f.opts;
+      // Preserva o local atual mesmo se ele tiver sido inativado depois que o contrato foi criado
+      if(f.srcBase && val && opts.indexOf(val)===-1) opts=opts.concat([val]);
+      var onch=f.key==='PERIODICIDADE'?' onchange="_ctrTogglePeriodicidade()"':'';
+      html+='<select id="'+fid+'"'+onch+'><option value="">—</option>';
+      opts.forEach(function(o){
+        var lbl=f.key==='PERIODICIDADE'?PERIODICIDADE_LABELS[o]:(isDiaInicio?WEEKDAY_NOMES[o]:(f.srcBase&&o===val&&localEstaInativo(o)?o+' (inativo)':o));
+        html+='<option value="'+_ctrEsc(o)+'"'+(String(val)===String(o)?' selected':'')+'>'+_ctrEsc(lbl)+'</option>';
+      });
+      html+='</select>';
+    } else if(f.type==='moneynum'){
+      var mval=(val===''||val==null)?'':fmt(val,2);
+      html+='<input id="'+fid+'" type="text" inputmode="decimal" value="'+_ctrEsc(mval)+'"'+(f.ph?' placeholder="'+f.ph+'"':'')+'>';
+    } else if(f.type==='date'){
+      html+='<input id="'+fid+'" type="date" value="'+_ctrEsc(String(val).slice(0,10))+'">';
+    } else {
+      html+='<input id="'+fid+'" type="'+f.type+'" value="'+_ctrEsc(val)+'"'+(f.ph?' placeholder="'+f.ph+'"':'')+'>';
+    }
+    html+='</div>';
+  });
+  document.getElementById('contratoModalGrid').innerHTML=html;
+  mascaraNumero(document.getElementById('ctrf_QUANTIDADE_META'),LIMITES_CAMPOS.contratoMeta,2);
+  document.getElementById('contratoModalOverlay').classList.add('show');
+}
+function closeContratoModal(){ document.getElementById('contratoModalOverlay').classList.remove('show'); _ctrEditId=null; }
+
+// Mostra só os campos extras da periodicidade escolhida (dia de início da
+// semana pra "semanal"; data início/fim pra "personalizado").
+function _ctrTogglePeriodicidade(){
+  var v=document.getElementById('ctrf_PERIODICIDADE').value;
+  document.querySelectorAll('#contratoModalGrid [data-ctr-grupo]').forEach(function(el){
+    el.style.display=el.getAttribute('data-ctr-grupo')===v?'':'none';
+  });
+}
+
+function salvarContrato(){
+  if(!maqIsAdmin()){ showToast('Sem permissão',true); return; }
+  var row={};
+  CONTRATO_FIELDS.forEach(function(f){
+    var el=document.getElementById('ctrf_'+f.key);
+    if(!el){ row[f.key]=null; return; }
+    row[f.key]=f.type==='moneynum'?(el.value?num(el.value):null):String(el.value).trim();
+  });
+  // Cada campo extra só faz sentido pra sua periodicidade — zera os outros
+  row.DIA_INICIO_SEMANA=(row.PERIODICIDADE==='semanal'&&row.DIA_INICIO_SEMANA!=='')?Number(row.DIA_INICIO_SEMANA):null;
+  if(row.PERIODICIDADE!=='personalizado'){ row.DATA_INICIO=null; row.DATA_FIM=null; }
+  else { if(!row.DATA_INICIO) row.DATA_INICIO=null; if(!row.DATA_FIM) row.DATA_FIM=null; }
+  if(!row.NOME){ showToast('Informe o nome do contrato',true); return; }
+  if(!row.LOCAL_DESCARGA){ showToast('Selecione o local de descarga',true); return; }
+  if(!row.PERIODICIDADE){ showToast('Selecione a periodicidade',true); return; }
+  if(row.PERIODICIDADE==='personalizado'){
+    if(!row.DATA_INICIO||!row.DATA_FIM){ showToast('Informe a data início e a data fim do contrato',true); return; }
+    if(row.DATA_FIM<row.DATA_INICIO){ showToast('A data fim não pode ser antes da data início',true); return; }
+  }
+  if(!row.QUANTIDADE_META||row.QUANTIDADE_META<=0){ showToast('Informe a quantidade contratada',true); return; }
+  var btn=document.getElementById('ctrSalvarBtn'); if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
+  function done(ok,res){
+    if(btn){ btn.disabled=false; btn.textContent='💾 Salvar'; }
+    if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
+    showToast('✅ Contrato salvo!');
+    closeContratoModal();
+    loadFromSheets(function(){ if(document.getElementById('pageContratos').classList.contains('active')) renderContratosCards(); });
+  }
+  if(_ctrEditId) saveToSheets('updateContrato',{id:_ctrEditId,row:row},done);
+  else saveToSheets('addContrato',row,done);
+}
+
+function openContratoDelete(id){
+  if(!maqIsAdmin()){ showToast('Apenas ADMIN pode excluir',true); return; }
+  var c=findContratoById(id); if(!c){ showToast('Contrato não encontrado',true); return; }
+  _ctrDelId=String(id);
+  document.getElementById('contratoDelDetails').innerHTML='<div><strong>Contrato:</strong> '+_ctrEsc(c.NOME||'-')+'</div><div><strong>Local:</strong> '+_ctrEsc(c.LOCAL_DESCARGA||'-')+'</div>';
+  document.getElementById('contratoDelOverlay').classList.add('show');
+}
+function closeContratoDelete(){ document.getElementById('contratoDelOverlay').classList.remove('show'); _ctrDelId=null; }
+function confirmContratoDelete(){
+  if(!_ctrDelId) return;
+  var btn=document.getElementById('contratoDelBtn'); if(btn){ btn.disabled=true; btn.textContent='Excluindo...'; }
+  saveToSheets('deleteContrato',{id:_ctrDelId},function(ok,res){
+    if(btn){ btn.disabled=false; btn.textContent='🗑️ Excluir'; }
+    if(!ok){ showToast('❌ Erro ao excluir: '+((res&&res.error)||'desconhecido'),true); return; }
+    showToast('✅ Contrato excluído');
+    closeContratoDelete();
+    loadFromSheets(function(){ if(document.getElementById('pageContratos').classList.contains('active')) renderContratosCards(); });
+  });
+}
+// ===== FIM MÓDULO CONTRATOS =====
 </script>
 </body>
 </html>

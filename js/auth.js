@@ -146,7 +146,7 @@ function navigateTo(page){
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
-  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas'};
+  var map={cadastro:'pageCadastro',producao:'pageProducao',financeiro:'pageFinanceiro',manutencao:'pageManutencao',consumo:'pageConsumo',tempoespera:'pageTempoEspera',mapa:'pageMapa',relatorio:'pageRelatorio',historico:'pageHistorico',usuarios:'pageUsuarios',maquinarios:'pageMaquinarios',comboio:'pageComboio',frequencia:'pageFrequencia',alertas:'pageAlertas',contratos:'pageContratos'};
   document.getElementById(map[page]).classList.add('active');
   if(page==='producao') buildProducao();
   else if(page==='financeiro') buildFinanceiro();
@@ -161,6 +161,7 @@ function navigateTo(page){
   else if(page==='comboio') buildComboio();
   else if(page==='frequencia') buildFrequencia();
   else if(page==='alertas') buildAlertas();
+  else if(page==='contratos') buildContratos();
   if(page==='cadastro') setTimeout(iniciarMascaras,100);
 }
 

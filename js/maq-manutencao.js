@@ -55,7 +55,8 @@ function _maqMtBuildForm(row){
   var to='<option value="">—</option>';
   MAQ_MANUT_TIPOS.forEach(function(t){ to+='<option'+(String(row.TIPO)===t?' selected':'')+'>'+t+'</option>'; });
   var fo='<option value="">— automático (pela localização) —</option>';
-  (BASE.localCarga||[]).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  locaisFiltrados(BASE.localCarga,'Ativos').forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  if(row.FLORESTA_OPC && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA_OPC)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA_OPC)+' (inativo)</option>';
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var pecVal=(row.CUSTO_PECAS!=null&&row.CUSTO_PECAS!=='')?fmt(num(row.CUSTO_PECAS),2):'';
   var maoVal=(row.CUSTO_MAO_OBRA!=null&&row.CUSTO_MAO_OBRA!=='')?fmt(num(row.CUSTO_MAO_OBRA),2):'';

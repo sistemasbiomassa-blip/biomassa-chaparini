@@ -109,6 +109,31 @@
   </div>
 </div>
 
+<!-- ===== MODAL CONTRATO (novo/editar) ===== -->
+<div class="modal-overlay" id="contratoModalOverlay" onclick="if(event.target===this)closeContratoModal()">
+  <div class="modal">
+    <h2 id="contratoModalTitle">📑 Novo Contrato</h2>
+    <div class="maq-grid" id="contratoModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn-secondary" onclick="closeContratoModal()">Cancelar</button>
+      <button class="btn btn-primary" id="ctrSalvarBtn" onclick="salvarContrato()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXCLUIR CONTRATO ===== -->
+<div class="modal-overlay" id="contratoDelOverlay" onclick="if(event.target===this)closeContratoDelete()">
+  <div class="modal" style="max-width:420px">
+    <div style="font-size:32px;text-align:center;margin-bottom:6px">⚠️</div>
+    <h3 style="text-align:center;margin-bottom:10px">Excluir contrato?</h3>
+    <div id="contratoDelDetails" style="font-size:13px;line-height:1.7"></div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
+      <button class="btn-secondary" onclick="closeContratoDelete()">Cancelar</button>
+      <button class="btn-danger" id="contratoDelBtn" onclick="confirmContratoDelete()">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL TRANSFERÊNCIA (novo/editar) ===== -->
 <div class="modal-overlay" id="maqLocModalOverlay" onclick="if(event.target===this)closeMaqLocalModal()">
   <div class="modal">
@@ -424,6 +449,7 @@
       <div class="nav-item" data-page="comboio" onclick="navigateTo('comboio')"><span class="icon">🛢️</span><span>Comboio</span></div>
       <div class="nav-item" data-page="alertas" onclick="navigateTo('alertas')"><span class="icon">🔔</span><span>Alertas</span></div>
       <div class="nav-item freq-visible" data-page="frequencia" onclick="navigateTo('frequencia')" style="display:none"><span class="icon">📅</span><span>Frequência</span></div>
+      <div class="nav-item diretor-only" data-page="contratos" onclick="navigateTo('contratos')" style="display:none"><span class="icon">📑</span><span>Contratos</span></div>
       <div class="nav-item diretor-only" data-page="historico" onclick="navigateTo('historico')" style="display:none"><span class="icon">📋</span><span>Histórico</span></div>
       <div class="nav-item admin-only" data-page="usuarios" onclick="navigateTo('usuarios')" style="display:none"><span class="icon">👥</span><span>Usuários</span></div>
       </div>
@@ -809,6 +835,15 @@
         </div>
       </div>
 
+      <!-- CONTRATOS PAGE (diretor/admin only) -->
+      <div class="page" id="pageContratos">
+        <div class="page-header">
+          <h1 class="page-title">📑 Contratos</h1>
+          <button class="btn btn-primary btn-sm" id="ctrAddBtn" onclick="openContratoModal()" style="display:none">➕ Novo Contrato</button>
+        </div>
+        <div id="contratosCards"></div>
+      </div>
+
       <!-- HISTORICO PAGE (admin only) -->
       <div class="page" id="pageHistorico">
         <div class="page-header"><h1 class="page-title">📋 Histórico de Lançamentos</h1></div>
@@ -1101,5 +1136,6 @@
 <script src="js/mascaras.js"></script>
 <script src="js/comboio.js"></script>
 <script src="js/alertas.js"></script>
+<script src="js/contratos.js"></script>
 </body>
 </html>

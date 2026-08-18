@@ -78,10 +78,11 @@ function _maqAbBuildForm(row){
   var co=''; MAQ_COMBUSTIVEIS.forEach(function(c){ co+='<option'+(String(row.TIPO_COMBUSTIVEL||'Diesel S10')===c?' selected':'')+'>'+c+'</option>'; });
   var curPosto=row.TANQUE_POSTO||''; var achouPosto=false;
   var to='<option value="">—</option>';
-  _maqOrdAlfa(BASE.localAbast).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
-  if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo)
+  _maqOrdAlfa(locaisFiltrados(BASE.localAbast,'Ativos')).forEach(function(p){ var sel=String(curPosto).trim().toUpperCase()===String(p).trim().toUpperCase(); if(sel)achouPosto=true; to+='<option'+(sel?' selected':'')+'>'+_maqEsc(p)+'</option>'; });
+  if(curPosto && !achouPosto) to+='<option selected>'+_maqEsc(curPosto)+'</option>'; // preserva valor antigo (ex.: Interno/Externo, ou posto inativado depois)
   var fo='<option value="">— automático (pela localização) —</option>';
-  _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  _maqOrdAlfa(locaisFiltrados(BASE.localCarga,'Ativos')).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA_OPC)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  if(row.FLORESTA_OPC && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA_OPC)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA_OPC)+' (inativo)</option>';
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?fmt(num(row.LITROS),2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?fmt(num(row.PRECO_LITRO),2):'';

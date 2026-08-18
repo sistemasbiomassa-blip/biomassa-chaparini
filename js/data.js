@@ -71,11 +71,12 @@ function loadFromSheets(callback) {
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
     sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'), sbFetchAll('manut_pneus_itens'),
+    sbFetchAll('contratos'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
         tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
-        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18];
+        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -120,7 +121,7 @@ function loadFromSheets(callback) {
 
     LOCAIS_DATA = locaisR.map(function(x){ return {
       NOME:x.nome, TIPO:x.tipo, 'ENDEREÇO':x.endereco, MUNICIPIO:x.municipio, ESTADO:x.estado,
-      LATITUDE:x.latitude, LONGITUDE:x.longitude, UNIDADE:x.unidade
+      LATITUDE:x.latitude, LONGITUDE:x.longitude, UNIDADE:x.unidade, ATIVO:x.ativo!==false
     };});
 
     MOTORISTAS_DATA = motoristasR.map(function(x){ return {
@@ -180,6 +181,13 @@ function loadFromSheets(callback) {
       ID:x.id, DESCRICAO:x.descricao, TIPO_GATILHO:x.tipo_gatilho, DATA_ALVO:x.data_alvo,
       PLACA:x.placa, KM_ALVO:x.km_alvo, STATUS:x.status, MOTIVO:x.motivo_nao_concluido,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id, CRIADO_EM:x.criado_em
+    };});
+
+    DB.contratos = contratosR.map(function(x){ return {
+      ID:x.id, NOME:x.nome, LOCAL_DESCARGA:x.local_descarga, PERIODICIDADE:x.periodicidade,
+      QUANTIDADE_META:x.quantidade_meta, DIA_INICIO_SEMANA:x.dia_inicio_semana,
+      DATA_INICIO:x.data_inicio, DATA_FIM:x.data_fim,
+      USUARIO:x.usuario_nome_legado, CRIADO_EM:x.criado_em
     };});
 
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
@@ -385,6 +393,11 @@ function _rotearAction(action, data) {
     case 'updateAlerta': return sb.from('alertas').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     case 'deleteAlerta': return sb.from('alertas').delete().eq('id', data.id).then(_unwrap);
 
+    // ---------- CONTRATOS ----------
+    case 'addContrato': return sb.from('contratos').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
+    case 'updateContrato': return sb.from('contratos').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
+    case 'deleteContrato': return sb.from('contratos').delete().eq('id', data.id).then(_unwrap);
+
     // ---------- USUÁRIOS (gestão de contas via Edge Function, única peça com acesso à service_role) ----------
     case 'addUsuario':
     case 'updateUsuario':
@@ -483,7 +496,9 @@ function openEditModal(key, complementar){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+(locked?' title="Já preenchido — só quem lançou ou um ADMIN pode alterar"':'')+'>';
     html+='<label>'+f.label+(locked?' 🔒':'')+'</label>';
     if(f.type==='select'){
-      var opts=(BASE[f.src]||[]).slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
+      var isLocalSrc=(f.src==='localCarga'||f.src==='localDescarga'||f.src==='localAbast');
+      var optsBase=isLocalSrc?locaisFiltrados(BASE[f.src],'Ativos'):(BASE[f.src]||[]);
+      var opts=optsBase.slice().sort(function(a,b){return String(a).localeCompare(String(b),'pt-BR',{sensitivity:'base'})});
       html+='<select id="'+id+'"'+dis+'><option value="">—</option>';
       opts.forEach(function(o){
         var sel=String(o)===String(val)?' selected':'';

@@ -177,6 +177,23 @@ create policy alertas_update on public.alertas
 create policy alertas_delete on public.alertas
   for delete using (public.is_admin());
 
+-- ---------- CONTRATOS ----------
+-- Aplicada via supabase/migrations/0014_contratos.sql. Leitura pra DIRETOR e
+-- ADMIN (aba de acompanhamento); cadastro/edição/exclusão só ADMIN.
+alter table public.contratos enable row level security;
+
+create policy contratos_select on public.contratos
+  for select using (public.is_admin() or public.is_diretor());
+
+create policy contratos_insert on public.contratos
+  for insert with check (public.is_admin());
+
+create policy contratos_update on public.contratos
+  for update using (public.is_admin());
+
+create policy contratos_delete on public.contratos
+  for delete using (public.is_admin());
+
 -- ============================================================
 -- NOVO USUÁRIO: cria profile automaticamente quando alguém é criado em auth.users
 -- (usado no script de migração de usuários da Fase B, via API admin do Supabase)
