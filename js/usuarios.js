@@ -9,7 +9,8 @@ function renderUsuariosTable(){
     h+='<tr>';
     h+='<td style="font-weight:600">'+(u.EMAIL||u.USUARIO||'-')+'</td>';
     h+='<td>'+(u.NOME||'-')+'</td>';
-    h+='<td><span class="historico-badge '+perfilClass+'">'+perfil+'</span></td>';
+    h+='<td><span class="historico-badge '+perfilClass+'">'+perfil+'</span> '+
+      '<span class="maq-act" title="Alterar perfil" onclick="openPerfilModal('+i+')">✏️</span></td>';
     h+='<td>'+(primeiroAcesso?'<span style="color:var(--yellow)">Sim</span>':'Não')+'</td>';
     h+='<td>'+(ativo?'<span style="color:var(--green)">✅ Ativo</span>':'<span style="color:var(--red)">❌ Inativo</span>')+'</td>';
     h+='<td>';
@@ -62,6 +63,40 @@ function toggleUsuario(idx,ativar){
       showToast(ativar?'✅ Usuário ativado':'⛔ Usuário desativado');
       renderUsuariosTable();
     } else {showToast('❌ Erro ao atualizar: '+((res&&res.error)||'desconhecido'),true);}
+  });
+}
+
+// ---------- Alterar perfil (modal) ----------
+var _perfilEditIdx=null;
+function openPerfilModal(idx){
+  var u=USUARIOS[idx];
+  if(!u)return;
+  _perfilEditIdx=idx;
+  var perfilAtual=(u.PERFIL||'ANALISTA').toUpperCase();
+  document.getElementById('perfilModalNome').textContent=u.NOME||u.EMAIL;
+  var sel=document.getElementById('perfilModalSelect');
+  sel.innerHTML=['ADMIN','DIRETOR','ANALISTA'].map(function(p){return '<option value="'+p+'"'+(p===perfilAtual?' selected':'')+'>'+p+'</option>';}).join('');
+  document.getElementById('perfilModalOverlay').classList.add('show');
+}
+function closePerfilModal(){ document.getElementById('perfilModalOverlay').classList.remove('show'); _perfilEditIdx=null; }
+function salvarPerfilModal(){
+  if(_perfilEditIdx==null)return;
+  var u=USUARIOS[_perfilEditIdx];
+  if(!u){closePerfilModal();return;}
+  var perfilAtual=(u.PERFIL||'ANALISTA').toUpperCase();
+  var novoPerfil=document.getElementById('perfilModalSelect').value;
+  if(novoPerfil===perfilAtual){closePerfilModal();return;}
+  var btn=document.getElementById('perfilModalSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  saveToSheets('updateUsuario',{id:u._id,PERFIL:novoPerfil},function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(ok){
+      u.PERFIL=novoPerfil;
+      showToast('✅ Perfil de '+(u.NOME||u.EMAIL)+' alterado para '+novoPerfil);
+      closePerfilModal();
+      renderUsuariosTable();
+    } else {
+      showToast('❌ Erro ao alterar perfil: '+((res&&res.error)||'desconhecido'),true);
+    }
   });
 }
 
