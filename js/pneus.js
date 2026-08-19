@@ -44,11 +44,12 @@ function _pneuAxleColHtml(containerId,axle,pickedMap){
   var mid=axle.driven?'<div class="pneu-diff"></div>':'<div class="pneu-beam"></div>';
   return '<div class="pneu-axle-col"><div class="pneu-axle-name">'+axle.nome+'</div>'+top+'<div class="pneu-stub"></div>'+mid+'<div class="pneu-stub"></div>'+bottom+'</div>';
 }
-function _pneuRowHtml(containerId,posId,label,removido,instalado){
+function _pneuRowHtml(containerId,posId,label,removido,instalado,marcaModelo){
   return '<div class="pneu-row" id="'+containerId+'_row_'+posId+'">'+
     '<div class="pneu-pos-tag">'+label+'</div>'+
     '<div><span class="pneu-field-label">Pneu removido (nº)</span><input id="'+containerId+'_rem_'+posId+'" value="'+(removido?String(removido).replace(/"/g,'&quot;'):'')+'"></div>'+
     '<div><span class="pneu-field-label">Pneu instalado (nº) *</span><input id="'+containerId+'_ins_'+posId+'" value="'+(instalado?String(instalado).replace(/"/g,'&quot;'):'')+'"></div>'+
+    '<div><span class="pneu-field-label">Marca/Modelo (instalado)</span><input id="'+containerId+'_mm_'+posId+'" value="'+(marcaModelo?String(marcaModelo).replace(/"/g,'&quot;'):'')+'"></div>'+
     '<div class="pneu-row-rm" onclick="pneuToggleTire(\''+containerId+'\',\''+posId+'\',\''+label.replace(/'/g,"\\'")+'\')">✕</div>'+
     '</div>';
 }
@@ -79,7 +80,7 @@ function renderDiagramaEixos(containerId,tipoVeiculo,itensExistentes){
     var it=pickedMap[posId];
     var tireEl=cont.querySelector('.pneu-tire[data-posid="'+posId+'"]');
     var label=tireEl?tireEl.getAttribute('title'):posId;
-    rowsEl.insertAdjacentHTML('beforeend',_pneuRowHtml(containerId,posId,label,it.PNEU_REMOVIDO,it.PNEU_INSTALADO));
+    rowsEl.insertAdjacentHTML('beforeend',_pneuRowHtml(containerId,posId,label,it.PNEU_REMOVIDO,it.PNEU_INSTALADO,it.MARCA_MODELO));
   });
 }
 
@@ -94,7 +95,7 @@ function pneuToggleTire(containerId,posId,label){
     tireEl.classList.remove('picked');
   } else {
     tireEl.classList.add('picked');
-    rowsEl.insertAdjacentHTML('beforeend',_pneuRowHtml(containerId,posId,label,'',''));
+    rowsEl.insertAdjacentHTML('beforeend',_pneuRowHtml(containerId,posId,label,'','',''));
   }
 }
 
@@ -107,9 +108,10 @@ function coletarItensPneu(containerId){
     var parts=posId.split('-');
     var insEl=document.getElementById(containerId+'_ins_'+posId);
     var remEl=document.getElementById(containerId+'_rem_'+posId);
+    var mmEl=document.getElementById(containerId+'_mm_'+posId);
     var instalado=insEl?insEl.value.trim():'';
     if(!instalado) return;
-    itens.push({eixo:Number(parts[0]),lado:parts[1],posicao:parts[2]||null,pneu_removido:(remEl&&remEl.value.trim())||null,pneu_instalado:instalado});
+    itens.push({eixo:Number(parts[0]),lado:parts[1],posicao:parts[2]||null,pneu_removido:(remEl&&remEl.value.trim())||null,pneu_instalado:instalado,marca_modelo:(mmEl&&mmEl.value.trim())||null});
   });
   return itens;
 }

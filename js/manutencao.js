@@ -429,8 +429,8 @@ function buildManutDetalhamento(){
       '<td>'+pneuCell+'</td>'+actCell+'</tr>';
     if(itensPneu.length){
       tH+='<tr id="mdPneuExp_'+r.ID+'" style="display:none"><td colspan="'+colCount+'" style="background:var(--surface2);padding:14px 20px">'+
-        '<table class="pneu-mini-tbl"><thead><tr><th>Posição</th><th>Pneu removido</th><th>Pneu instalado</th></tr></thead><tbody>'+
-        itensPneu.map(function(it){return '<tr><td>'+_pneuPosLabel(it)+'</td><td style="'+mono+'">'+(it.PNEU_REMOVIDO||'-')+'</td><td style="'+mono+';color:var(--green)">'+(it.PNEU_INSTALADO||'-')+'</td></tr>';}).join('')+
+        '<table class="pneu-mini-tbl"><thead><tr><th>Posição</th><th>Pneu removido</th><th>Pneu instalado</th><th>Marca/Modelo</th></tr></thead><tbody>'+
+        itensPneu.map(function(it){return '<tr><td>'+_pneuPosLabel(it)+'</td><td style="'+mono+'">'+(it.PNEU_REMOVIDO||'-')+'</td><td style="'+mono+';color:var(--green)">'+(it.PNEU_INSTALADO||'-')+'</td><td>'+(it.MARCA_MODELO||'-')+'</td></tr>';}).join('')+
         '</tbody></table></td></tr>';
     }
   });

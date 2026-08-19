@@ -104,7 +104,7 @@ function loadFromSheets(callback) {
 
     DB.manutPneusItens = manutPneusR.map(function(x){ return {
       ID:x.id, MANUT_REALIZADA_ID:x.manut_realizada_id, EIXO:x.eixo, LADO:x.lado, POSICAO:x.posicao,
-      PNEU_REMOVIDO:x.pneu_removido, PNEU_INSTALADO:x.pneu_instalado,
+      PNEU_REMOVIDO:x.pneu_removido, PNEU_INSTALADO:x.pneu_instalado, MARCA_MODELO:x.marca_modelo,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
