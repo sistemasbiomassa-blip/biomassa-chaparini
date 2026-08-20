@@ -319,10 +319,26 @@ function showDespesaDetail(categoria){
 function exportPagePDF(filterContainerId){
   var pageMap={filtersProd:'pageProducao',filtersFin:'pageFinanceiro',filtersTempo:'pageTempoEspera',filtersManut:'pageManutencao'};
   var pageId=pageMap[filterContainerId];
+  var isProd=pageId==='pageProducao';
   var page=pageId?document.getElementById(pageId):document.querySelector('.page.active');
   if(!page){showToast('Nenhuma página ativa',true);return;}
+  // Abre a janela já no clique (gesto do usuário) — se deixar pra depois do processamento
+  // dos gráficos, o navegador bloqueia o popup em silêncio, sem erro nenhum.
+  var printWin=window.open('','_blank');
+  if(!printWin){showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true);return;}
+  try{
   var title=page.querySelector('.page-title');
   var titleText=title?title.textContent:'Relatório';
+  // Produção: liga os rótulos de valor (já embutidos na config de cada gráfico, ver prodDL)
+  // só pra gerar o PNG do PDF — nunca mexe na config depois de o gráfico já existir.
+  var toggledCharts=[];
+  if(isProd){
+    prodPdfMode=true;
+    page.querySelectorAll('canvas').forEach(function(cv){
+      var ch=chartInstances[cv.id];
+      if(ch){ ch.update('none'); toggledCharts.push(ch); }
+    });
+  }
   // Convert all canvas to images BEFORE cloning
   var canvases=page.querySelectorAll('canvas');
   var origData=[];
@@ -332,11 +348,18 @@ function exportPagePDF(filterContainerId){
       origData.push({canvas:cv,dataUrl:dataUrl,parent:cv.parentNode});
     }catch(e){origData.push(null);}
   });
+  // Desliga de novo pra tela voltar ao normal (só hover, sem rótulos fixos)
+  if(isProd){
+    prodPdfMode=false;
+    toggledCharts.forEach(function(ch){ ch.update('none'); });
+  }
   // Clone page
   var clone=page.cloneNode(true);
   // Replace canvas elements in clone with img
   var cloneCanvases=clone.querySelectorAll('canvas');
+  var pizzaCard=null;
   cloneCanvases.forEach(function(cv,i){
+    if(isProd && cv.id==='cProdPizza') pizzaCard=cv.closest('.chart-card');
     if(origData[i]&&origData[i].dataUrl){
       var img=document.createElement('img');
       img.src=origData[i].dataUrl;
@@ -346,16 +369,32 @@ function exportPagePDF(filterContainerId){
       cv.parentNode.replaceChild(img,cv);
     }
   });
+  // Produção: tira o gráfico "Top 5 Clientes" (rosca) do PDF — a barra "Quantidade por Cliente"
+  // já cobre a mesma informação, um a menos ajuda a caber em menos páginas.
+  if(pizzaCard) pizzaCard.remove();
   // Remove filters from clone
   var filters=clone.querySelector('.filters,.manut-filter-bar');
   if(filters) filters.style.display='none';
+  var notaWrap=clone.querySelector('#fpNotaWrap');
+  if(notaWrap) notaWrap.style.display='none';
+  // Produção: KPIs simplificados só no PDF (tela continua com os 7 cards originais)
+  if(isProd && lastProdKpi){
+    var k=lastProdKpi, showTon=k.totalTON>0, showM3=k.totalM3>0;
+    var kpiPdf='<div class="kpi-card"><div class="kpi-icon">🚚</div><div class="kpi-value">'+numBR(k.totalViagens)+'</div><div class="kpi-label">Total de Entregas</div></div>';
+    if(showTon) kpiPdf+='<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value">'+numBR(k.totalTON,1)+'</div><div class="kpi-label">Total (TON)</div></div>';
+    if(showM3) kpiPdf+='<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value">'+numBR(k.totalM3,1)+'</div><div class="kpi-label">Total (M³)</div></div>';
+    kpiPdf+='<div class="kpi-card"><div class="kpi-icon">🚛</div><div class="kpi-value">'+k.camAtivosCount+'</div><div class="kpi-label">Caminhões Ativos</div></div>';
+    if(showTon) kpiPdf+='<div class="kpi-card"><div class="kpi-icon">⚖️</div><div class="kpi-value">'+numBR(k.mediaTonPlaca,1)+'</div><div class="kpi-label">Média TON/Entrega</div></div>';
+    if(showM3) kpiPdf+='<div class="kpi-card"><div class="kpi-icon">⚖️</div><div class="kpi-value">'+numBR(k.mediaM3Placa,1)+'</div><div class="kpi-label">Média M³/Entrega</div></div>';
+    var kpiEl=clone.querySelector('#kpiProd');
+    if(kpiEl) kpiEl.innerHTML=kpiPdf;
+  }
   var isDark=!document.body.classList.contains('light');
   var bg='#ffffff';
   var txt='#111111';
   var surf='#f8f9fa';
   var brd='#cccccc';
   var logoData='data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD/wAARCAD8APwDACIAAREBAhEB/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMAAAERAhEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASiiql5fW9hD5tw+yPOM7SefwpSkoq72BJt2RboNZI8SaSf+Xsf98t/hT117THO0Xkf61kq9N7SX3lulUX2X9x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';
-  var printWin=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8">';
   html+='<title>'+titleText+' - Biomassa Chaparini</title>';
   html+='<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">';
@@ -426,13 +465,23 @@ function exportPagePDF(filterContainerId){
   html+='.status-badge{padding:2px 6px;border-radius:4px;font-size:10px}';
   html+='.chart-badge{font-size:10px;color:#555555;background:#eeeeee;border:1px solid #cccccc;border-radius:20px;padding:2px 8px;margin-left:6px}';
   html+='.pdf-header{position:fixed;top:0;left:0;right:0;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:#ffffff;border-bottom:2px solid #cccccc;z-index:9999}';
+  html+='.pdf-filtros{margin:6px 0 14px;font-size:9px;color:#555555;background:#f5f5f5;border:1px solid #dddddd;border-radius:6px;padding:6px 10px}';
+  html+='.pdf-filtros b{color:#111111}';
   html+='.pdf-body{margin-top:78px}';
   html+='#tblTempo{page-break-before:always}';
+  if(isProd){
+    html+='#kpiProd.kpi-row{grid-template-columns:repeat(3,1fr)}';
+    html+='#chartsProd.charts-grid{grid-template-columns:1fr}';
+    html+='#chartsProd .chart-container{height:210px}';
+    html+='#chartsProd .chart-container img{height:210px}';
+    html+='#tblProd{page-break-before:always}';
+  }
   html+='@media print{';
   html+='  body{padding:10px}';
-  html+='  @page{size:landscape;margin:22mm 10mm 10mm 10mm}';
+  html+='  @page{size:'+(isProd?'portrait':'landscape')+';margin:22mm 10mm 10mm 10mm}';
   html+='  .pdf-header{position:fixed;top:0;left:0;right:0}';
   html+='  #tblTempo{page-break-before:always}';
+  html+=(isProd?'  #tblProd{page-break-before:always}':'');
   html+='}';
   html+='</style></head><body>';
   html+='<div class="pdf-header">';
@@ -441,14 +490,20 @@ function exportPagePDF(filterContainerId){
   html+='<div><div style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:#1a4a2e;letter-spacing:0.5px">BIOMASSA CHAPARINI</div>';
   html+='<div style="font-size:10px;color:#555555;margin-top:1px">Sistema de Gestão de Frota</div></div></div>';
   html+='<div style="text-align:right"><div style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:600;color:#111111">'+titleText+'</div>';
-  html+='<div style="font-size:10px;color:#555555;margin-top:2px">Gerado em '+new Date().toLocaleDateString('pt-BR')+' às '+new Date().toLocaleTimeString('pt-BR')+'</div></div>';
+  html+='<div style="font-size:8px;color:#555555;margin-top:2px">Gerado em '+new Date().toLocaleDateString('pt-BR')+' às '+new Date().toLocaleTimeString('pt-BR')+'</div></div>';
   html+='</div>';
   html+='<div class="pdf-body">';
+  if(isProd && lastProdFiltros) html+='<div class="pdf-filtros"><b>Filtros aplicados:</b> '+lastProdFiltros+'</div>';
   html+=clone.innerHTML;
   html+='</div>';
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>';
   html+='</body></html>';
   printWin.document.write(html);
   printWin.document.close();
+  }catch(err){
+    printWin.document.write('<pre style="white-space:pre-wrap;font-family:monospace;padding:20px">Erro ao gerar o PDF:\n\n'+(err&&err.stack||err)+'</pre>');
+    printWin.document.close();
+    showToast('Erro ao gerar PDF — veja o detalhe na aba que abriu',true);
+  }
 }
 

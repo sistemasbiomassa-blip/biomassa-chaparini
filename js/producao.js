@@ -1,5 +1,15 @@
 // ==================== PRODUCAO ====================
 var prodMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
+var lastProdKpi=null; // último snapshot dos totais, usado pelo exportPagePDF para montar os KPIs do PDF
+var lastProdFiltros=''; // resumo legível dos filtros ativos, usado no cabeçalho do PDF
+var prodPdfMode=false; // true só durante a geração do PDF — liga os rótulos de valor nos gráficos
+
+// Rótulo de valor "scriptable": fica embutido no gráfico desde a criação (desligado por padrão)
+// e só liga quando prodPdfMode=true. Nunca mexe na configuração depois de o gráfico já existir —
+// o Chart.js quebra (RangeError de pilha) se você substituir options.plugins.datalabels depois de pronto.
+function prodDL(anchor,align,color,formatter){
+  return {display:function(){return prodPdfMode},anchor:anchor,align:align,color:color||'#333333',font:{size:11,weight:'700',family:'Barlow'},formatter:formatter};
+}
 function buildProducao(){
   var uMot=[],uPla=[],uCar=[],uDes=[],uMon=[];
   var motSet={},plaSet={},carSet={},desSet={},monSet={};
@@ -47,6 +57,23 @@ function buildProducao(){
   var fDtFim=document.getElementById('fpDtFim')?document.getElementById('fpDtFim').value:'';
   var hasRange = !!(fDtIni||fDtFim);
 
+  var filtrosList=[];
+  if(hasRange){
+    filtrosList.push('Período: '+(fDtIni?formatDateBR(fDtIni):'(início)')+' até '+(fDtFim?formatDateBR(fDtFim):'(hoje)'));
+  } else if(fDia){
+    filtrosList.push('Dia: '+formatDateBR(fDia));
+  } else if(fSemP){
+    filtrosList.push('Semana: '+getWeekDisplay(fSemP));
+  } else if(fMes){
+    filtrosList.push('Mês: '+getMonthLabel(fMes));
+  }
+  if(fM) filtrosList.push('Motorista: '+fM);
+  if(fP) filtrosList.push('Placa: '+fP);
+  if(fC) filtrosList.push('Local Carga: '+fC);
+  if(fD) filtrosList.push('Local Descarga: '+fD);
+  if(fUnid) filtrosList.push('Unidade: '+fUnid);
+  lastProdFiltros=filtrosList.join(' · ');
+
   var data=DB.cadastro.filter(function(r){
     if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
     if(fM&&r.MOTORISTA!==fM) return false;
@@ -83,6 +110,8 @@ function buildProducao(){
   });
   var mediaTonPlaca=qtdEntregasTON?totalTON/qtdEntregasTON:0;
   var mediaM3Placa=qtdEntregasM3?totalM3/qtdEntregasM3:0;
+
+  lastProdKpi={totalViagens:totalViagens,totalTON:totalTON,totalM3:totalM3,camAtivosCount:Object.keys(camAtivos).length,mediaTonPlaca:mediaTonPlaca,mediaM3Placa:mediaM3Placa};
 
   // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência
   // e no gráfico dos últimos 15 dias — assim ambos respeitam Placa/Motorista/Local/Unidade/Nota.
@@ -140,7 +169,7 @@ function buildProducao(){
   var mL=Object.keys(md).sort();
   destroyChart('cProdMensal');
   var ctxM=document.getElementById('cProdMensal').getContext('2d');
-  chartInstances['cProdMensal']=new Chart(ctxM,{type:'bar',data:{labels:mL.map(getMonthLabel),datasets:[{label:'TON',data:mL.map(function(m){return md[m].ton}),backgroundColor:makeGrad(ctxM,'rgba(59,130,246,0.85)','rgba(59,130,246,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6},{label:'M³',data:mL.map(function(m){return md[m].m3}),backgroundColor:makeGrad(ctxM,'rgba(249,115,22,0.85)','rgba(249,115,22,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}}}}});
+  chartInstances['cProdMensal']=new Chart(ctxM,{type:'bar',data:{labels:mL.map(getMonthLabel),datasets:[{label:'TON',data:mL.map(function(m){return md[m].ton}),backgroundColor:makeGrad(ctxM,'rgba(59,130,246,0.85)','rgba(59,130,246,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6},{label:'M³',data:mL.map(function(m){return md[m].m3}),backgroundColor:makeGrad(ctxM,'rgba(249,115,22,0.85)','rgba(249,115,22,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}},datalabels:prodDL('end','top',null,function(v){return v?numBR(v,1):''})},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}}}}});
 
   // Entregas por dia — por padrão, últimos 15 dias corridos (independe do filtro de mês/semana/data,
   // mas respeita os demais filtros: placa, motorista, local, nota, unidade). Se algum filtro de período
@@ -182,14 +211,14 @@ function buildProducao(){
   entregas15.forEach(function(r){var dd=String(r.DATA||'').slice(0,10);if(contagem15.hasOwnProperty(dd))contagem15[dd]++;});
   destroyChart('cProdDiario15');
   var ctx15=document.getElementById('cProdDiario15').getContext('2d');
-  chartInstances['cProdDiario15']=new Chart(ctx15,{type:'line',data:{labels:dias15.map(function(d){return formatDateBR(d)}),datasets:[{label:'Entregas',data:dias15.map(function(d){return contagem15[d]}),borderColor:'rgba(59,130,246,0.9)',backgroundColor:makeGrad(ctx15,'rgba(59,130,246,0.35)','rgba(59,130,246,0.02)'),fill:true,tension:0.35,pointRadius:3,pointBackgroundColor:'rgba(59,130,246,1)',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{beginAtZero:true,ticks:{color:colors.text,precision:0},grid:{color:colors.grid}}}}});
+  chartInstances['cProdDiario15']=new Chart(ctx15,{type:'line',data:{labels:dias15.map(function(d){return formatDateBR(d)}),datasets:[{label:'Entregas',data:dias15.map(function(d){return contagem15[d]}),borderColor:'rgba(59,130,246,0.9)',backgroundColor:makeGrad(ctx15,'rgba(59,130,246,0.35)','rgba(59,130,246,0.02)'),fill:true,tension:0.35,pointRadius:3,pointBackgroundColor:'rgba(59,130,246,1)',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:prodDL(null,'top',null,function(v){return v||''})},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{beginAtZero:true,ticks:{color:colors.text,precision:0},grid:{color:colors.grid}}}}});
 
   // Top Drivers with horizontal gradient
   var mc={};entregas.forEach(function(r){if(r.MOTORISTA)mc[r.MOTORISTA]=(mc[r.MOTORISTA]||0)+1});
   var ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
   destroyChart('cProdMotoristas');
   var ctxD=document.getElementById('cProdMotoristas').getContext('2d');
-  chartInstances['cProdMotoristas']=new Chart(ctxD,{type:'bar',data:{labels:ms.map(function(m){return m[0]}),datasets:[{data:ms.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxD,'rgba(0,229,255,0.9)','rgba(59,130,246,0.3)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500',family:"'Outfit',sans-serif"}},grid:{display:false}}}}});
+  chartInstances['cProdMotoristas']=new Chart(ctxD,{type:'bar',data:{labels:ms.map(function(m){return m[0]}),datasets:[{data:ms.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxD,'rgba(0,229,255,0.9)','rgba(59,130,246,0.3)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:prodDL('end','end',null,function(v){return v})},scales:{x:{ticks:{color:colors.text},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500',family:"'Outfit',sans-serif"}},grid:{display:false}}}}});
 
   // Clients
   var cv={};
@@ -205,12 +234,18 @@ function buildProducao(){
   // Doughnut Top 5
   var t5=cs.slice(0,5);
   destroyChart('cProdPizza');
-  chartInstances['cProdPizza']=new Chart(document.getElementById('cProdPizza'),{type:'doughnut',data:{labels:t5.map(function(c){return c[0]}),datasets:[{data:t5.map(function(c){return c[1].ton+c[1].m3}),backgroundColor:modernColors.slice(0,5),borderWidth:0,spacing:3,borderRadius:4}]},options:{cutout:'72%',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:colors.text,font:{size:11}}}}}});
+  chartInstances['cProdPizza']=new Chart(document.getElementById('cProdPizza'),{type:'doughnut',data:{labels:t5.map(function(c){return c[0]}),datasets:[{data:t5.map(function(c){return c[1].ton+c[1].m3}),backgroundColor:modernColors.slice(0,5),borderWidth:0,spacing:3,borderRadius:4}]},options:{cutout:'72%',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:colors.text,font:{size:11},generateLabels:function(chart){
+    var ds=chart.data.datasets[0];
+    return chart.data.labels.map(function(label,i){
+      var text=prodPdfMode?(label+' — '+numBR(ds.data[i],1)):label;
+      return {text:text,fillStyle:ds.backgroundColor[i],strokeStyle:ds.backgroundColor[i],index:i};
+    });
+  }}}}}});
 
   // Clients horizontal stacked with gradient
   destroyChart('cProdClientes');
   var ctxC=document.getElementById('cProdClientes').getContext('2d');
-  chartInstances['cProdClientes']=new Chart(ctxC,{type:'bar',data:{labels:cs.map(function(c){return c[0]}),datasets:[{label:'TON',data:cs.map(function(c){return c[1].ton}),backgroundColor:makeGradH(ctxC,'rgba(59,130,246,0.85)','rgba(59,130,246,0.2)'),borderRadius:6,borderSkipped:false},{label:'M³',data:cs.map(function(c){return c[1].m3}),backgroundColor:makeGradH(ctxC,'rgba(249,115,22,0.85)','rgba(249,115,22,0.2)'),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},scales:{x:{stacked:true,ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}},y:{stacked:true,ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
+  chartInstances['cProdClientes']=new Chart(ctxC,{type:'bar',data:{labels:cs.map(function(c){return c[0]}),datasets:[{label:'TON',data:cs.map(function(c){return c[1].ton}),backgroundColor:makeGradH(ctxC,'rgba(59,130,246,0.85)','rgba(59,130,246,0.2)'),borderRadius:6,borderSkipped:false},{label:'M³',data:cs.map(function(c){return c[1].m3}),backgroundColor:makeGradH(ctxC,'rgba(249,115,22,0.85)','rgba(249,115,22,0.2)'),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}},datalabels:prodDL('end','end',null,function(v){return v?numBR(v,1):''})},scales:{x:{stacked:true,ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}},y:{stacked:true,ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   // Table with modern styling
   var canEditEnt=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
