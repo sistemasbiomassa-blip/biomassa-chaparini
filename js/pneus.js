@@ -100,11 +100,20 @@ function pneuToggleTire(containerId,posId,label){
 }
 
 // Lê as posições marcadas no diagrama — usado no momento de salvar.
+// Lê a partir das linhas de edição (não do ícone .picked do pneu) porque uma
+// posição pré-carregada (edição) pode não achar o ícone correspondente caso o
+// Tipo de Veículo da placa tenha mudado depois do lançamento original — nesse
+// caso a linha continua existindo com os dados certos, só o ícone que não
+// casa. Ler pelo ícone faria a linha "sumir" silenciosamente ao salvar.
 // Exige "instalado" preenchido; ignora posições marcadas sem esse campo.
 function coletarItensPneu(containerId){
   var itens=[];
-  document.querySelectorAll('#'+containerId+' .pneu-tire.picked').forEach(function(t){
-    var posId=t.getAttribute('data-posid');
+  var rowsEl=document.getElementById(containerId+'_rows');
+  if(!rowsEl) return itens;
+  var prefix=containerId+'_row_';
+  rowsEl.querySelectorAll('.pneu-row').forEach(function(rowEl){
+    var posId=String(rowEl.id||'').slice(prefix.length);
+    if(!posId) return;
     var parts=posId.split('-');
     var insEl=document.getElementById(containerId+'_ins_'+posId);
     var remEl=document.getElementById(containerId+'_rem_'+posId);
