@@ -517,6 +517,11 @@ function salvarManutRealEdit(){
     observacao:document.getElementById('mr_obs').value.trim()||null
   };
   var mostraDiagrama=document.getElementById('mrPneuWrap').style.display!=='none';
+  var pneuIncompletos=mostraDiagrama?contarPneuLinhasIncompletas('mrPneuDiagram'):0;
+  if(pneuIncompletos>0){
+    showToast('⚠️ '+pneuIncompletos+' posição(ões) de pneu marcada(s) sem o "Pneu instalado (nº)" preenchido. Preencha ou desmarque a posição antes de salvar.',true);
+    return;
+  }
   var itensPneu=mostraDiagrama?coletarItensPneu('mrPneuDiagram'):null;
   var editId=_mrEditId;
   var btn=document.getElementById('mrSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}

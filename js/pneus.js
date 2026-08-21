@@ -125,6 +125,23 @@ function coletarItensPneu(containerId){
   return itens;
 }
 
+// Conta quantas linhas marcadas no diagrama estão sem "Pneu instalado" (campo
+// obrigatório) — usado pra avisar o usuário antes de salvar, já que
+// coletarItensPneu() descarta essas linhas silenciosamente.
+function contarPneuLinhasIncompletas(containerId){
+  var rowsEl=document.getElementById(containerId+'_rows');
+  if(!rowsEl) return 0;
+  var prefix=containerId+'_row_';
+  var n=0;
+  rowsEl.querySelectorAll('.pneu-row').forEach(function(rowEl){
+    var posId=String(rowEl.id||'').slice(prefix.length);
+    if(!posId) return;
+    var insEl=document.getElementById(containerId+'_ins_'+posId);
+    if(!insEl||!insEl.value.trim()) n++;
+  });
+  return n;
+}
+
 // ==================== FOLHA DE CAMPO (IMPRESSÃO) ====================
 // Folha em branco pra anotar na garagem (pneu removido/instalado por posição)
 // e depois passar pro sistema. Uma página por tipo de veículo, mesmo diagrama

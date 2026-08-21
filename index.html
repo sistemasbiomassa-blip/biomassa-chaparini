@@ -4075,6 +4075,11 @@ function salvarManutRealizada(){
   var motorista=n(document.getElementById('fmMotorista').value);
   var obs=n(document.getElementById('fmObs').value);
   var mostraDiagrama=document.getElementById('fmPneuWrap').style.display!=='none';
+  var pneuIncompletos=mostraDiagrama?contarPneuLinhasIncompletas('fmPneuDiagram'):0;
+  if(pneuIncompletos>0){
+    showToast('⚠️ '+pneuIncompletos+' posição(ões) de pneu marcada(s) sem o "Pneu instalado (nº)" preenchido. Preencha ou desmarque a posição antes de salvar.',true);
+    return;
+  }
   var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
   saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
     if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
@@ -4707,6 +4712,23 @@ function coletarItensPneu(containerId){
     itens.push({eixo:Number(parts[0]),lado:parts[1],posicao:parts[2]||null,pneu_removido:(remEl&&remEl.value.trim())||null,pneu_instalado:instalado,marca_modelo:(mmEl&&mmEl.value.trim())||null});
   });
   return itens;
+}
+
+// Conta quantas linhas marcadas no diagrama estão sem "Pneu instalado" (campo
+// obrigatório) — usado pra avisar o usuário antes de salvar, já que
+// coletarItensPneu() descarta essas linhas silenciosamente.
+function contarPneuLinhasIncompletas(containerId){
+  var rowsEl=document.getElementById(containerId+'_rows');
+  if(!rowsEl) return 0;
+  var prefix=containerId+'_row_';
+  var n=0;
+  rowsEl.querySelectorAll('.pneu-row').forEach(function(rowEl){
+    var posId=String(rowEl.id||'').slice(prefix.length);
+    if(!posId) return;
+    var insEl=document.getElementById(containerId+'_ins_'+posId);
+    if(!insEl||!insEl.value.trim()) n++;
+  });
+  return n;
 }
 
 // ==================== FOLHA DE CAMPO (IMPRESSÃO) ====================
@@ -5948,6 +5970,11 @@ function salvarManutRealEdit(){
     observacao:document.getElementById('mr_obs').value.trim()||null
   };
   var mostraDiagrama=document.getElementById('mrPneuWrap').style.display!=='none';
+  var pneuIncompletos=mostraDiagrama?contarPneuLinhasIncompletas('mrPneuDiagram'):0;
+  if(pneuIncompletos>0){
+    showToast('⚠️ '+pneuIncompletos+' posição(ões) de pneu marcada(s) sem o "Pneu instalado (nº)" preenchido. Preencha ou desmarque a posição antes de salvar.',true);
+    return;
+  }
   var itensPneu=mostraDiagrama?coletarItensPneu('mrPneuDiagram'):null;
   var editId=_mrEditId;
   var btn=document.getElementById('mrSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}

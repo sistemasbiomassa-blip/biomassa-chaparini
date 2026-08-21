@@ -212,6 +212,11 @@ function salvarManutRealizada(){
   var motorista=n(document.getElementById('fmMotorista').value);
   var obs=n(document.getElementById('fmObs').value);
   var mostraDiagrama=document.getElementById('fmPneuWrap').style.display!=='none';
+  var pneuIncompletos=mostraDiagrama?contarPneuLinhasIncompletas('fmPneuDiagram'):0;
+  if(pneuIncompletos>0){
+    showToast('⚠️ '+pneuIncompletos+' posição(ões) de pneu marcada(s) sem o "Pneu instalado (nº)" preenchido. Preencha ou desmarque a posição antes de salvar.',true);
+    return;
+  }
   var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
   saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
     if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
