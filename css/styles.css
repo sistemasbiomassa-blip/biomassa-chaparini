@@ -267,7 +267,7 @@ tbody tr:hover{background:var(--surface2)}
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9998;display:none;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:500px;width:90%;box-shadow:var(--shadow)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:500px;width:90%;box-shadow:var(--shadow);max-height:90vh;overflow-y:auto}
 .modal h2{margin-bottom:16px}
 .progress-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:16px 0}
 .progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease;width:0%}
