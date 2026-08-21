@@ -27,6 +27,7 @@ function populateSelects(){
   fill('fClasseDesp',BASE.classeDesp);
   fill('fmPlaca',BASE.placas);
   fill('fmTipo',BASE.tipoManut);
+  fill('fmMotorista',motoristasFiltrados(BASE.motoristas,'Ativos'));
 }
 
 // Reaplica as opções de um <select> específico sem mexer nos outros campos do

@@ -209,10 +209,11 @@ function salvarManutRealizada(){
   var valor=num(document.getElementById('fmValor').value);
   var localServico=n(document.getElementById('fmLocalServico').value);
   var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
+  var motorista=n(document.getElementById('fmMotorista').value);
   var obs=n(document.getElementById('fmObs').value);
   var mostraDiagrama=document.getElementById('fmPneuWrap').style.display!=='none';
   var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
     if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
     var novoId=res&&res[0]&&res[0].id;
     function finalizar(){
@@ -233,7 +234,7 @@ function salvarManutRealizada(){
 }
 
 function limparFormManutReal(){
-  ['fmPlaca','fmTipo'].forEach(function(id){document.getElementById(id).value=''});
+  ['fmPlaca','fmTipo','fmMotorista'].forEach(function(id){document.getElementById(id).value=''});
   ['fmKM','fmValor','fmLocalServico','fmNotaFiscal'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('fmObs').value='';
   document.getElementById('fmData').value=new Date().toISOString().slice(0,10);
@@ -260,9 +261,9 @@ function _atualizarDiagramaPneuForm(){
 // ==================== RENDER TABLES ====================
 function renderManutRealTable(){
   var data=DB.manutRealizada;
-  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
+  var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutRealContainer').innerHTML=h;

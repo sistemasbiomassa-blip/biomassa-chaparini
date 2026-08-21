@@ -94,7 +94,7 @@ function loadFromSheets(callback) {
     DB.manutRealizada = manutRR.map(function(x){ return {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
       KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
-      NOTA_FISCAL:x.nota_fiscal, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+      NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
@@ -289,7 +289,7 @@ function _rotearAction(action, data) {
       var mr={
         placa: data.PLACA, tipo_manutencao: data.TIPO_MANUTENCAO, data_manutencao: data['DATA MANUTENÇÃO'],
         km: data.KM, observacao: data['OBSERVAÇÃO'], valor: data.VALOR,
-        local_servico: data.LOCAL_SERVICO, nota_fiscal: data.NOTA_FISCAL
+        local_servico: data.LOCAL_SERVICO, nota_fiscal: data.NOTA_FISCAL, motorista: data.MOTORISTA
       };
       return sb.from('manut_realizada').insert(_comUsuarioAtual(_limparPayload(mr))).select().then(_unwrap);
     }

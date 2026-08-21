@@ -62,6 +62,7 @@ function buildManutencaoFora(){
   // Fora de garantia = todas as placas com km conhecido, exceto as com garantia ainda ativa
   var allPlacas=Object.keys(kmByPlaca).filter(function(p){return !placaEmGarantiaAtiva(p)}).sort();
   var progs=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO&&p.INTERVALO_KM});
+  var todosTipos=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO}).map(function(p){return p.TIPO_MANUTENCAO}).sort();
 
   // Build alerts data
   var alertsData=[];
@@ -111,7 +112,7 @@ function buildManutencaoFora(){
   allPlacas.forEach(function(p){fbH+='<option value="'+p+'"'+(savedPlaca===p?' selected':'')+'>'+p+'</option>'});
   fbH+='</select>';
   fbH+='<select class="filter-select" id="fmDashTipo" onchange="manutFiltro.tipo=this.value;buildManutencao()"><option value="">🔧 Todos os tipos</option>';
-  progs.forEach(function(p){fbH+='<option value="'+p.TIPO_MANUTENCAO+'"'+(savedTipo===p.TIPO_MANUTENCAO?' selected':'')+'>'+p.TIPO_MANUTENCAO+'</option>'});
+  todosTipos.forEach(function(t){fbH+='<option value="'+t+'"'+(savedTipo===t?' selected':'')+'>'+t+'</option>'});
   fbH+='</select>';
   fbH+='<div class="filter-sep" style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>';
   var urgTag=manutFiltro.status.indexOf('r')>=0;
@@ -407,8 +408,8 @@ function buildManutDetalhamento(){
 
   var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
-  var colCount=canEdit?10:9;
-  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  var colCount=canEdit?11:10;
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   rows.forEach(function(r){
     var actCell='';
     if(canEdit){
@@ -422,6 +423,7 @@ function buildManutDetalhamento(){
       '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
       '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
       '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td>'+
+      '<td>'+(r.MOTORISTA||'-')+'</td>'+
       '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
       '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
       '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
@@ -450,11 +452,14 @@ function _mrBuildForm(row){
   (BASE.placas||[]).slice().sort().forEach(function(p){po+='<option value="'+p+'"'+(row.PLACA===p?' selected':'')+'>'+p+'</option>'});
   var to='<option value="">Selecione...</option>';
   (BASE.tipoManut||[]).slice().sort().forEach(function(t){to+='<option value="'+t+'"'+(row.TIPO_MANUTENCAO===t?' selected':'')+'>'+t+'</option>'});
+  var mo='<option value="">Selecione...</option>';
+  motoristasFiltrados(BASE.motoristas||[],'Todos').slice().sort().forEach(function(m){mo+='<option value="'+m+'"'+(row.MOTORISTA===m?' selected':'')+'>'+m+'</option>'});
   return ''+
     '<div class="form-group"><label>Placa *</label><select id="mr_placa" onchange="_atualizarDiagramaPneuEdit(false)">'+po+'</select></div>'+
     '<div class="form-group"><label>Tipo *</label><select id="mr_tipo" onchange="_atualizarDiagramaPneuEdit(false)">'+to+'</select></div>'+
     '<div class="form-group"><label>Data *</label><input id="mr_data" type="date" value="'+(row.DATA_MANUTENCAO?String(row.DATA_MANUTENCAO).slice(0,10):'')+'"></div>'+
     '<div class="form-group"><label>KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
+    '<div class="form-group"><label>Motorista</label><select id="mr_motorista">'+mo+'</select></div>'+
     '<div class="form-group"><label>Valor (R$)</label><input id="mr_valor" type="number" step="0.01" value="'+(row.VALOR!=null&&row.VALOR!==''?num(row.VALOR):'')+'"></div>'+
     '<div class="form-group"><label>Local do Serviço</label><input id="mr_local" type="text" value="'+(row.LOCAL_SERVICO?String(row.LOCAL_SERVICO).replace(/"/g,'&quot;'):'')+'"></div>'+
     '<div class="form-group"><label>Nota Fiscal</label><input id="mr_nota" type="text" value="'+(row.NOTA_FISCAL?String(row.NOTA_FISCAL).replace(/"/g,'&quot;'):'')+'"></div>'+
@@ -508,6 +513,7 @@ function salvarManutRealEdit(){
     valor:document.getElementById('mr_valor').value?num(document.getElementById('mr_valor').value):null,
     local_servico:document.getElementById('mr_local').value.trim()||null,
     nota_fiscal:document.getElementById('mr_nota').value.trim()||null,
+    motorista:document.getElementById('mr_motorista').value||null,
     observacao:document.getElementById('mr_obs').value.trim()||null
   };
   var mostraDiagrama=document.getElementById('mrPneuWrap').style.display!=='none';
