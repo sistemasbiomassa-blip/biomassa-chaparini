@@ -30,7 +30,10 @@ function _limparPayload(o){
 // preenchidos à parte por _comUsuarioAtual) — remover aqui evita erro "column usuario does not exist".
 function _lowerKeys(row){
   var out={};
-  Object.keys(row||{}).forEach(function(k){ out[k.toLowerCase()]=row[k]; });
+  Object.keys(row||{}).forEach(function(k){
+    var nk=k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    out[nk]=row[k];
+  });
   delete out.usuario;
   return _limparPayload(out);
 }
