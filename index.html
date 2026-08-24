@@ -6022,13 +6022,13 @@ function confirmManutRealDelete(){
 </script>
 <script>
 // ==================== CONSUMO ====================
-var consumoFiltro={motorista:'',placa:'',mes:'',dtIni:'',dtFim:''};
+var consumoFiltro={motorista:'',placa:'',localCarga:'',mes:'',dtIni:'',dtFim:''};
 var consumoMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
 
 function buildConsumo(){
   // Coletar opções de filtros
-  var uMot=[],uPla=[],uMes=[];
-  var motSet={},plaSet={},mesSet={};
+  var uMot=[],uPla=[],uMes=[],uLocalCarga=[];
+  var motSet={},plaSet={},mesSet={},localCargaSet={};
   DB.cadastro.forEach(function(r){
     if(r.MOTORISTA&&!motSet[r.MOTORISTA]){motSet[r.MOTORISTA]=1;uMot.push(r.MOTORISTA)}
     if(r.PLACA){
@@ -6036,24 +6036,27 @@ function buildConsumo(){
       if(p&&!plaSet[p]){plaSet[p]=1;uPla.push(p)}
     }
     if(r.DATA){var my=getMonthYear(r.DATA);if(my&&!mesSet[my]){mesSet[my]=1;uMes.push(my)}}
+    if(r['LOCAL CARGA']&&!localCargaSet[r['LOCAL CARGA']]){localCargaSet[r['LOCAL CARGA']]=1;uLocalCarga.push(r['LOCAL CARGA'])}
   });
-  uMot.sort();uPla.sort();uMes.sort();
+  uMot.sort();uPla.sort();uMes.sort();uLocalCarga.sort();
   uMot=motoristasFiltrados(uMot, consumoMotModo); // filtro Ativos/Inativos/Todos
 
   // Renderizar filtros
   createFilters('filtersConsumo',[
     {id:'fcMot',label:'Motorista',options:uMot,onChange:onConsumoFilterChange},
     {id:'fcPla',label:'Placa',options:uPla,onChange:onConsumoFilterChange},
+    {id:'fcLocalCarga',label:'Local de Carga',options:uLocalCarga,onChange:onConsumoFilterChange},
     {id:'fcMes',label:'Mês',options:uMes,optionLabels:uMes.map(getMonthLabel),onChange:onConsumoFilterChange},
     {type:'dateRange',idIni:'fcDtIni',idFim:'fcDtFim',onChange:onConsumoFilterChange}
   ],motoristaModoSelectHtml('consumoMotModo', consumoMotModo, 'buildConsumo'),function(){
-    consumoFiltro={motorista:'',placa:'',mes:'',dtIni:'',dtFim:''};
-    clearFilters(['fcMot','fcPla','fcMes','fcDtIni','fcDtFim'],buildConsumo);
+    consumoFiltro={motorista:'',placa:'',localCarga:'',mes:'',dtIni:'',dtFim:''};
+    clearFilters(['fcMot','fcPla','fcLocalCarga','fcMes','fcDtIni','fcDtFim'],buildConsumo);
   });
 
   // Restaurar valores salvos nos selects
   if(document.getElementById('fcMot')) document.getElementById('fcMot').value=consumoFiltro.motorista||'';
   if(document.getElementById('fcPla')) document.getElementById('fcPla').value=consumoFiltro.placa||'';
+  if(document.getElementById('fcLocalCarga')) document.getElementById('fcLocalCarga').value=consumoFiltro.localCarga||'';
   if(document.getElementById('fcMes')) document.getElementById('fcMes').value=consumoFiltro.mes||'';
   if(document.getElementById('fcDtIni')) document.getElementById('fcDtIni').value=consumoFiltro.dtIni||'';
   if(document.getElementById('fcDtFim')) document.getElementById('fcDtFim').value=consumoFiltro.dtFim||'';
@@ -6067,6 +6070,7 @@ function buildConsumo(){
 function onConsumoFilterChange(){
   consumoFiltro.motorista=document.getElementById('fcMot')?document.getElementById('fcMot').value:'';
   consumoFiltro.placa=document.getElementById('fcPla')?document.getElementById('fcPla').value:'';
+  consumoFiltro.localCarga=document.getElementById('fcLocalCarga')?document.getElementById('fcLocalCarga').value:'';
   consumoFiltro.mes=document.getElementById('fcMes')?document.getElementById('fcMes').value:'';
   consumoFiltro.dtIni=document.getElementById('fcDtIni')?document.getElementById('fcDtIni').value:'';
   consumoFiltro.dtFim=document.getElementById('fcDtFim')?document.getElementById('fcDtFim').value:'';
@@ -6074,6 +6078,27 @@ function onConsumoFilterChange(){
   renderConsumoPlacas();
   renderConsumoTops();
   renderConsumoAbastList();
+}
+
+// Placas que fizeram pelo menos 1 viagem a partir do local de carga informado, no período
+// filtrado (mês OU intervalo de datas). Usado pra restringir o gauge e a tabela por placa
+// às placas "dessa rota" — não isola o km/L exato da rota (ver conversa com o usuário: um
+// trecho entre abastecimentos pode incluir dias sem carga registrada, então não dá pra
+// atribuir o consumo com precisão a um local específico).
+function calcPlacasPorLocalCarga(localCarga, mesFiltro, dtIniF, dtFimF){
+  var hasRange=!!(dtIniF||dtFimF);
+  var set={};
+  DB.cadastro.forEach(function(r){
+    if(r['LOCAL CARGA']!==localCarga) return;
+    if(!r.PLACA) return;
+    if(hasRange){
+      if(!dateInRange(r.DATA,dtIniF,dtFimF)) return;
+    } else if(mesFiltro && getMonthYear(r.DATA)!==mesFiltro){
+      return;
+    }
+    set[String(r.PLACA).replace(/\s+/g,'')]=1;
+  });
+  return set;
 }
 
 // Faixas de km/L (caminhão): mesma régua usada na tabela por placa e no gauge da frota.
@@ -6216,6 +6241,7 @@ function calcSegmentosPorPlaca(rows){
 function calcConsumoPlacasT2T(){
   var f=consumoFiltro;
   var hasRangeC=!!(f.dtIni||f.dtFim);
+  var placasLocalCarga=f.localCarga?calcPlacasPorLocalCarga(f.localCarga,f.mes,f.dtIni,f.dtFim):null;
   var rowsPlaca=DB.cadastro.filter(function(r){
     if(hasRangeC){
       if(!dateInRange(r.DATA,f.dtIni,f.dtFim)) return false;
@@ -6225,6 +6251,10 @@ function calcConsumoPlacasT2T(){
     if(f.placa){
       var p=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
       if(p!==f.placa) return false;
+    }
+    if(placasLocalCarga){
+      var pl=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
+      if(!placasLocalCarga[pl]) return false;
     }
     return true;
   });
@@ -6266,6 +6296,9 @@ function renderConsumoPlacas(){
   placas.forEach(function(p){ if(p.kmL>10) suspeitas++; });
   var h='';
   h+='<div style="padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)">ℹ️ km/L calculado pelo método <strong>tanque-a-tanque</strong> (descarta o 1º abastecimento do período). A coluna Litros mostra o total comprado.</div>';
+  if(consumoFiltro.localCarga){
+    h+='<div style="padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)">ℹ️ Mostrando as placas que carregaram em <strong>'+consumoFiltro.localCarga+'</strong> no período — o km/L é o consumo geral de cada placa, não isolado só dessa rota.</div>';
+  }
   if(suspeitas>0){
     h+='<div style="padding:10px 14px;background:rgba(239,68,68,0.08);border-bottom:1px solid var(--border);font-size:12px;color:#ef4444;display:flex;align-items:center;gap:8px">';
     h+='<span style="font-size:16px">⚠️</span>';
@@ -6529,6 +6562,7 @@ function renderConsumoTops(){
 function renderConsumoAbastList(){
   var f=consumoFiltro;
   var hasRangeA=!!(f.dtIni||f.dtFim);
+  var placasLocalCargaA=f.localCarga?calcPlacasPorLocalCarga(f.localCarga,f.mes,f.dtIni,f.dtFim):null;
   var rows=DB.cadastro.filter(function(r){
     if(!r['QTDADE LITROS'] && !r.KM) return false; // só abastecimento ou linha com KM
     if(!r['QTDADE LITROS']) return false; // queremos só abastecimentos
@@ -6541,6 +6575,10 @@ function renderConsumoAbastList(){
     if(f.placa){
       var p=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
       if(p!==f.placa) return false;
+    }
+    if(placasLocalCargaA){
+      var pl=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
+      if(!placasLocalCargaA[pl]) return false;
     }
     return true;
   }).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
@@ -6602,6 +6640,7 @@ function exportConsumoPDF(){
   var filtrosTxt=[];
   if(f.motorista) filtrosTxt.push('Motorista: '+f.motorista);
   if(f.placa) filtrosTxt.push('Placa: '+f.placa);
+  if(f.localCarga) filtrosTxt.push('Local de Carga: '+f.localCarga);
   if(f.dtIni || f.dtFim){
     var de=f.dtIni?formatDateBR(f.dtIni):'(início)';
     var ate=f.dtFim?formatDateBR(f.dtFim):'(hoje)';
@@ -6625,6 +6664,7 @@ function exportConsumoPDF(){
 
   // Abastecimentos (mesma lógica de filtro)
   var hasRangeE=!!(f.dtIni||f.dtFim);
+  var placasLocalCargaE=f.localCarga?calcPlacasPorLocalCarga(f.localCarga,f.mes,f.dtIni,f.dtFim):null;
   var abast=DB.cadastro.filter(function(r){
     if(!r['QTDADE LITROS']) return false;
     if(hasRangeE){
@@ -6636,6 +6676,10 @@ function exportConsumoPDF(){
     if(f.placa){
       var p=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
       if(p!==f.placa) return false;
+    }
+    if(placasLocalCargaE){
+      var pl=r.PLACA?String(r.PLACA).replace(/\s+/g,''):'';
+      if(!placasLocalCargaE[pl]) return false;
     }
     return true;
   }).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
