@@ -5,9 +5,9 @@
 // ============================================================
 function _maqCuPopSelects(){
   var sf=document.getElementById('maqCuFloresta');
-  if(sf && sf.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
+  if(sf && sf.options.length<=1){ _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
   var sm=document.getElementById('maqCuMaq');
-  if(sm && sm.options.length<=1){ DB.maquinas.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
+  if(sm && sm.options.length<=1){ DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
 }
 function _maqCustoLancamentos(){
   var out=[];

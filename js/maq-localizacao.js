@@ -35,9 +35,9 @@ function maqLocComputed(){
 }
 function _maqPopLocSelects(){
   var sm=document.getElementById('maqLocFiltroMaq');
-  if(sm && sm.options.length<=1){ DB.maquinas.forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
+  if(sm && sm.options.length<=1){ DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
   var sf=document.getElementById('maqLocFiltroFloresta');
-  if(sf && sf.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
+  if(sf && sf.options.length<=1){ _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
 }
 
 function renderMaqLocalTable(){
@@ -75,9 +75,9 @@ function renderMaqLocalTable(){
 function _maqLocBuildForm(row){
   row=row||{};
   var mo='<option value="">—</option>';
-  DB.maquinas.forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
   var fo='<option value="">—</option>';
-  locaisFiltrados(BASE.localCarga,'Ativos').forEach(function(fl){ fo+='<option'+(String(row.FLORESTA)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
+  _maqOrdAlfa(locaisFiltrados(BASE.localCarga,'Ativos')).forEach(function(fl){ fo+='<option'+(String(row.FLORESTA)===String(fl)?' selected':'')+'>'+_maqEsc(fl)+'</option>'; });
   if(row.FLORESTA && locaisFiltrados(BASE.localCarga,'Ativos').indexOf(row.FLORESTA)===-1) fo+='<option selected>'+_maqEsc(row.FLORESTA)+' (inativo)</option>';
   return '<div class="form-group"><label>Máquina *</label><select id="mlf_maq">'+mo+'</select></div>'+
     '<div class="form-group"><label>Floresta (local de carga) *</label><select id="mlf_fl">'+fo+'</select></div>'+
