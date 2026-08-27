@@ -28,7 +28,7 @@ function buildConsumo(){
   ],motoristaModoSelectHtml('consumoMotModo', consumoMotModo, 'buildConsumo'),function(){
     consumoFiltro={motorista:'',placa:'',localCarga:'',mes:'',dtIni:'',dtFim:''};
     clearFilters(['fcMot','fcPla','fcLocalCarga','fcMes','fcDtIni','fcDtFim'],buildConsumo);
-  });
+  }, true); // noPdfBtn: Consumo tem seu próprio botão "Exportar PDF" (exportConsumoPDF), não usar o genérico
 
   // Restaurar valores salvos nos selects
   if(document.getElementById('fcMot')) document.getElementById('fcMot').value=consumoFiltro.motorista||'';
@@ -611,8 +611,9 @@ function renderConsumoAbastList(){
   document.getElementById('cnsAbastList').innerHTML=h;
 }
 
-// Exportar a aba Consumo como PDF (paisagem, padrão do sistema)
+// Exportar a aba Consumo como PDF (retrato, padrão do sistema)
 function exportConsumoPDF(){
+  var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var f=consumoFiltro;
   var filtrosTxt=[];
   if(f.motorista) filtrosTxt.push('Motorista: '+f.motorista);
@@ -676,11 +677,30 @@ function exportConsumoPDF(){
   html+='.tops-grid{display:flex;gap:12px;margin-bottom:12px}';
   html+='.tops-grid > div{flex:1}';
   html+='.gold-row{background:#fef3c7}';
-  html+='@page{size:landscape;margin:8mm}';
+  html+='.tbl-abast th,.tbl-abast td{padding:4px 5px;font-size:9px}';
+  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:10px}';
+  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}.rep-head h1{font-size:18px;color:#085425;line-height:1.1;margin:0}';
+  html+='.rep-head .sub{font-size:11px;color:#444;margin-top:2px}.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
+  html+='@page{size:portrait;margin:8mm}';
   html+='@media print{body{padding:0}}';
   html+='</style></head><body>';
-  html+='<h1>Relatório de Consumo</h1>';
-  html+='<div class="sub">'+filtrosLine+' · Gerado em '+new Date().toLocaleString('pt-BR')+'</div>';
+  html+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Relatório de Consumo — '+filtrosLine+'</div><div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div></div></div>';
+
+  // Gauge pequeno com o consumo médio da frota (mesma conta do dashboard, versão compacta pro PDF)
+  var gauge=calcConsumoMedioGeral();
+  if(gauge){
+    var gSt=kmLStatus(gauge.kmL);
+    var gScaleMax=5, gFrac=Math.max(0,Math.min(1,gauge.kmL/gScaleMax)), gR=55, gLen=Math.PI*gR, gFilled=gFrac*gLen;
+    html+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">';
+    html+='<svg viewBox="0 0 140 80" style="width:130px;flex-shrink:0">';
+    html+='<path d="M12,68 A55,55 0 0 1 128,68" fill="none" stroke="#e5e7eb" stroke-width="10" stroke-linecap="round"/>';
+    html+='<path d="M12,68 A55,55 0 0 1 128,68" fill="none" stroke="'+gSt.cor+'" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+gFilled.toFixed(1)+' '+gLen.toFixed(1)+'"/>';
+    html+='<text x="70" y="58" font-size="16" font-weight="700" fill="'+gSt.cor+'" text-anchor="middle">'+numBR(gauge.kmL,2)+'</text>';
+    html+='</svg>';
+    html+='<div><div style="font-size:12px;font-weight:600;color:#374151">Consumo Médio da Frota</div>';
+    html+='<div style="font-size:10px;color:#666;margin-top:2px">'+gSt.icone+gSt.label+' · '+gauge.placas+' placa'+(gauge.placas>1?'s':'')+' · '+numBR(Math.round(gauge.km))+' km rodados</div></div>';
+    html+='</div>';
+  }
 
   // Consumo por placa
   html+='<h2>Consumo Médio por Placa ('+placas.length+')</h2>';
@@ -722,7 +742,7 @@ function exportConsumoPDF(){
   // Abastecimentos
   html+='<h2>Abastecimentos e KM ('+abast.length+')</h2>';
   if(abast.length){
-    html+='<table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th class="num-right">Litros</th><th class="num-right">Vlr Unit.</th><th class="num-right">Vlr Total</th><th class="num-right">KM</th></tr></thead><tbody>';
+    html+='<table class="tbl-abast"><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th class="num-right">Litros</th><th class="num-right">Vlr Unit.</th><th class="num-right">Vlr Total</th><th class="num-right">KM</th></tr></thead><tbody>';
     abast.forEach(function(r){
       html+='<tr><td>'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td class="num-right">'+numBR(num(r['QTDADE LITROS']),1)+'</td><td class="num-right">'+(r['VALOR UNITARIO']?'R$ '+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td class="num-right">'+(r['VALOR TOTAL']?'R$ '+numBR(r['VALOR TOTAL'],2):'-')+'</td><td class="num-right">'+(r.KM?numBR(parseKM(r.KM),0):'-')+'</td></tr>';
     });

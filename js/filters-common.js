@@ -14,7 +14,7 @@ function getWeeksForMonth(monthVal, allWeeks){
   });
 }
 
-function createFilters(containerId,filterDefs,extraHtml,clearFn){
+function createFilters(containerId,filterDefs,extraHtml,clearFn,noPdfBtn){
   var container=document.getElementById(containerId);
   var saved={};
   filterDefs.forEach(function(f){
@@ -131,11 +131,18 @@ function createFilters(containerId,filterDefs,extraHtml,clearFn){
     btn.onclick=clearFn;
     container.appendChild(btn);
   }
-  var pdfBtn=document.createElement('button');
-  pdfBtn.className='filter-btn-pdf';
-  pdfBtn.innerHTML='📄 Exportar PDF';
-  pdfBtn.onclick=function(){exportPagePDF(containerId)};
-  container.appendChild(pdfBtn);
+  // Páginas com botão de exportação próprio (ex: Consumo, que tem relatório sob medida)
+  // passam noPdfBtn=true pra não ganhar este botão genérico duplicado — o genérico usa
+  // exportPagePDF(containerId), que só sabe montar relatório pras páginas cadastradas em
+  // pageMap (utils.js); pra qualquer outra ele cai num fallback que clona a tela inteira
+  // "como está", incluindo caixas com rolagem interna cortadas.
+  if(!noPdfBtn){
+    var pdfBtn=document.createElement('button');
+    pdfBtn.className='filter-btn-pdf';
+    pdfBtn.innerHTML='📄 Exportar PDF';
+    pdfBtn.onclick=function(){exportPagePDF(containerId)};
+    container.appendChild(pdfBtn);
+  }
 }
 
 // Helper: aplica filtro de intervalo de datas a uma data ISO ou DD/MM/AAAA.
