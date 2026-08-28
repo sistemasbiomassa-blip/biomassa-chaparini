@@ -35,7 +35,9 @@ function renderMaqManutTable(){
   document.getElementById('maqMtCount').textContent=rows.length+(rows.length===1?' registro':' registros');
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma manutenção'+((di||df||fMaq||fFl||fTipo)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Tipo</th><th>Serviço</th><th>Floresta (auto)</th><th>Peças</th><th>M. obra</th><th>Terceiros</th><th>Total</th><th>Oficina</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  var totPec=0, totMao=0, totTer=0, totGeral=0;
   rows.forEach(function(r){
+    totPec+=num(r.CUSTO_PECAS); totMao+=num(r.CUSTO_MAO_OBRA); totTer+=num(r.CUSTO_TERCEIROS); totGeral+=num(r.CUSTO_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqManutModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqManutDelete(\''+r.ID+'\')">🗑️</span>';
@@ -44,7 +46,8 @@ function renderMaqManutTable(){
     var fl=maqFlorestaDoLancamento(r);
     h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+_maqEsc(maqNome(r.ID_MAQUINA))+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
-  h+='</tbody></table>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
+  h+='</table>';
   cont.innerHTML=h;
 }
 

@@ -141,8 +141,8 @@ function buildProducao(){
 
   document.getElementById('kpiProd').innerHTML=
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">🚚</div>'+trendBadge(trendViagens.current,trendViagens.previous)+'</div><div class="kpi-value">'+numBR(totalViagens)+'</div><div class="kpi-label">Total de Entregas</div></div>'+
-    '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendTON.current,trendTON.previous)+'</div><div class="kpi-value">'+numBR(totalTON,1)+'</div><div class="kpi-label">Total (TON)</div></div>'+
-    '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendM3.current,trendM3.previous)+'</div><div class="kpi-value">'+numBR(totalM3,1)+'</div><div class="kpi-label">Total (M³)</div></div>'+
+    '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendTON.current,trendTON.previous)+'</div><div class="kpi-value">'+numBR(totalTON,2)+'</div><div class="kpi-label">Total (TON)</div></div>'+
+    '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">📦</div>'+trendBadge(trendM3.current,trendM3.previous)+'</div><div class="kpi-value">'+numBR(totalM3,2)+'</div><div class="kpi-label">Total (M³)</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-value">'+Object.keys(motAtivos).length+'</div><div class="kpi-label">Motoristas Ativos</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🚛</div><div class="kpi-value">'+Object.keys(camAtivos).length+'</div><div class="kpi-label">Caminhões Ativos</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">⚖️</div><div class="kpi-value">'+numBR(mediaTonPlaca,1)+'</div><div class="kpi-label">Média TON/Entrega</div></div>'+

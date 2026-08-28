@@ -57,7 +57,9 @@ function renderMaqAbastTable(){
   document.getElementById('maqAbCount').textContent=rows.length+(rows.length===1?' registro':' registros');
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhum abastecimento'+((di||df||fMaq||fFl)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Floresta (auto)</th><th>Leitura</th><th>Litros</th><th>Vlr Unit.</th><th>Total</th><th>Operador</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  var totLit=0, totVal=0;
   rows.forEach(function(r){
+    totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqAbastModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqAbastDelete(\''+r.ID+'\')">🗑️</span>';
@@ -66,7 +68,8 @@ function renderMaqAbastTable(){
     var fl=maqFlorestaDoLancamento(r);
     h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+_maqEsc(maqNome(r.ID_MAQUINA))+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+leitura+'</td><td class="maq-mono">'+fmt(num(r.LITROS),2)+'</td><td class="maq-mono">'+fmtR(num(r.PRECO_LITRO))+'</td><td class="maq-mono">'+fmtR(num(r.VALOR_TOTAL))+'</td><td>'+_maqEsc(r.OPERADOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
-  h+='</tbody></table>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="4" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmt(totLit,2)+'</td><td></td><td class="maq-mono">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
+  h+='</table>';
   cont.innerHTML=h;
 }
 
@@ -86,12 +89,12 @@ function _maqAbBuildForm(row){
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?fmt(num(row.LITROS),2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?fmt(num(row.PRECO_LITRO),2):'';
-  var horVal=(row.HORIMETRO!=null&&row.HORIMETRO!=='')?num(row.HORIMETRO):'';
+  var horVal=(row.HORIMETRO!=null&&row.HORIMETRO!=='')?fmt(num(row.HORIMETRO),2):'';
   var kmVal=(row.KM!=null&&row.KM!=='')?fmt(num(row.KM),2):'';
   return ''+
     '<div class="form-group"><label>Data *</label><input id="mab_data" type="date" value="'+_maqEsc(dataVal)+'"></div>'+
     '<div class="form-group"><label>Máquina *</label><select id="mab_maq" onchange="_maqAbToggleLeitura()">'+mo+'</select></div>'+
-    '<div class="form-group" id="mab_horGrp"><label>Horímetro (h)</label><input id="mab_hor" type="number" step="0.1" value="'+_maqEsc(horVal)+'"></div>'+
+    '<div class="form-group" id="mab_horGrp"><label>Horímetro (h)</label><input id="mab_hor" type="text" inputmode="decimal" value="'+_maqEsc(horVal)+'"></div>'+
     '<div class="form-group" id="mab_kmGrp"><label>KM</label><input id="mab_km" type="text" inputmode="decimal" value="'+_maqEsc(kmVal)+'"></div>'+
     '<div class="form-group"><label>Litros *</label><input id="mab_lit" type="text" inputmode="decimal" value="'+_maqEsc(litVal)+'"></div>'+
     '<div class="form-group"><label>Valor unitário (R$/L) *</label><input id="mab_pre" type="text" inputmode="decimal" value="'+_maqEsc(preVal)+'"></div>'+
@@ -127,6 +130,7 @@ function openMaqAbastModal(id){
   mascaraNumero(document.getElementById('mab_lit'),LIMITES_CAMPOS.litros,2);
   mascaraNumero(document.getElementById('mab_pre'),LIMITES_CAMPOS.valorUnit,2);
   mascaraNumero(document.getElementById('mab_km'),LIMITES_CAMPOS.km,2);
+  mascaraNumero(document.getElementById('mab_hor'),LIMITES_CAMPOS.horimetro,2);
   document.getElementById('mab_lit').addEventListener('input',_maqAbCalcTotal);
   document.getElementById('mab_pre').addEventListener('input',_maqAbCalcTotal);
   _maqAbToggleLeitura();

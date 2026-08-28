@@ -55,6 +55,7 @@ function renderMaquinasTable(){
     if(fFloresta && maqFlorestaAtual(m.ID)!==fFloresta) return false;
     return true;
   });
+  lista.sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'}); });
   document.getElementById('maqCount').textContent=lista.length+(lista.length===1?' máquina':' máquinas');
   if(!lista.length){
     cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma máquina'+((fTipo||fStatus)?' no filtro.':' cadastrada.'+(admin?' Clique em “Nova máquina”.':''))+'</div>';

@@ -40,6 +40,7 @@ var LIMITES_CAMPOS = {
   quantidadeTON: 2,  // TON:  99,99
   quantidadeM3:  3,  // M³:  999,99
   km:            6,  // KM:  999.999,99
+  horimetro:     6,  // Horímetro: 999.999,99
   litros:        3,  // Litros: 999,99
   valorUnit:     2,  // Valor Unitário: 9,99 (usa 2 inteiros para funcionar corretamente)
   arla:          3,  // Arla: 999,99
