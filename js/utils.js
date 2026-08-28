@@ -5,6 +5,30 @@ function fmt(v,d){ if(d===undefined)d=2; return v!=null?Number(v).toLocaleString
 function fmtR(v){ return v!=null?'R$ '+fmt(v):'-'; }
 function getUnit(client){ return BASE.clientesM3.includes(client)?'M³':'TON'; }
 
+// Encolhe a fonte de cada .kpi-value até caber numa linha só dentro do card,
+// em vez de deixar o CSS cortar com "..." ou quebrar o número no meio.
+// Roda sozinho (via MutationObserver) sempre que algum card é (re)renderizado.
+(function(){
+  var MAX=26, MIN=12;
+  function fitEl(el){
+    el.style.fontSize=MAX+'px';
+    var size=MAX, guard=0;
+    while(el.scrollWidth>el.clientWidth+1 && size>MIN && guard<30){ size--; el.style.fontSize=size+'px'; guard++; }
+  }
+  function fitAll(){ document.querySelectorAll('.kpi-value').forEach(fitEl); }
+  if(typeof document!=='undefined'){
+    var mo=new MutationObserver(function(muts){
+      var need=muts.some(function(m){ return m.addedNodes && m.addedNodes.length; });
+      if(need) requestAnimationFrame(fitAll);
+    });
+    document.addEventListener('DOMContentLoaded',function(){
+      mo.observe(document.body,{childList:true,subtree:true});
+      fitAll();
+    });
+    window.addEventListener('resize',function(){ requestAnimationFrame(fitAll); });
+  }
+})();
+
 function parseTime(t){
   if(!t && t!==0) return null;
   // Date object (raro chegar aqui, mas defendendo)

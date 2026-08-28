@@ -39,6 +39,7 @@ function buildFinanceiro(){
   var fSemF=document.getElementById('ffSemana')?document.getElementById('ffSemana').value:'';
   var fDtIni=document.getElementById('ffDtIni')?document.getElementById('ffDtIni').value:'';
   var fDtFim=document.getElementById('ffDtFim')?document.getElementById('ffDtFim').value:'';
+  var fUnid=document.getElementById('ffUnid')?document.getElementById('ffUnid').value:'';
   var hasRangeF=!!(fDtIni||fDtFim);
 
   var data=DB.cadastro.filter(function(r){
@@ -57,15 +58,60 @@ function buildFinanceiro(){
   });
 
   finFilteredData=data;
-  var tComb=0,tLit=0,tArla=0,tDesp=0,tTON=0,tM3=0;
+  var tComb=0,tLit=0,tArla=0,tDesp=0,tTON=0,tM3=0,nEntregas=0;
+  var placaEntregas={}; // placa -> {ton:qtd, m3:qtd}, pra classificar cada placa pelo tipo predominante
   data.forEach(function(r){
     tComb+=num(r['VALOR TOTAL']);tLit+=num(r['QTDADE LITROS']);tArla+=num(r['ARLA VALOR']);tDesp+=num(r['VALOR DESPESA']);
-    if(r.ENTREGA&&r.QUANTIDADE){if(BASE.clientesM3.includes(r['LOCAL DESCARGA']))tM3+=r.QUANTIDADE;else tTON+=r.QUANTIDADE;}
+    if(r.ENTREGA&&r.QUANTIDADE){
+      nEntregas++;
+      var isM3=BASE.clientesM3.includes(r['LOCAL DESCARGA']);
+      if(isM3)tM3+=r.QUANTIDADE;else tTON+=r.QUANTIDADE;
+      if(r.PLACA){
+        if(!placaEntregas[r.PLACA])placaEntregas[r.PLACA]={ton:0,m3:0};
+        if(isM3)placaEntregas[r.PLACA].m3+=r.QUANTIDADE;else placaEntregas[r.PLACA].ton+=r.QUANTIDADE;
+      }
+    }
   });
   var pMedio=tLit>0?tComb/tLit:0;
   var cTotal=tComb+tArla+tDesp;
-  var cTON=tTON>0?cTotal/tTON:0;
-  var cM3=tM3>0?cTotal/tM3:0;
+
+  // Combustível não é rastreado por entrega — não dá pra saber qual litro abasteceu
+  // qual viagem. Em vez de dividir o mesmo custo total pelas toneladas e de novo
+  // pelos m³ (dobrando a conta), cada placa é classificada pelo tipo que ela mais
+  // entregou no período e seu custo (combustível+arla+despesa) entra só naquele grupo.
+  var placasTON={},placasM3={};
+  Object.keys(placaEntregas).forEach(function(p){
+    var d=placaEntregas[p];
+    if(d.m3>d.ton) placasM3[p]=true; else placasTON[p]=true;
+  });
+  var custoTONGrupo=0,custoM3Grupo=0,qtdTONGrupo=0,qtdM3Grupo=0;
+  data.forEach(function(r){
+    if(!r.PLACA) return;
+    var custoLinha=num(r['VALOR TOTAL'])+num(r['ARLA VALOR'])+num(r['VALOR DESPESA']);
+    if(placasTON[r.PLACA]) custoTONGrupo+=custoLinha;
+    else if(placasM3[r.PLACA]) custoM3Grupo+=custoLinha;
+  });
+  Object.keys(placaEntregas).forEach(function(p){
+    var d=placaEntregas[p];
+    if(placasTON[p]) qtdTONGrupo+=d.ton;
+    else if(placasM3[p]) qtdM3Grupo+=d.m3;
+  });
+  var cTON=qtdTONGrupo>0?custoTONGrupo/qtdTONGrupo:0;
+  var cM3=qtdM3Grupo>0?custoM3Grupo/qtdM3Grupo:0;
+  var qtdPlacasMistas=Object.keys(placaEntregas).filter(function(p){var d=placaEntregas[p];return d.ton>0&&d.m3>0;}).length;
+  var cEntrega=nEntregas>0?cTotal/nEntregas:0;
+
+  // Card de custo unitário: por padrão mostra Custo/Entrega (exato, não depende de
+  // unidade). Só quando o usuário filtra Unidade que mostramos Custo/TON ou Custo/M³
+  // (estimados pela placa dominante, ver comentário acima).
+  var cardUnid;
+  if(fUnid==='TON'){
+    cardUnid='<div class="kpi-card" title="Custo (combustível+arla+despesa) das placas cuja maioria das entregas no período foi em toneladas, dividido pelas toneladas entregues por elas"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(cTON,2)+'</div><div class="kpi-label">Custo/TON</div></div>';
+  } else if(fUnid==='M³'){
+    cardUnid='<div class="kpi-card" title="Combustível não é rastreado por entrega. Estimativa: custo das placas cuja maioria das entregas no período foi em m³'+(qtdPlacasMistas?' ('+qtdPlacasMistas+' placa'+(qtdPlacasMistas>1?'s':'')+' com uso misto no período)':'')+', dividido pelos m³ entregues por elas"><div class="kpi-icon">💰</div><div class="kpi-value">≈&nbsp;R$'+numBR(cM3,2)+'</div><div class="kpi-label">Custo/M³</div></div>';
+  } else {
+    cardUnid='<div class="kpi-card" title="Custo total (combustível+arla+despesa) dividido pelo número de entregas do período. Combustível não é rastreado por entrega, então não dá pra separar por TON/M³ sem filtrar a Unidade"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(cEntrega,2)+'</div><div class="kpi-label">Custo/Entrega</div></div>';
+  }
 
   // Trends (comparing selected month vs previous month)
   var trendMonthF=fMes||null;
@@ -80,8 +126,7 @@ function buildFinanceiro(){
     '<div class="kpi-card"><div class="kpi-icon">🧴</div><div class="kpi-value">R$'+numBR(tArla,2)+'</div><div class="kpi-label">Total ARLA</div></div>'+
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">💸</div>'+trendBadge(trendDesp.current,trendDesp.previous)+'</div><div class="kpi-value">R$'+numBR(tDesp,2)+'</div><div class="kpi-label">Total Despesas</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(cTotal,2)+'</div><div class="kpi-label">Custo Total</div></div>'+
-    '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(cTON,2)+'</div><div class="kpi-label">Custo/TON</div></div>'+
-    '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(cM3,2)+'</div><div class="kpi-label">Custo/M³</div></div>';
+    cardUnid;
 
   var colors=cc();
   document.getElementById('chartsFin').innerHTML=
