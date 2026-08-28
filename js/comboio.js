@@ -301,8 +301,8 @@ function salvarEntrada(){
   var row={
     DATA:data,
     LOCAL_ABASTECIMENTO:posto,
-    LITROS:litStr,           // string BR; o servidor converte e calcula VALOR_TOTAL
-    PRECO_LITRO:preStr,
+    LITROS:num(litStr),
+    PRECO_LITRO:num(preStr),
     FORNECEDOR:document.getElementById('ent_forn').value.trim(),
     NOTA_FISCAL:document.getElementById('ent_nf').value.trim(),
     OBS:document.getElementById('ent_obs').value.trim()
