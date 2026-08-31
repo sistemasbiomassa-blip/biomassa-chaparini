@@ -99,7 +99,7 @@ function _maqAbBuildForm(row){
     '<div class="form-group"><label>Litros *</label><input id="mab_lit" type="text" inputmode="decimal" value="'+_maqEsc(litVal)+'"></div>'+
     '<div class="form-group"><label>Valor unitário (R$/L) *</label><input id="mab_pre" type="text" inputmode="decimal" value="'+_maqEsc(preVal)+'"></div>'+
     '<div class="form-group"><label>Valor total</label><input id="mab_tot" type="text" value="" readonly style="background:var(--surface2);font-weight:600"></div>'+
-    '<div class="form-group"><label>Combustível</label><select id="mab_comb">'+co+'</select></div>'+
+    '<div class="form-group"><label>Combustível</label><select id="mab_comb" onchange="_maqAbPrecoAuto()">'+co+'</select></div>'+
     '<div class="form-group"><label>Tanque / Posto</label><select id="mab_tanq" onchange="_maqAbPrecoAuto()">'+to+'</select></div>'+
     '<div class="form-group"><label>Operador</label><input id="mab_oper" type="text" value="'+_maqEsc(row.OPERADOR||'')+'"></div>'+
     '<div class="form-group"><label>Floresta (opcional)</label><select id="mab_flopc">'+fo+'</select></div>'+

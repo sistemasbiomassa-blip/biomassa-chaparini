@@ -170,7 +170,7 @@ function loadFromSheets(callback) {
     };});
 
     DB.tanqueEntradas = tanqueEntR.map(function(x){ return {
-      ID:x.id, DATA:x.data, LOCAL_ABASTECIMENTO:x.local_abastecimento, LITROS:x.litros,
+      ID:x.id, DATA:x.data, LOCAL_ABASTECIMENTO:x.local_abastecimento, TIPO_COMBUSTIVEL:x.tipo_combustivel, LITROS:x.litros,
       PRECO_LITRO:x.preco_litro, VALOR_TOTAL:x.valor_total, FORNECEDOR:x.fornecedor, NOTA_FISCAL:x.nota_fiscal,
       OBS:x.obs, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});

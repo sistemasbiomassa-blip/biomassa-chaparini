@@ -98,6 +98,11 @@ create index manut_realizada_placa_tipo_data_idx
   on public.manut_realizada (placa, tipo_manutencao, data_manutencao desc);
 
 -- ---------- COMBOIO: TANQUES ----------
+-- Um tanque por Posto (não por combustível). Diesel e Gasolina de um mesmo
+-- Posto dividem o mesmo cadastro físico; o combustível é escolhido em cada
+-- Entrada (ver tanque_entradas.tipo_combustivel) e o saldo de cada tipo é
+-- calculado no front — Diesel herda saldo_inicial (comportamento histórico),
+-- Gasolina começa do zero.
 create table public.tanques (
   id bigint generated always as identity primary key,
   local_abastecimento text not null unique references public.locais(nome),
@@ -114,6 +119,7 @@ create table public.tanque_entradas (
   id bigint generated always as identity primary key,
   data date not null,
   local_abastecimento text not null references public.tanques(local_abastecimento),
+  tipo_combustivel text not null default 'Diesel' check (tipo_combustivel in ('Diesel','Gasolina')),
   litros numeric not null,
   preco_litro numeric not null,
   valor_total numeric generated always as (round((litros * preco_litro)::numeric, 2)) stored,

@@ -34,7 +34,7 @@ function calcValorTotal(){
 function _cadAbPrecoAuto(){
   var sel=document.getElementById('fLocalAbast'), pre=document.getElementById('fValorUnit');
   if(!sel||!pre||typeof _cbUltimoPrecoTanque!=='function') return;
-  var preco=_cbUltimoPrecoTanque(sel.value);
+  var preco=_cbUltimoPrecoTanque(sel.value, 'Diesel');
   if(preco!=null){ pre.value=fmt(preco,2); calcValorTotal(); }
 }
 

@@ -47,43 +47,77 @@ function _comboioPlaceholder(titulo){
 
 // ---------- COMBOIO: Saldos ----------
 // Saldo = SALDO_INICIAL + entradas − saídas, contando a partir de DATA_INICIO.
-// Entradas: TANQUE_ENTRADAS (mesmo Posto). Saídas: MAQ_ABASTECIMENTO (máquinas)
-// + CADASTRO (caminhões) que apontam pro mesmo Posto. Helpers reusados na aba Saídas.
+// Entradas: TANQUE_ENTRADAS (mesmo Posto + mesmo combustível). Saídas: MAQ_ABASTECIMENTO
+// (máquinas) + CADASTRO (caminhões) que apontam pro mesmo Posto. Helpers reusados na aba Saídas.
+// O tanque cadastrado é um só por Posto — Diesel e Gasolina dividem o mesmo
+// cadastro físico. O combustível é escolhido em cada Entrada, e o saldo de
+// cada tipo é calculado à parte: Diesel herda o SALDO_INICIAL do tanque
+// (comportamento de sempre), Gasolina começa do zero e só aparece na tela
+// quando existe alguma entrada ou saída lançada com esse combustível.
+var COMBOIO_COMBUSTIVEIS = ['Diesel','Gasolina'];
+// Normaliza qualquer valor de tipo_combustivel (inclusive as opções mais granulares
+// de MAQ_ABASTECIMENTO: Diesel S10/Diesel comum/Gasolina/Arla 32/Outro) para o
+// "balde" do tanque do comboio: 'Diesel', 'Gasolina' ou null (não descontado
+// de nenhum tanque do comboio — ex.: Arla 32).
+function _cbCombBucket(tipo){
+  var t=_cbNorm(tipo);
+  if(!t) return 'Diesel'; // registros antigos sem esse campo eram sempre diesel
+  if(t.indexOf('DIESEL')>=0) return 'Diesel';
+  if(t.indexOf('GASOLINA')>=0) return 'Gasolina';
+  return null; // Arla 32, Outro etc. — não descontam de nenhum tanque do comboio
+}
 function _cbDatePart(v){
   var s=String(v==null?'':v).trim();
   var m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[0];
   var b=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if(b) return b[3]+'-'+b[2]+'-'+b[1];
   return s;
 }
-function _cbEntradasTanque(posto, dataIni){
-  var p=_cbNorm(posto), ini=_cbDatePart(dataIni||''), tot=0;
+function _cbEntradasTanque(posto, tipo, dataIni){
+  var p=_cbNorm(posto), tp=_cbNorm(tipo), ini=_cbDatePart(dataIni||''), tot=0;
   (DB.tanqueEntradas||[]).forEach(function(e){
     if(_cbNorm(e.LOCAL_ABASTECIMENTO)!==p) return;
+    if(_cbNorm(e.TIPO_COMBUSTIVEL||'Diesel')!==tp) return;
     if(ini && _cbDatePart(e.DATA)<ini) return;
     tot+=_cbNum(e.LITROS);
   });
   return Math.round(tot*100)/100;
 }
-function _cbSaidasTanque(posto, dataIni){
-  var p=_cbNorm(posto), ini=_cbDatePart(dataIni||''), maq=0, cam=0;
+function _cbSaidasTanque(posto, tipo, dataIni){
+  var p=_cbNorm(posto), tp=_cbNorm(tipo), ini=_cbDatePart(dataIni||''), maq=0, cam=0;
   (DB.maqAbastecimento||[]).forEach(function(r){
     if(_cbNorm(r.TANQUE_POSTO)!==p) return;
+    if(_cbCombBucket(r.TIPO_COMBUSTIVEL)!==tp) return;
     if(ini && _cbDatePart(r.DATA)<ini) return;
     maq+=_cbNum(r.LITROS);
   });
-  (DB.cadastro||[]).forEach(function(r){
-    if(_cbNorm(r['LOCAL ABASTECIMENTO'])!==p) return;
-    if(ini && _cbDatePart(r.DATA)<ini) return;
-    cam+=_cbNum(r['QTDADE LITROS']);
-  });
+  if(tp==='Diesel'){
+    (DB.cadastro||[]).forEach(function(r){
+      if(_cbNorm(r['LOCAL ABASTECIMENTO'])!==p) return;
+      if(ini && _cbDatePart(r.DATA)<ini) return;
+      cam+=_cbNum(r['QTDADE LITROS']);
+    });
+  }
   maq=Math.round(maq*100)/100; cam=Math.round(cam*100)/100;
   return {total:Math.round((maq+cam)*100)/100, maquinas:maq, caminhoes:cam};
 }
-function _cbSaldoTanque(t){
-  var si=_cbNum(t.SALDO_INICIAL);
-  var ent=_cbEntradasTanque(t.LOCAL_ABASTECIMENTO, t.DATA_INICIO);
-  var sai=_cbSaidasTanque(t.LOCAL_ABASTECIMENTO, t.DATA_INICIO);
-  return {saldo:Math.round((si+ent-sai.total)*100)/100, inicial:si, entradas:ent, saidas:sai.total, saidasDet:sai, min:_cbNum(t.NIVEL_MINIMO)};
+// tipo: 'Diesel' (default) ou 'Gasolina'. Só o Diesel herda o saldo inicial
+// do tanque — os demais combustíveis começam do zero (só contam a partir da
+// primeira entrada lançada).
+function _cbSaldoTanque(t, tipo){
+  tipo = tipo || 'Diesel';
+  var si = tipo==='Diesel' ? _cbNum(t.SALDO_INICIAL) : 0;
+  var ent=_cbEntradasTanque(t.LOCAL_ABASTECIMENTO, tipo, t.DATA_INICIO);
+  var sai=_cbSaidasTanque(t.LOCAL_ABASTECIMENTO, tipo, t.DATA_INICIO);
+  return {saldo:Math.round((si+ent-sai.total)*100)/100, inicial:si, entradas:ent, saidas:sai.total, saidasDet:sai, min:_cbNum(t.NIVEL_MINIMO), tipo:tipo};
+}
+// Existe alguma entrada ou saída já lançada com esse combustível para o Posto?
+// Usado para só exibir o bloco de Gasolina depois que ela é usada pela primeira vez.
+function _cbTemAtividadeCombustivel(posto, tipo){
+  var p=_cbNorm(posto), tp=_cbNorm(tipo);
+  if((DB.tanqueEntradas||[]).some(function(e){ return _cbNorm(e.LOCAL_ABASTECIMENTO)===p && _cbNorm(e.TIPO_COMBUSTIVEL||'Diesel')===tp; })) return true;
+  if((DB.maqAbastecimento||[]).some(function(r){ return _cbNorm(r.TANQUE_POSTO)===p && _cbNorm(_cbCombBucket(r.TIPO_COMBUSTIVEL))===tp; })) return true;
+  if(tp==='DIESEL' && (DB.cadastro||[]).some(function(r){ return _cbNorm(r['LOCAL ABASTECIMENTO'])===p; })) return true;
+  return false;
 }
 function _cbStatusTanque(saldo, min){
   if(saldo < min) return 'red';
@@ -93,22 +127,25 @@ function _cbStatusTanque(saldo, min){
 
 // Último preço de compra (R$/L) de um Posto com tanque — pega a entrada mais
 // recente por DATA (desempate pelo ID). Retorna null se não houver entradas.
-function _cbUltimoPrecoTanque(posto){
-  var p=_cbNorm(posto), best=null, bD='', bId=-1;
+function _cbUltimoPrecoTanque(posto, tipo){
+  var p=_cbNorm(posto), tp=_cbNorm(tipo), best=null, bD='', bId=-1;
   (DB.tanqueEntradas||[]).forEach(function(e){
     if(_cbNorm(e.LOCAL_ABASTECIMENTO)!==p) return;
+    if(tp && _cbNorm(e.TIPO_COMBUSTIVEL||'Diesel')!==tp) return;
     var d=_cbDatePart(e.DATA), id=Number(e.ID)||0;
     if(best===null || d>bD || (d===bD && id>bId)){ best=_cbNum(e.PRECO_LITRO); bD=d; bId=id; }
   });
   return best;
 }
-// Handler do campo Tanque/Posto no abastecimento da máquina: ao escolher um
-// Posto com tanque, preenche o R$/L com o último preço (editável). Só dispara
-// na ação do usuário (não no carregamento do modal), preservando o valor salvo.
+// Handler do campo Tanque/Posto (e Combustível) no abastecimento da máquina:
+// ao escolher um Posto com tanque, preenche o R$/L com o último preço daquele
+// combustível (editável). Só dispara na ação do usuário (não no carregamento
+// do modal), preservando o valor salvo.
 function _maqAbPrecoAuto(){
-  var sel=document.getElementById('mab_tanq'), pre=document.getElementById('mab_pre');
+  var sel=document.getElementById('mab_tanq'), pre=document.getElementById('mab_pre'), comb=document.getElementById('mab_comb');
   if(!sel||!pre) return;
-  var preco=_cbUltimoPrecoTanque(sel.value);
+  var bucket=_cbCombBucket(comb?comb.value:'');
+  var preco=_cbUltimoPrecoTanque(sel.value, bucket);
   if(preco!=null){ pre.value=fmt(preco,2); if(typeof _maqAbCalcTotal==='function') _maqAbCalcTotal(); }
 }
 
@@ -117,11 +154,14 @@ function _maqAbPrecoAuto(){
 // "OK" some pela sessão; reaparece a cada login até o saldo subir (comprar diesel).
 // Sem persistência: recalcula a cada carregamento.
 var _comboioAlertDismissed=false;
+// Só considera o Diesel — é o combustível que sustenta a operação das
+// máquinas/caminhões e sempre teve o alerta. Gasolina não entra aqui por
+// enquanto (o saldo dela continua visível na aba Saldos, só não dispara o alerta).
 function _cbTanquesBaixos(){
   var out=[];
   (DB.tanques||[]).forEach(function(t){
-    var s=_cbSaldoTanque(t);
-    if(_cbStatusTanque(s.saldo, s.min)==='red') out.push({posto:t.LOCAL_ABASTECIMENTO, saldo:s.saldo, min:s.min});
+    var s=_cbSaldoTanque(t, 'Diesel');
+    if(_cbStatusTanque(s.saldo, s.min)==='red') out.push({posto:t.LOCAL_ABASTECIMENTO, tipo:'Diesel', saldo:s.saldo, min:s.min});
   });
   return out;
 }
@@ -150,6 +190,24 @@ function dismissComboioAlert(){
   var ov=document.getElementById('comboioAlertOverlay'); if(ov) ov.classList.remove('show');
 }
 
+// Bloco de saldo de um combustível, dentro do card do Posto. `destacado` põe
+// o número grande (usado pro Diesel, sempre primeiro); os demais vêm menores,
+// separados por uma linha pontilhada.
+function _cbSaldoBlocoHtml(t, tipo, destacado){
+  var s=_cbSaldoTanque(t, tipo);
+  var cls=_cbStatusTanque(s.saldo, s.min);
+  var statusTxt = cls==='red'?'⚠️ Abaixo do mínimo':(cls==='yellow'?'Atenção — perto do mínimo':'OK');
+  return '<div style="'+(destacado?'':'margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)')+'">'+
+     '<div style="font-weight:700;font-size:12px;opacity:.75">'+_cbEsc(tipo)+'</div>'+
+     '<div class="cb-saldo" style="'+(destacado?'':'font-size:20px')+'">'+_cbNumBR(s.saldo)+' <span class="cb-unit">L</span></div>'+
+     '<div class="cb-status">'+statusTxt+'</div>'+
+     '<div style="margin-top:8px">'+
+     '<div class="cb-line"><span>Saldo inicial</span><span>'+_cbNumBR(s.inicial)+' L</span></div>'+
+     '<div class="cb-line"><span>+ Entradas</span><span style="color:var(--green)">+'+_cbNumBR(s.entradas)+' L</span></div>'+
+     '<div class="cb-line"><span>− Saídas</span><span style="color:var(--red)">−'+_cbNumBR(s.saidas)+' L</span></div>'+
+     '<div class="cb-line"><span>Nível mínimo</span><span>'+_cbNumBR(s.min)+' L</span></div>'+
+     '</div></div>';
+}
 function renderComboioSaldos(){
   var cont=document.getElementById('comboioSaldosContainer');
   if(!cont) return;
@@ -160,20 +218,21 @@ function renderComboioSaldos(){
   }
   var h='<div class="cb-grid">';
   tanques.forEach(function(t){
-    var s=_cbSaldoTanque(t);
-    var cls=_cbStatusTanque(s.saldo, s.min);
-    var statusTxt = cls==='red'?'⚠️ Abaixo do mínimo':(cls==='yellow'?'Atenção — perto do mínimo':'OK');
-    h+='<div class="cb-card '+cls+'">'+
+    var dieselS=_cbSaldoTanque(t,'Diesel');
+    var worstCls=_cbStatusTanque(dieselS.saldo, dieselS.min);
+    var blocos=_cbSaldoBlocoHtml(t,'Diesel',true);
+    COMBOIO_COMBUSTIVEIS.forEach(function(tipo){
+      if(tipo==='Diesel' || !_cbTemAtividadeCombustivel(t.LOCAL_ABASTECIMENTO, tipo)) return;
+      var s=_cbSaldoTanque(t, tipo);
+      var cls=_cbStatusTanque(s.saldo, s.min);
+      if(cls==='red' || (cls==='yellow' && worstCls!=='red')) worstCls=cls;
+      blocos+=_cbSaldoBlocoHtml(t, tipo, false);
+    });
+    h+='<div class="cb-card '+worstCls+'">'+
        '<div class="cb-posto">🛢️ '+_cbEsc(t.LOCAL_ABASTECIMENTO||'-')+'</div>'+
-       '<div class="cb-saldo">'+_cbNumBR(s.saldo)+' <span class="cb-unit">L</span></div>'+
-       '<div class="cb-status">'+statusTxt+'</div>'+
-       '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">'+
-       '<div class="cb-line"><span>Saldo inicial</span><span>'+_cbNumBR(s.inicial)+' L</span></div>'+
-       '<div class="cb-line"><span>+ Entradas</span><span style="color:var(--green)">+'+_cbNumBR(s.entradas)+' L</span></div>'+
-       '<div class="cb-line"><span>− Saídas</span><span style="color:var(--red)">−'+_cbNumBR(s.saidas)+' L</span></div>'+
-       '<div class="cb-line"><span>Nível mínimo</span><span>'+_cbNumBR(s.min)+' L</span></div>'+
-       '<div class="cb-line" style="font-size:10px;opacity:.7"><span>Desde</span><span>'+_cbEsc(t.DATA_INICIO?formatDateBR(t.DATA_INICIO):'-')+'</span></div>'+
-       '</div></div>';
+       blocos+
+       '<div class="cb-line" style="font-size:10px;opacity:.7;margin-top:8px"><span>Desde</span><span>'+_cbEsc(t.DATA_INICIO?formatDateBR(t.DATA_INICIO):'-')+'</span></div>'+
+       '</div>';
   });
   h+='</div>';
   cont.innerHTML=h;
@@ -193,35 +252,37 @@ function renderComboioEntradas(){
   var di=(document.getElementById('cbEnIni')||{}).value||'';
   var df=(document.getElementById('cbEnFim')||{}).value||'';
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
+  var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
   var admin=comboioIsAdmin();
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
     if(df && String(r.DATA||'')>df) return false;
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
+    if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
     return true;
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('cbEnCount').textContent=rows.length+(rows.length===1?' registro':' registros');
-  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
+  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fC||fF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
   var totLit=0, totVal=0;
-  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Litros</th><th>R$/L</th><th>Total</th><th>Fornecedor</th><th>Nota fiscal</th><th>Cadastro</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
+  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Litros</th><th>R$/L</th><th>Total</th><th>Fornecedor</th><th>Nota fiscal</th><th>Cadastro</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
   rows.forEach(function(r){
     totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||_cbEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openEntradaModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openEntradaDelete(\''+r.ID+'\')">🗑️</span>';
     if(!acts) acts='<span style="color:var(--text2)">—</span>';
-    h+='<tr><td class="maq-mono">'+_cbEsc(r.DATA?formatDateBR(r.DATA):'-')+'</td><td>'+_cbEsc(r.LOCAL_ABASTECIMENTO||'-')+'</td><td class="maq-mono">'+fmt(num(r.LITROS),2)+'</td><td class="maq-mono">'+fmtR(num(r.PRECO_LITRO))+'</td><td class="maq-mono">'+fmtR(num(r.VALOR_TOTAL))+'</td><td>'+_cbEsc(r.FORNECEDOR||'-')+'</td><td>'+_cbEsc(r.NOTA_FISCAL||'-')+'</td><td style="font-size:11px;color:var(--text2)">'+_cbAuditTxt(r)+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_cbEsc(r.DATA?formatDateBR(r.DATA):'-')+'</td><td>'+_cbEsc(r.LOCAL_ABASTECIMENTO||'-')+'</td><td>'+_cbEsc(r.TIPO_COMBUSTIVEL||'Diesel')+'</td><td class="maq-mono">'+fmt(num(r.LITROS),2)+'</td><td class="maq-mono">'+fmtR(num(r.PRECO_LITRO))+'</td><td class="maq-mono">'+fmtR(num(r.VALOR_TOTAL))+'</td><td>'+_cbEsc(r.FORNECEDOR||'-')+'</td><td>'+_cbEsc(r.NOTA_FISCAL||'-')+'</td><td style="font-size:11px;color:var(--text2)">'+_cbAuditTxt(r)+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
-  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="2" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmt(totLit,2)+'</td><td></td><td class="maq-mono">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="4"></td></tr></tfoot>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="3" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmt(totLit,2)+'</td><td></td><td class="maq-mono">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="4"></td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
 }
 
 function clearComboioEntradasFiltro(){
-  ['cbEnIni','cbEnFim','cbEnPosto','cbEnForn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['cbEnIni','cbEnFim','cbEnPosto','cbEnComb','cbEnForn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   renderComboioEntradas();
 }
 
@@ -252,12 +313,15 @@ function _entBuildForm(row){
   row=row||{};
   var po='<option value="">—</option>';
   _cbPostosComTanque().forEach(function(p){ po+='<option'+(_cbNorm(row.LOCAL_ABASTECIMENTO)===_cbNorm(p)?' selected':'')+'>'+_cbEsc(p)+'</option>'; });
+  var co='';
+  COMBOIO_COMBUSTIVEIS.forEach(function(c){ co+='<option'+(String(row.TIPO_COMBUSTIVEL||'Diesel')===c?' selected':'')+'>'+c+'</option>'; });
   var dataVal=row.DATA||new Date().toISOString().slice(0,10);
   var litVal=(row.LITROS!=null&&row.LITROS!=='')?_cbToMask(row.LITROS,2):'';
   var preVal=(row.PRECO_LITRO!=null&&row.PRECO_LITRO!=='')?_cbToMask(row.PRECO_LITRO,2):'';
   return ''+
     '<div class="form-group"><label>Data *</label><input id="ent_data" type="date" value="'+_cbEsc(dataVal)+'"></div>'+
     '<div class="form-group"><label>Posto (tanque) *</label><select id="ent_posto">'+po+'</select></div>'+
+    '<div class="form-group"><label>Combustível *</label><select id="ent_comb">'+co+'</select></div>'+
     '<div class="form-group"><label>Litros *</label><input id="ent_lit" type="text" inputmode="numeric" value="'+_cbEsc(litVal)+'"></div>'+
     '<div class="form-group"><label>Preço (R$/L) *</label><input id="ent_pre" type="text" inputmode="numeric" value="'+_cbEsc(preVal)+'"></div>'+
     '<div class="form-group"><label>Valor total</label><input id="ent_tot" type="text" value="" readonly style="background:var(--surface2);font-weight:600"></div>'+
@@ -276,7 +340,7 @@ function openEntradaModal(id){
     if(!row){ showToast('Entrada não encontrada',true); return; }
     if(!comboioIsAdmin() && !_cbEhDono(row)){ showToast('❌ Você só pode editar as suas próprias entradas',true); return; }
   } else if(!comboioCanLancar()){ showToast('Sem permissão',true); return; }
-  if(!_cbPostosComTanque().length){ showToast('Cadastre um tanque antes de lançar entradas',true); return; }
+  if(!(DB.tanques||[]).length){ showToast('Cadastre um tanque antes de lançar entradas',true); return; }
   document.getElementById('entradaModalTitle').textContent=_entEditId?'✏️ Editar Entrada':'🛒 Nova Entrada';
   var aud=document.getElementById('entradaAudit');
   if(_entEditId){ aud.innerHTML=_cbAuditTxt(row); aud.style.display=''; } else { aud.style.display='none'; }
@@ -292,6 +356,7 @@ function closeEntradaModal(){ document.getElementById('entradaModalOverlay').cla
 function salvarEntrada(){
   var data=document.getElementById('ent_data').value;
   var posto=document.getElementById('ent_posto').value;
+  var comb=document.getElementById('ent_comb').value||'Diesel';
   var litStr=document.getElementById('ent_lit').value;
   var preStr=document.getElementById('ent_pre').value;
   if(!data){ showToast('Informe a data',true); return; }
@@ -301,6 +366,7 @@ function salvarEntrada(){
   var row={
     DATA:data,
     LOCAL_ABASTECIMENTO:posto,
+    TIPO_COMBUSTIVEL:comb,
     LITROS:num(litStr),
     PRECO_LITRO:num(preStr),
     FORNECEDOR:document.getElementById('ent_forn').value.trim(),
@@ -322,7 +388,7 @@ function openEntradaDelete(id){
   if(!comboioIsAdmin()){ showToast('Apenas ADMIN pode excluir',true); return; }
   var r=findEntradaById(id); if(!r){ showToast('Entrada não encontrada',true); return; }
   _entDelId=String(id);
-  document.getElementById('entradaDelDetails').innerHTML='<div><strong>Data:</strong> '+_cbEsc(r.DATA?formatDateBR(r.DATA):'-')+'</div><div><strong>Posto:</strong> '+_cbEsc(r.LOCAL_ABASTECIMENTO||'-')+'</div><div><strong>Litros:</strong> '+fmt(num(r.LITROS),2)+' L</div><div><strong>Valor:</strong> '+fmtR(num(r.VALOR_TOTAL))+'</div><div style="margin-top:8px;color:var(--text2);font-size:12px">A entrada será removida permanentemente e o saldo do tanque será recalculado.</div>';
+  document.getElementById('entradaDelDetails').innerHTML='<div><strong>Data:</strong> '+_cbEsc(r.DATA?formatDateBR(r.DATA):'-')+'</div><div><strong>Posto:</strong> '+_cbEsc(r.LOCAL_ABASTECIMENTO||'-')+'</div><div><strong>Combustível:</strong> '+_cbEsc(r.TIPO_COMBUSTIVEL||'Diesel')+'</div><div><strong>Litros:</strong> '+fmt(num(r.LITROS),2)+' L</div><div><strong>Valor:</strong> '+fmtR(num(r.VALOR_TOTAL))+'</div><div style="margin-top:8px;color:var(--text2);font-size:12px">A entrada será removida permanentemente e o saldo do tanque será recalculado.</div>';
   document.getElementById('entradaDelOverlay').classList.add('show');
 }
 function closeEntradaDelete(){ document.getElementById('entradaDelOverlay').classList.remove('show'); _entDelId=null; }
@@ -341,11 +407,13 @@ function exportEntradasPDF(){
   var di=(document.getElementById('cbEnIni')||{}).value||'';
   var df=(document.getElementById('cbEnFim')||{}).value||'';
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
+  var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
     if(df && String(r.DATA||'')>df) return false;
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
+    if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
     return true;
   }).sort(function(a,b){ return String(a.DATA||'').localeCompare(String(b.DATA||'')); });
@@ -353,6 +421,7 @@ function exportEntradasPDF(){
   if(di) extra.push('De: '+formatDateBR(di));
   if(df) extra.push('Até: '+formatDateBR(df));
   if(fP) extra.push('Posto: '+fP);
+  if(fC) extra.push('Combustível: '+fC);
   if(fF) extra.push('Fornecedor: '+fF);
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var totLit=0, totVal=0;
@@ -369,12 +438,12 @@ function exportEntradasPDF(){
   html+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Entradas de Combustível — Comboio</div>'+(extra.length?'<div class="sub"><b>Filtros:</b> '+extra.join(' · ')+'</div>':'')+'<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div></div></div>';
   if(!rows.length){ html+='<p style="padding:20px;text-align:center;color:#888">Nenhuma entrada para os filtros aplicados.</p>'; }
   else {
-    html+='<table><thead><tr><th>Data</th><th>Posto</th><th class="num">Litros</th><th class="num">R$/L</th><th class="num">Total</th><th>Fornecedor</th><th>Nota fiscal</th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th class="num">Litros</th><th class="num">R$/L</th><th class="num">Total</th><th>Fornecedor</th><th>Nota fiscal</th></tr></thead><tbody>';
     rows.forEach(function(r){
       totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
-      html+='<tr><td>'+(r.DATA?formatDateBR(r.DATA):'-')+'</td><td>'+(r.LOCAL_ABASTECIMENTO||'-')+'</td><td class="num">'+fmt(num(r.LITROS),2)+'</td><td class="num">'+fmtR(num(r.PRECO_LITRO))+'</td><td class="num">'+fmtR(num(r.VALOR_TOTAL))+'</td><td>'+(r.FORNECEDOR||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td></tr>';
+      html+='<tr><td>'+(r.DATA?formatDateBR(r.DATA):'-')+'</td><td>'+(r.LOCAL_ABASTECIMENTO||'-')+'</td><td>'+(r.TIPO_COMBUSTIVEL||'Diesel')+'</td><td class="num">'+fmt(num(r.LITROS),2)+'</td><td class="num">'+fmtR(num(r.PRECO_LITRO))+'</td><td class="num">'+fmtR(num(r.VALOR_TOTAL))+'</td><td>'+(r.FORNECEDOR||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td></tr>';
     });
-    html+='</tbody><tfoot><tr><td colspan="2" class="num">TOTAIS:</td><td class="num">'+fmt(totLit,2)+'</td><td></td><td class="num">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
+    html+='</tbody><tfoot><tr><td colspan="3" class="num">TOTAIS:</td><td class="num">'+fmt(totLit,2)+'</td><td></td><td class="num">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
     html+='</table><div class="foot">'+rows.length+' entrada(s)</div>';
   }
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
@@ -389,17 +458,18 @@ function _cbSaidasLista(){
   (DB.tanques||[]).forEach(function(t){ tanquePorPosto[_cbNorm(t.LOCAL_ABASTECIMENTO)]=t; });
   var out=[];
   (DB.maqAbastecimento||[]).forEach(function(r){
+    var bucket=_cbCombBucket(r.TIPO_COMBUSTIVEL); if(!bucket) return;
     var t=tanquePorPosto[_cbNorm(r.TANQUE_POSTO)]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r.LITROS); if(!lit) return;
-    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, combustivel:bucket, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit});
   });
   (DB.cadastro||[]).forEach(function(r){
     var t=tanquePorPosto[_cbNorm(r['LOCAL ABASTECIMENTO'])]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r['QTDADE LITROS']); if(!lit) return;
     var ident=[r.PLACA,r.MOTORISTA].filter(Boolean).join(' · ')||'-';
-    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], origem:'Caminhão', ident:ident, litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], combustivel:'Diesel', origem:'Caminhão', ident:ident, litros:lit});
   });
   return out;
 }
@@ -426,13 +496,13 @@ function renderComboioSaidas(){
     return;
   }
   var tot=0;
-  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Origem</th><th>Identificação</th><th>Litros</th></tr></thead><tbody>';
+  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th>Litros</th></tr></thead><tbody>';
   rows.forEach(function(r){
     tot+=r.litros;
     var badge=r.origem==='Máquina'?'🌲':'🚚';
-    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+_cbEsc(r.combustivel||'Diesel')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td></tr>';
   });
-  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="4" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
 }
@@ -474,12 +544,12 @@ function exportSaidasPDF(){
   html+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Saídas de Combustível — Comboio</div>'+(extra.length?'<div class="sub"><b>Filtros:</b> '+extra.join(' · ')+'</div>':'')+'<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div></div></div>';
   if(!rows.length){ html+='<p style="padding:20px;text-align:center;color:#888">Nenhuma saída para os filtros aplicados.</p>'; }
   else {
-    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th></tr></thead><tbody>';
     rows.forEach(function(r){
       tot+=r.litros;
-      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td></tr>';
+      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+(r.combustivel||'Diesel')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td></tr>';
     });
-    html+='</tbody><tfoot><tr><td colspan="4" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+    html+='</tbody><tfoot><tr><td colspan="5" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
     html+='</table><div class="foot">'+rows.length+' saída(s)</div>';
   }
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
@@ -578,7 +648,7 @@ function salvarTanque(){
   if(row.DATA_INICIO===''){ showToast('Informe a data de início',true); return; }
   if(row.SALDO_INICIAL==='') row.SALDO_INICIAL='0';
   if(row.NIVEL_MINIMO==='') row.NIVEL_MINIMO='0';
-  // Um Posto = um tanque (o saldo é calculado por Posto)
+  // Um Posto = um tanque (o saldo é calculado por Posto, com Diesel e Gasolina divididos por combustível da Entrada)
   var dup=(DB.tanques||[]).some(function(t){ return _cbNorm(t.LOCAL_ABASTECIMENTO)===_cbNorm(row.LOCAL_ABASTECIMENTO) && String(t.ID)!==String(_tanqueEditId||''); });
   if(dup){ showToast('Já existe um tanque para esse Posto',true); return; }
   var btn=document.getElementById('tanqueSalvarBtn'); if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
