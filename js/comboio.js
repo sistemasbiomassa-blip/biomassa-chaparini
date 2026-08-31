@@ -86,11 +86,11 @@ function _cbSaidasTanque(posto, tipo, dataIni){
   var p=_cbNorm(posto), tp=_cbNorm(tipo), ini=_cbDatePart(dataIni||''), maq=0, cam=0;
   (DB.maqAbastecimento||[]).forEach(function(r){
     if(_cbNorm(r.TANQUE_POSTO)!==p) return;
-    if(_cbCombBucket(r.TIPO_COMBUSTIVEL)!==tp) return;
+    if(_cbNorm(_cbCombBucket(r.TIPO_COMBUSTIVEL))!==tp) return;
     if(ini && _cbDatePart(r.DATA)<ini) return;
     maq+=_cbNum(r.LITROS);
   });
-  if(tp==='Diesel'){
+  if(tp==='DIESEL'){
     (DB.cadastro||[]).forEach(function(r){
       if(_cbNorm(r['LOCAL ABASTECIMENTO'])!==p) return;
       if(ini && _cbDatePart(r.DATA)<ini) return;
