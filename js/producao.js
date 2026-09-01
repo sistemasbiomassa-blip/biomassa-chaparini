@@ -264,3 +264,140 @@ function buildProducao(){
   document.getElementById('tblProd').innerHTML=tH;
 }
 
+// Relatório Analítico de Entregas (ADMIN) — versão enxuta da Produção pra entregar ao cliente:
+// sem Local de Carga, sem gráficos, cards reduzidos numa linha só, e com Tempo de Descarga
+// (calculado por timeDiff entre CHEGADA CLIENTE e SAIDA CLIENTE, igual à aba Tempo de Espera).
+// Reaplica os mesmos filtros já selecionados em Produção (lê direto do DOM de #filtersProd).
+function exportProdAnaliticoPDF(){
+  var fNota=document.getElementById('fpNota')?document.getElementById('fpNota').value.trim():'';
+  var fM=document.getElementById('fpMot')?document.getElementById('fpMot').value:'';
+  var fP=document.getElementById('fpPlaca')?document.getElementById('fpPlaca').value:'';
+  var fC=document.getElementById('fpCarga')?document.getElementById('fpCarga').value:'';
+  var fD=document.getElementById('fpDescarga')?document.getElementById('fpDescarga').value:'';
+  var fMes=document.getElementById('fpMes')?document.getElementById('fpMes').value:'';
+  var fDia=document.getElementById('fpDia')?document.getElementById('fpDia').value:'';
+  var fSemP=document.getElementById('fpSemana')?document.getElementById('fpSemana').value:'';
+  var fUnid=document.getElementById('fpUnid')?document.getElementById('fpUnid').value:'';
+  var fDtIni=document.getElementById('fpDtIni')?document.getElementById('fpDtIni').value:'';
+  var fDtFim=document.getElementById('fpDtFim')?document.getElementById('fpDtFim').value:'';
+  var hasRange=!!(fDtIni||fDtFim);
+
+  var data=DB.cadastro.filter(function(r){
+    if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
+    if(fM&&r.MOTORISTA!==fM) return false;
+    if(fP&&r.PLACA!==fP) return false;
+    if(fC&&r['LOCAL CARGA']!==fC) return false;
+    if(fD&&r['LOCAL DESCARGA']!==fD) return false;
+    if(hasRange){
+      if(!dateInRange(r.DATA,fDtIni,fDtFim)) return false;
+    } else {
+      if(fDia&&r.DATA){if(r.DATA.slice(0,10)!==fDia) return false;}
+      else if(fMes&&getMonthYear(r.DATA)!==fMes) return false;
+      if(fSemP&&getWeekLabel(r.DATA)!==fSemP) return false;
+    }
+    if(fUnid&&r['LOCAL DESCARGA']){
+      var isM3f=BASE.clientesM3.includes(r['LOCAL DESCARGA']);
+      if(fUnid==='TON'&&isM3f) return false;
+      if(fUnid==='M³'&&!isM3f) return false;
+    }
+    return true;
+  });
+
+  var entregas=data.filter(function(r){return r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0});
+
+  var totalTON=0,totalM3=0,motAtivos={},camAtivos={};
+  var somaTempoDescarga=0,qtdTempoDescarga=0;
+  entregas.forEach(function(r){
+    if(r.QUANTIDADE){
+      if(BASE.clientesM3.includes(r['LOCAL DESCARGA'])) totalM3+=r.QUANTIDADE;
+      else totalTON+=r.QUANTIDADE;
+    }
+    if(r.MOTORISTA) motAtivos[r.MOTORISTA]=1;
+    if(r.PLACA) camAtivos[r.PLACA]=1;
+    var td=timeDiff(r['CHEGADA CLIENTE'],r['SAIDA CLIENTE']);
+    if(td!=null){somaTempoDescarga+=td;qtdTempoDescarga++;}
+  });
+  var tempoMedioDescarga=qtdTempoDescarga?Math.round(somaTempoDescarga/qtdTempoDescarga):null;
+
+  var filtrosList=[];
+  if(hasRange){
+    filtrosList.push('Período: '+(fDtIni?formatDateBR(fDtIni):'(início)')+' até '+(fDtFim?formatDateBR(fDtFim):'(hoje)'));
+  } else if(fDia){
+    filtrosList.push('Dia: '+formatDateBR(fDia));
+  } else if(fSemP){
+    filtrosList.push('Semana: '+getWeekDisplay(fSemP));
+  } else if(fMes){
+    filtrosList.push('Mês: '+getMonthLabel(fMes));
+  }
+  if(fM) filtrosList.push('Motorista: '+fM);
+  if(fP) filtrosList.push('Placa: '+fP);
+  if(fD) filtrosList.push('Local Descarga: '+fD);
+  if(fUnid) filtrosList.push('Unidade: '+fUnid);
+  if(fNota) filtrosList.push('Nota: '+fNota);
+  var filtrosTxt=filtrosList.join(' · ')||'Todos os períodos';
+
+  var logoEl=document.querySelector('.sidebar-logo img');
+  var logoSrc=logoEl?logoEl.src:'';
+
+  var win=window.open('','_blank');
+  if(!win){showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true);return;}
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Analítico de Entregas</title><style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box}';
+  html+='body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
+  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:12px}';
+  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}';
+  html+='.rep-head h1{font-size:18px;color:#085425;line-height:1.1}';
+  html+='.rep-head .sub{font-size:11px;color:#444;margin-top:2px}';
+  html+='.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
+  html+='.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}';
+  html+='.kpi-card{border:1px solid #ccc;border-radius:8px;padding:6px 3px;text-align:center}';
+  html+='.kpi-icon{font-size:12px;margin-bottom:2px}';
+  html+='.kpi-value{font-size:13px;font-weight:700;color:#085425}';
+  html+='.kpi-label{font-size:7px;text-transform:uppercase;color:#666;margin-top:2px;letter-spacing:.2px}';
+  html+='table{width:100%;border-collapse:collapse}';
+  html+='th,td{border:1px solid #ccc;padding:4px 6px;font-size:9px;text-align:center;vertical-align:middle}';
+  html+='th{background:#0D692C;color:#fff;font-weight:600;font-size:8.5px;text-transform:uppercase}';
+  html+='tbody tr:nth-child(even){background:#f4f8fb}';
+  html+='.foot{margin-top:10px;font-size:9px;color:#666;text-align:center}';
+  html+='@page{size:portrait;margin:10mm}';
+  html+='@media print{body{padding:0}}';
+  html+='</style></head><body>';
+
+  html+='<div class="rep-head">';
+  if(logoSrc) html+='<img src="'+logoSrc+'" alt="Logo">';
+  html+='<div>';
+  html+='<h1>BIOMASSA CHAPARINI</h1>';
+  html+='<div class="sub">Relatório Analítico de Entregas</div>';
+  html+='<div class="sub"><b>Filtros:</b> '+filtrosTxt+'</div>';
+  html+='<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div>';
+  html+='</div></div>';
+
+  var kpiCards=[];
+  kpiCards.push('<div class="kpi-card"><div class="kpi-icon">🚚</div><div class="kpi-value">'+numBR(entregas.length)+'</div><div class="kpi-label">Entregas</div></div>');
+  if(totalTON>0) kpiCards.push('<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value">'+numBR(totalTON,2)+'</div><div class="kpi-label">Total (TON)</div></div>');
+  if(totalM3>0) kpiCards.push('<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value">'+numBR(totalM3,2)+'</div><div class="kpi-label">Total (M³)</div></div>');
+  kpiCards.push('<div class="kpi-card"><div class="kpi-icon">👷</div><div class="kpi-value">'+Object.keys(motAtivos).length+'</div><div class="kpi-label">Motoristas</div></div>');
+  kpiCards.push('<div class="kpi-card"><div class="kpi-icon">🚛</div><div class="kpi-value">'+Object.keys(camAtivos).length+'</div><div class="kpi-label">Caminhões</div></div>');
+  kpiCards.push('<div class="kpi-card"><div class="kpi-icon">⏱️</div><div class="kpi-value">'+(tempoMedioDescarga!=null?minToHHMM(tempoMedioDescarga):'-')+'</div><div class="kpi-label">Tempo Médio Descarga</div></div>');
+  html+='<div class="kpi-row" style="grid-template-columns:repeat('+kpiCards.length+',1fr)">'+kpiCards.join('')+'</div>';
+
+  if(!entregas.length){
+    html+='<p style="padding:20px;text-align:center;color:#888">Nenhuma entrega encontrada para os filtros aplicados.</p>';
+  } else {
+    html+='<table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Descarga</th><th>Qtd</th><th>Und</th><th>Nota</th><th>Tempo Descarga</th></tr></thead><tbody>';
+    entregas.slice().sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')}).forEach(function(r){
+      var u=r['LOCAL DESCARGA']?getUnit(r['LOCAL DESCARGA']):'';
+      var td=timeDiff(r['CHEGADA CLIENTE'],r['SAIDA CLIENTE']);
+      html+='<tr><td>'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL DESCARGA']||'-')+'</td><td>'+(r.QUANTIDADE?numBR(r.QUANTIDADE,2):'-')+'</td><td>'+u+'</td><td>'+(r.NOTA||'-')+'</td><td>'+(td!=null?minToHHMM(td):'-')+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<div class="foot">'+entregas.length+' entrega(s) · Total TON: '+numBR(totalTON,2)+' · Total M³: '+numBR(totalM3,2)+'</div>';
+  }
+
+  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script>';
+  html+='</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+

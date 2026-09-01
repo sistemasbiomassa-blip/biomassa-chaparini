@@ -692,7 +692,10 @@
 
       <!-- PRODUCAO PAGE -->
       <div class="page" id="pageProducao">
-        <div class="page-header"><h1 class="page-title">📊 Produção</h1></div>
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <h1 class="page-title">📊 Produção</h1>
+          <button class="btn btn-secondary admin-only" style="display:none;font-size:12px" onclick="exportProdAnaliticoPDF()">📋 Relatório Analítico</button>
+        </div>
         <div style="display:flex;gap:10px;margin-bottom:10px">
           <input type="text" inputmode="numeric" id="fpNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildProducao()">
         </div>
