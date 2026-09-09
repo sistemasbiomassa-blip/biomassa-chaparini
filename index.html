@@ -7551,7 +7551,10 @@ function renderMotoristasTable(){
   var isAdmin = (currentUserData && currentUserData.perfil === 'ADMIN');
   var syncBox=document.getElementById('motSyncBox'); if(syncBox) syncBox.style.display=isAdmin?'block':'none';
   var h='<table><thead><tr><th>Nome</th><th>CPF</th><th>CNH</th><th>Validade CNH</th><th>Status</th>'+(isAdmin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
-  MOTORISTAS_DATA.forEach(function(r){
+  var listaOrdenada=MOTORISTAS_DATA.slice().sort(function(a,b){
+    return String(a.NOME||'').localeCompare(String(b.NOME||''),'pt-BR');
+  });
+  listaOrdenada.forEach(function(r){
     var valCNH=r.VALIDADE_CNH||'';
     var vencida=false;
     if(valCNH){
