@@ -3,12 +3,18 @@
 // Total = peças + mão de obra + terceiros (somado ao vivo e no servidor).
 // ============================================================
 var _maqMtEditId=null, _maqMtDelId=null;
-var MAQ_MANUT_TIPOS=['Preventiva','Corretiva'];
+var MAQ_MANUT_TIPOS=['Preventiva','Corretiva','Insumo'];
+var MAQ_MT_SEM_MAQ='__SEM__'; // valor do filtro "sem maquina"
+// Maquina e opcional: insumo comprado a granel (ex: 7 baldes de oleo numa nota) nao
+// pertence a uma maquina so, o custo e conhecido no nivel da fazenda.
+function _maqMtTemMaquina(r){ return r && r.ID_MAQUINA!=null && String(r.ID_MAQUINA)!==''; }
 function findManutById(id){ id=String(id); for(var i=0;i<DB.maqManutencao.length;i++){ if(String(DB.maqManutencao[i].ID)===id) return DB.maqManutencao[i]; } return null; }
 
 function _maqMtPopSelects(){
   var sm=document.getElementById('maqMtFiltroMaq');
-  if(sm && sm.options.length<=1){ DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); }); }
+  if(sm && sm.options.length<=1){ DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ var o=document.createElement('option'); o.value=String(m.ID); o.textContent=m.IDENTIFICACAO||('#'+m.ID); sm.appendChild(o); });
+    var os=document.createElement('option'); os.value=MAQ_MT_SEM_MAQ; os.textContent='— Sem máquina (insumo) —'; sm.appendChild(os);
+  }
   var sf=document.getElementById('maqMtFiltroFloresta');
   if(sf && sf.options.length<=1){ _maqOrdAlfa(BASE.localCarga).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; sf.appendChild(o); }); }
 }
@@ -26,7 +32,8 @@ function renderMaqManutTable(){
   var rows=DB.maqManutencao.filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
     if(df && String(r.DATA||'')>df) return false;
-    if(fMaq && String(r.ID_MAQUINA)!==fMaq) return false;
+    if(fMaq===MAQ_MT_SEM_MAQ){ if(_maqMtTemMaquina(r)) return false; }
+    else if(fMaq && String(r.ID_MAQUINA)!==fMaq) return false;
     if(fTipo && (r.TIPO||'')!==fTipo) return false;
     if(fFl && maqFlorestaDoLancamento(r)!==fFl) return false;
     return true;
@@ -42,9 +49,9 @@ function renderMaqManutTable(){
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqManutModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqManutDelete(\''+r.ID+'\')">🗑️</span>';
     if(!acts) acts='<span style="color:var(--text2)">—</span>';
-    var tipoChip=r.TIPO==='Preventiva'?'<span class="maq-chip maq-chip-g">Preventiva</span>':(r.TIPO==='Corretiva'?'<span class="maq-chip maq-chip-y">Corretiva</span>':'<span class="maq-chip maq-chip-gray">'+_maqEsc(r.TIPO||'-')+'</span>');
+    var tipoChip=r.TIPO==='Preventiva'?'<span class="maq-chip maq-chip-g">Preventiva</span>':(r.TIPO==='Corretiva'?'<span class="maq-chip maq-chip-y">Corretiva</span>':(r.TIPO==='Insumo'?'<span class="maq-chip maq-chip-b">Insumo</span>':'<span class="maq-chip maq-chip-gray">'+_maqEsc(r.TIPO||'-')+'</span>'));
     var fl=maqFlorestaDoLancamento(r);
-    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+_maqEsc(maqNome(r.ID_MAQUINA))+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):'<span style="color:var(--text2)">— insumo (fazenda)</span>')+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
@@ -53,7 +60,7 @@ function renderMaqManutTable(){
 
 function _maqMtBuildForm(row){
   row=row||{};
-  var mo='<option value="">—</option>';
+  var mo='<option value="">— sem máquina (insumo p/ fazenda) —</option>';
   DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})}).forEach(function(m){ mo+='<option value="'+m.ID+'"'+(String(row.ID_MAQUINA)===String(m.ID)?' selected':'')+'>'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
   var to='<option value="">—</option>';
   MAQ_MANUT_TIPOS.forEach(function(t){ to+='<option'+(String(row.TIPO)===t?' selected':'')+'>'+t+'</option>'; });
@@ -78,12 +85,17 @@ function _maqMtBuildForm(row){
     '<div class="form-group"><label>Terceiros (R$)</label><input id="mmt_ter" type="text" inputmode="decimal" value="'+_maqEsc(terVal)+'"></div>'+
     '<div class="form-group"><label>Custo total</label><input id="mmt_tot" type="text" value="" readonly style="background:var(--surface2);font-weight:600"></div>'+
     '<div class="form-group"><label>Oficina / Fornecedor</label><input id="mmt_ofic" type="text" value="'+_maqEsc(row.OFICINA_FORNECEDOR||'')+'"></div>'+
-    '<div class="form-group"><label>Floresta (opcional)</label><select id="mmt_flopc">'+fo+'</select></div>'+
+    '<div class="form-group"><label id="mmt_flLabel">Floresta (opcional)</label><select id="mmt_flopc">'+fo+'</select></div>'+
     '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="mmt_obs" type="text" value="'+_maqEsc(row.OBS||'')+'"></div>';
 }
 function _maqMtToggleLeitura(){
-  var met=maqMetrica(document.getElementById('mmt_maq').value);
+  var maq=document.getElementById('mmt_maq').value;
   var hor=document.getElementById('mmt_horGrp'), km=document.getElementById('mmt_kmGrp');
+  var lab=document.getElementById('mmt_flLabel');
+  if(lab) lab.textContent=maq?'Floresta (opcional)':'Floresta * (obrigatória sem máquina)';
+  // sem máquina não há horímetro/km para registrar
+  if(!maq){ hor.style.display='none'; km.style.display='none'; return; }
+  var met=maqMetrica(maq);
   if(!met){ hor.style.display=''; km.style.display=''; return; }
   hor.style.display=(met==='HORIMETRO'||met==='AMBOS')?'':'none';
   km.style.display=(met==='KM'||met==='AMBOS')?'':'none';
@@ -119,7 +131,9 @@ function salvarManutMaq(){
   var data=document.getElementById('mmt_data').value;
   var tipo=document.getElementById('mmt_tipo').value;
   var serv=document.getElementById('mmt_serv').value.trim();
-  if(!maq){ showToast('Selecione a máquina',true); return; }
+  var flopc=document.getElementById('mmt_flopc').value;
+  // máquina é opcional (insumo a granel), mas o lançamento precisa cair em algum lugar
+  if(!maq && !flopc){ showToast('Sem máquina, informe a floresta',true); return; }
   if(!data){ showToast('Informe a data',true); return; }
   if(!tipo){ showToast('Selecione o tipo',true); return; }
   if(!serv){ showToast('Descreva o serviço',true); return; }
@@ -134,7 +148,7 @@ function salvarManutMaq(){
     CUSTO_MAO_OBRA:num(document.getElementById('mmt_mao').value),
     CUSTO_TERCEIROS:num(document.getElementById('mmt_ter').value),
     OFICINA_FORNECEDOR:document.getElementById('mmt_ofic').value.trim(),
-    FLORESTA_OPC:document.getElementById('mmt_flopc').value,
+    FLORESTA_OPC:flopc,
     OBS:document.getElementById('mmt_obs').value.trim()
   };
   var btn=document.getElementById('maqMtSalvarBtn'); if(btn){ btn.disabled=true; btn.textContent='Salvando...'; }
@@ -152,7 +166,7 @@ function openMaqManutDelete(id){
   if(!maqIsAdmin()){ showToast('Apenas ADMIN pode excluir',true); return; }
   var r=findManutById(id); if(!r){ showToast('Registro não encontrado',true); return; }
   _maqMtDelId=String(id);
-  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+_maqEsc(maqNome(r.ID_MAQUINA))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>';
+  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):('— insumo · '+_maqEsc(r.FLORESTA_OPC||'sem fazenda')))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>';
   document.getElementById('maqMtDelOverlay').classList.add('show');
 }
 function closeMaqManutDelete(){ document.getElementById('maqMtDelOverlay').classList.remove('show'); _maqMtDelId=null; }

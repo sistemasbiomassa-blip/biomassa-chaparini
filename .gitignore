@@ -3,3 +3,6 @@
 node_modules/
 supabase/.temp/
 scripts/exports/
+
+# Notas fiscais (XML/PDF) usadas para lançamento — repo é público, nunca commitar
+notas/

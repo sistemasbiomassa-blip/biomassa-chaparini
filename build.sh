@@ -15,6 +15,10 @@ SRC="index.dev.html"
 > "$OUT"
 
 while IFS= read -r line || [ -n "$line" ]; do
+  # Tira o CR final: se o fonte for salvo com quebra de linha do Windows (CRLF), a
+  # comparacao exata abaixo nao bate em nada e o build gera um index.html SEM embutir
+  # css/js — falha silenciosa que ja aconteceu. Ver a checagem no fim do script.
+  line="${line%$'\r'}"
   if [[ "$line" == '<link rel="stylesheet" href="css/styles.css">' ]]; then
     echo "<style>" >> "$OUT"
     cat "css/styles.css" >> "$OUT"
@@ -29,4 +33,13 @@ while IFS= read -r line || [ -n "$line" ]; do
   fi
 done < "$SRC"
 
-echo "OK: $OUT gerado a partir de $SRC + css/ + js/"
+# Conferencia: se sobrou referencia a css/ ou js/ soltos, o build nao embutiu nada.
+# Melhor falhar aqui do que publicar um index.html quebrado achando que deu certo.
+restantes=$(grep -c -E '<script src="js/|<link rel="stylesheet" href="css/' "$OUT" || true)
+if [ "$restantes" -ne 0 ]; then
+  echo "ERRO: $OUT ficou com $restantes referencia(s) a css/ ou js/ soltos — nada foi embutido." >&2
+  echo "      Causa provavel: $SRC salvo com quebra de linha CRLF (Windows)." >&2
+  exit 1
+fi
+
+echo "OK: $OUT gerado a partir de $SRC + css/ + js/ ($(wc -c < "$OUT") bytes)"
