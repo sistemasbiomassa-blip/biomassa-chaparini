@@ -449,8 +449,6 @@ function exportPagePDF(filterContainerId){
   html+='td{padding:6px 10px;border-bottom:1px solid '+brd+';color:#111111}';
   html+='.btn-edit-row,.btn-delete-row{display:none!important}';
   html+='.filters,.manut-filter-bar{display:none!important}';
-  html+='.manut-main-grid{display:grid;grid-template-columns:1fr 350px;gap:12px;margin-bottom:12px}';
-  html+='.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}';
   html+='.manut-panel{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
   html+='.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid '+brd+'}';
   html+='.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:14px;font-weight:600;color:#111111}';
@@ -477,6 +475,12 @@ function exportPagePDF(filterContainerId){
   html+='.manut-km-fill{height:100%;border-radius:2px}';
   html+='.manut-km-fill.g{background:#2ea043}.manut-km-fill.y{background:#d29922}.manut-km-fill.r{background:#f85149}';
   html+='.manut-km-bar-lbl,.manut-km-rest{font-size:9px;color:#555555}';
+  // tabela de KM & Próxima Troca: no PDF sai inteira (sem a rolagem da tela)
+  html+='#manutKmPanel{margin-top:12px}.manut-km-scroll{max-height:none;overflow:visible}';
+  html+='.manut-km-tbl{width:100%;border-collapse:collapse;font-size:11px}';
+  html+='.manut-km-tbl th{text-align:left;font-size:9px;color:#555555;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid '+brd+'}';
+  html+='.manut-km-tbl td{padding:5px 8px;border-bottom:1px solid '+brd+'}';
+  html+='.manut-km-num{font-family:"JetBrains Mono",monospace;font-size:10px}';
   html+='.manut-hist-ico{width:24px;height:24px;border-radius:6px;background:#f0f0f0;border:1px solid '+brd+';display:flex;align-items:center;justify-content:center;font-size:12px}';
   html+='.manut-hist-tipo{font-size:11px;font-weight:500;color:#111111}';
   html+='.manut-hist-km{font-size:10px;color:#555555}';

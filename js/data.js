@@ -74,12 +74,13 @@ function loadFromSheets(callback) {
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
     sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'), sbFetchAll('manut_pneus_itens'),
-    sbFetchAll('contratos'),
+    sbFetchAll('contratos'), sbFetchAll('nf_documentos'), sbFetchAll('nf_itens'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
         tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
-        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19];
+        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19],
+        nfDocR=r[20], nfItensR=r[21];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -97,7 +98,19 @@ function loadFromSheets(callback) {
     DB.manutRealizada = manutRR.map(function(x){ return {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
       KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
-      NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+      NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id,
+      NF_PRINCIPAL_ID:x.nf_principal_id
+    };});
+
+    // notas fiscais importadas (NF-e/NFS-e) e seus itens — ver js/nf-parse.js
+    DB.nfDocumentos = nfDocR.map(function(x){ return {
+      ID:x.id, CHAVE:x.chave, MODELO:x.modelo, NUMERO:x.numero, SERIE:x.serie, DATA_EMISSAO:x.data_emissao,
+      EMITENTE_CNPJ:x.emitente_cnpj, EMITENTE_NOME:x.emitente_nome, VALOR_TOTAL:x.valor_total, OS_NUMERO:x.os_numero,
+      MAQ_MANUTENCAO_ID:x.maq_manutencao_id, MANUT_REALIZADA_ID:x.manut_realizada_id
+    };});
+    DB.nfItens = nfItensR.map(function(x){ return {
+      ID:x.id, DOCUMENTO_ID:x.documento_id, N_ITEM:x.n_item, TIPO:x.tipo, CODIGO:x.codigo, DESCRICAO:x.descricao,
+      QUANTIDADE:x.quantidade, UNIDADE:x.unidade, VALOR_BRUTO:x.valor_bruto, DESCONTO:x.desconto, VALOR:x.valor
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
@@ -360,6 +373,12 @@ function _rotearAction(action, data) {
     case 'addManutMaq': return sb.from('maq_manutencao').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
     case 'updateManutMaq': return sb.from('maq_manutencao').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     case 'deleteManutMaq': return sb.from('maq_manutencao').delete().eq('id', data.id).then(_unwrap);
+
+    // ---------- NOTA FISCAL (NF-e/NFS-e) ----------
+    // Uma chamada só: lançamento(s) + notas + itens gravados numa transação no banco
+    // (função importar_nf). Em passos separados, uma nota recusada por duplicata deixaria
+    // o lançamento gravado sozinho — custo em dobro sem nota ligada.
+    case 'importarNf': return sb.rpc('importar_nf', { p: data }).then(_unwrap);
 
     // ---------- COMBOIO ----------
     case 'addTanque': return sb.from('tanques').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);

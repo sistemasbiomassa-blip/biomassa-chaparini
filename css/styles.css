@@ -76,7 +76,11 @@ a{color:var(--accent);text-decoration:none}
 .nav-scroll::-webkit-scrollbar{width:8px}
 .nav-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 .nav-scroll::-webkit-scrollbar-track{background:transparent}
-.main-content{margin-left:240px;flex:1;padding:24px;min-height:100vh}
+/* min-width:0: sem isto, a área de conteúdo (item flex ao lado do menu) cresce até caber
+   o elemento mais largo da página — uma tabela larga deixava a PÁGINA INTEIRA mais larga
+   que a tela (arrastar pro lado) e tudo com width:100% esticava junto. Com isto, tabela
+   larga rola dentro da própria caixa (.table-scroll), como já era a intenção. */
+.main-content{margin-left:240px;flex:1;padding:24px;min-height:100vh;min-width:0}
 
 /* DASHBOARD */
 .page{display:none}
@@ -178,7 +182,7 @@ tbody tr:hover{background:var(--surface2)}
 .manut-view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
 .manut-view-tab.active{background:var(--surface2);color:var(--text)}
 .manut-view-tab:hover:not(.active){color:var(--text)}
-.manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
+.manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap;width:fit-content;max-width:100%}
 .manut-filter-bar .filter-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;margin-right:4px}
 .manut-filter-bar .filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px}
 .manut-filter-bar .filter-select{min-width:140px}
@@ -197,8 +201,6 @@ tbody tr:hover{background:var(--surface2)}
 .manut-alert-txt strong{color:var(--red)}
 .manut-alert-txt em{color:var(--accent);font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:12px}
 
-.manut-main-grid{display:grid;grid-template-columns:1fr 380px;gap:14px;margin-bottom:14px}
-.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .manut-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;animation:fadeIn .3s ease}
 .manut-ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .manut-ph-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;color:var(--text)}
@@ -206,9 +208,9 @@ tbody tr:hover{background:var(--surface2)}
 
 .manut-matrix-wrap{overflow-x:auto;max-height:500px;overflow-y:auto}
 .manut-matrix{width:100%;border-collapse:collapse;font-size:12px}
-.manut-matrix th{font-size:10px;color:var(--text2);text-align:center;padding:0 6px 10px;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase}
-.manut-matrix th:first-child{text-align:left;min-width:110px}
-.manut-matrix td{padding:7px 6px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.manut-matrix th{font-size:10px;color:var(--text2);text-align:center;padding:0 5px 8px;letter-spacing:.03em;line-height:1.25;max-width:86px;vertical-align:bottom;text-transform:uppercase}
+.manut-matrix th:first-child{text-align:left;min-width:90px}
+.manut-matrix td{padding:5px 5px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
 .manut-matrix tr:last-child td{border-bottom:none}
 .manut-matrix tr:hover td{background:rgba(255,255,255,0.02)}
 .manut-matrix td:first-child{color:var(--text)}
@@ -221,18 +223,25 @@ tbody tr:hover{background:var(--surface2)}
 .manut-chip.r{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.28)}
 .manut-chip.x{background:rgba(139,148,158,0.12);color:var(--text2);border:1px solid rgba(139,148,158,0.2)}
 
-.manut-km-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
-.manut-km-item:last-child{border-bottom:none}
-.manut-km-placa{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--accent);min-width:82px;text-align:center;flex-shrink:0}
-.manut-km-body{flex:1}
-.manut-km-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--text);line-height:1}
-.manut-km-meta{font-size:10px;color:var(--text2);margin-top:1px}
-.manut-km-bar-wrap{width:100px;flex-shrink:0}
-.manut-km-bar-lbl{display:flex;justify-content:flex-end;font-size:9px;color:var(--text2);margin-bottom:3px}
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}
 .manut-km-fill.g{background:var(--green)}.manut-km-fill.y{background:var(--yellow)}.manut-km-fill.r{background:var(--red)}
-.manut-km-rest{font-size:9px;color:var(--text2);margin-top:3px;text-align:right}
+/* KM & Próxima Troca: tabela embaixo da matriz (antes era um painel de 380px ao lado, que
+   espremia a matriz). ~5 linhas visíveis, os demais caminhões pela barra de rolagem. */
+.manut-panel{min-width:0}
+.manut-km-scroll{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.manut-km-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.manut-km-tbl thead th{position:sticky;top:0;z-index:1;background:var(--surface2);text-align:left;font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:9px 12px;border-bottom:1px solid var(--border)}
+.manut-km-tbl td{padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.manut-km-tbl tr:last-child td{border-bottom:none}
+.manut-km-num{font-family:'JetBrains Mono',monospace;font-size:12px}
+.manut-km-tbl .manut-km-bg{height:6px;min-width:130px}
+/* Cards da Manutenção menores que o padrão. O .kpi-card é o mesmo de outras 6 páginas,
+   por isso o ajuste é só aqui (Fora e Em Garantia). */
+#kpiManut,#kpiManutGar,#kpiNfRel{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+#kpiManut .kpi-card,#kpiManutGar .kpi-card,#kpiNfRel .kpi-card{padding:10px 14px;border-radius:12px}
+#kpiManut .kpi-icon,#kpiManutGar .kpi-icon,#kpiNfRel .kpi-icon{font-size:15px;margin-bottom:3px}
+#kpiManut .kpi-value,#kpiManutGar .kpi-value,#kpiNfRel .kpi-value{font-size:20px}
 
 .manut-consumo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .manut-consumo-item:last-child{border-bottom:none}
@@ -245,17 +254,7 @@ tbody tr:hover{background:var(--surface2)}
 .manut-consumo-fill{height:100%;border-radius:2px}
 .manut-consumo-meta{font-size:10px;color:var(--text2);margin-top:4px}
 
-.manut-hist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.manut-hist-item:last-child{border-bottom:none}
-.manut-hist-ico{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.manut-hist-body{flex:1}
-.manut-hist-tipo{font-size:12px;font-weight:500;color:var(--text)}
-.manut-hist-meta{font-size:10px;color:var(--text2);margin-top:2px}
-.manut-hist-placa-tag{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--accent);font-weight:600}
-.manut-hist-km{font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0}
 
-@media(max-width:1000px){.manut-main-grid{grid-template-columns:1fr}}
-@media(max-width:620px){.manut-bottom-grid{grid-template-columns:1fr}}
 .state-tooltip{background:rgba(10,14,23,0.85)!important;color:#facc15!important;border:1px solid rgba(250,204,21,0.3)!important;font-family:'Outfit',sans-serif!important;font-size:11px!important;font-weight:600!important;padding:4px 10px!important;border-radius:6px!important;box-shadow:0 2px 10px rgba(0,0,0,0.3)!important}
 .leaflet-div-icon{background:none!important;border:none!important;box-shadow:none!important}
 
@@ -283,71 +282,6 @@ tbody tr:hover{background:var(--surface2)}
   .charts-grid{grid-template-columns:1fr}
 }
 
-';
-  html+='*{margin:0;padding:0;box-sizing:border-box}';
-  html+='body{font-family:"Barlow",sans-serif;background:'+bg+';color:'+txt+';padding:20px 30px}';
-  html+='h1,h2,h3,h4{font-family:"Barlow Condensed",sans-serif}';
-  html+='.page-header{margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid '+brd+'}';
-  html+='.page-title{font-size:24px}';
-  html+='.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}';
-  html+='.kpi-card{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;text-align:center}';
-  html+='.kpi-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:700}';
-  html+='.kpi-label{font-size:10px;text-transform:uppercase;color:#888;margin-top:2px}';
-  html+='.kpi-icon{font-size:16px;margin-bottom:6px}';
-  html+='.kpi-card::before{display:none}';
-  html+='.charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}';
-  html+='.chart-card{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
-  html+='.chart-card.full{grid-column:1/-1}';
-  html+='.chart-title{font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:600;margin-bottom:10px;text-transform:uppercase;color:#888}';
-  html+='.chart-container{position:relative;width:100%;height:280px}';
-  html+='.chart-container img{width:100%;height:280px;object-fit:contain}';
-  html+='.table-container{background:'+surf+';border:1px solid '+brd+';border-radius:8px;overflow:hidden;margin-bottom:16px;page-break-inside:avoid}';
-  html+='.table-header{padding:10px 14px;border-bottom:1px solid '+brd+'}';
-  html+='.table-scroll{overflow-x:auto}';
-  html+='table{width:100%;border-collapse:collapse;font-size:11px}';
-  html+='th{background:'+bg+';padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid '+brd+'}';
-  html+='td{padding:6px 10px;border-bottom:1px solid '+brd+'}';
-  html+='.filters,.manut-filter-bar{display:none!important}';
-  html+='.manut-main-grid{display:grid;grid-template-columns:1fr 350px;gap:12px;margin-bottom:12px}';
-  html+='.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}';
-  html+='.manut-panel{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
-  html+='.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid '+brd+'}';
-  html+='.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:14px;font-weight:600}';
-  html+='.manut-ph-badge{font-size:9px;color:#888;background:'+bg+';border:1px solid '+brd+';border-radius:20px;padding:2px 8px}';
-  html+='.manut-matrix{width:100%;border-collapse:collapse;font-size:11px}';
-  html+='.manut-matrix th{font-size:9px;padding:4px;text-align:center}';
-  html+='.manut-matrix th:first-child{text-align:left}';
-  html+='.manut-matrix td{padding:5px 4px;border-bottom:1px solid '+brd+';text-align:center;font-size:10px}';
-  html+='.manut-matrix td:first-child{text-align:left}';
-  html+='.manut-chip{display:inline-block;padding:2px 6px;border-radius:10px;font-size:9px}';
-  html+='.manut-chip.g{background:rgba(46,160,67,0.15);color:#2ea043}';
-  html+='.manut-chip.y{background:rgba(210,153,34,0.15);color:#d29922}';
-  html+='.manut-chip.r{background:rgba(248,81,73,0.15);color:#f85149}';
-  html+='.manut-chip.x{background:rgba(139,148,158,0.12);color:#888}';
-  html+='.manut-placa-tag{font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:600;color:#00b4d8}';
-  html+='.manut-alert{display:flex;align-items:center;gap:10px;background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.25);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px}';
-  html+='.manut-km-item,.manut-consumo-item,.manut-hist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid '+brd+';font-size:11px}';
-  html+='.manut-km-placa,.manut-consumo-placa{font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:600;color:#00b4d8}';
-  html+='.manut-km-val,.manut-consumo-val{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:700}';
-  html+='.manut-km-meta,.manut-consumo-meta,.manut-hist-meta{font-size:9px;color:#888}';
-  html+='.manut-km-body,.manut-consumo-body{flex:1}';
-  html+='.manut-km-bar-wrap,.manut-consumo-bg{width:100px}';
-  html+='.manut-km-bg{height:4px;background:#333;border-radius:2px;overflow:hidden}';
-  html+='.manut-km-fill{height:100%;border-radius:2px}';
-  html+='.manut-km-fill.g{background:#2ea043}.manut-km-fill.y{background:#d29922}.manut-km-fill.r{background:#f85149}';
-  html+='.manut-km-bar-lbl,.manut-km-rest{font-size:9px;color:#888}';
-  html+='.manut-hist-ico{width:24px;height:24px;border-radius:6px;background:'+bg+';border:1px solid '+brd+';display:flex;align-items:center;justify-content:center;font-size:12px}';
-  html+='.manut-hist-tipo{font-size:11px;font-weight:500}';
-  html+='.manut-hist-km{font-size:10px;color:#888}';
-  html+='.manut-hist-placa-tag{font-family:"Barlow Condensed",sans-serif;font-size:10px;color:#00b4d8}';
-  html+='.manut-consumo-top{display:flex;align-items:baseline;gap:4px;margin-bottom:4px}';
-  html+='.manut-consumo-unit{font-size:12px;color:#888}';
-  html+='.manut-consumo-fill{height:4px;border-radius:2px}';
-  html+='.manut-alert-ico{font-size:16px}.manut-alert-txt{font-size:12px;line-height:1.5}';
-  html+='.manut-alert-txt strong{color:#f85149}.manut-alert-txt em{color:#00b4d8;font-style:normal}';
-  html+='.status-badge{padding:2px 6px;border-radius:4px;font-size:10px}';
-  html+='@media print{body{padding:10px}@page{size:landscape;margin:10mm}}';
-  html+='
 .login-logo-text{font-size:64px;margin-bottom:24px;text-align:center}
 
 /* Botões de ação nas tabelas */
@@ -378,6 +312,68 @@ tbody tr:hover{background:var(--surface2)}
 #maqModalOverlay .modal,#maqAbastModalOverlay .modal,#maqMtModalOverlay .modal{max-width:680px;width:92%;max-height:88vh;overflow-y:auto}
 .maq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:6px}
 #pageMaquinarios .filters select,#pageMaquinarios .filters input,#pageComboio .filters select,#pageComboio .filters input{padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+
+/* ---------- Manutenção > Peças e Serviços (js/nf-relatorio.js) ---------- */
+.nf-rel-filtros{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px}
+.nf-rel-atalhos,.nf-rel-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nf-rel-atalhos{margin-bottom:10px}
+.nf-rel-linha #nfRelBusca{min-width:240px;flex:1}
+.nf-rel-datas{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--text2)}
+.nf-rel-datas input{border:none;background:transparent;font-size:11px;color:var(--text);font-family:inherit}
+.nf-rel-nota{font-size:11px;color:var(--text2);margin-top:10px;line-height:1.5}
+.nf-rel-vazio{padding:40px;text-align:center;color:var(--text2);background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);line-height:1.7}
+.nf-rel-bloco{margin-bottom:14px}
+.nf-rel-rank{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto}
+.nf-rel-rank-lin{display:grid;grid-template-columns:24px minmax(90px,160px) 1fr 110px auto;align-items:center;gap:10px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.nf-rel-rank-lin:hover{background:var(--surface2)}
+.nf-rel-pos{font-size:11px;color:var(--text2);text-align:right}
+.nf-rel-maq{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nf-rel-barra{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.nf-rel-barra div{height:100%;background:var(--accent);border-radius:4px}
+.nf-rel-split{font-size:11px;color:var(--text2);white-space:nowrap}
+.nf-rel-clica{cursor:pointer}
+.nf-rel-clica:hover td{background:var(--surface2)}
+
+/* ---------- Notas fiscais: importadores e detalhe (.nf-modal) ----------
+   Os modais vivem fora de #pageMaquinarios, entao nao herdavam o estilo de filtro acima
+   e os selects saiam com o visual cru do navegador, destoando do resto do sistema. */
+.nf-modal .modal{width:94%;max-height:90vh;overflow-y:auto}
+.nf-modal select,.nf-modal input[type=number],.nf-modal input[type=text]{padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;max-width:100%}
+.nf-modal select:focus,.nf-modal input:focus{border-color:var(--accent);outline:none}
+.nf-modal .maq-table select{font-size:12px;padding:6px 8px;min-width:112px}
+.nf-modal input[type=file]{width:100%;padding:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer}
+.nf-modal input[type=file]:hover{border-color:var(--accent)}
+.nf-modal input[type=file]::file-selector-button{padding:8px 14px;margin-right:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-weight:600;font-size:13px;cursor:pointer}
+.nf-modal input[type=file]::file-selector-button:hover{background:var(--border)}
+.nf-modal .btn-secondary{padding:7px 12px;font-size:12.5px}
+.nf-intro{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6}
+.nf-bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
+.nf-avisos{font-size:12.5px;line-height:1.5;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+.nf-resumo{font-size:12px;margin-top:10px}
+.nf-rodape{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+/* cartao de uma revisao (caminhoes) */
+.nf-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.nf-card-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.nf-card-valores{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;margin:8px 0 10px}
+.nf-card-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:10px}
+.nf-card-campos label,.nf-card-tipos>label{display:block;font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:5px}
+.nf-card-campos select,.nf-card-campos input{width:100%}
+.nf-card-anexo{font-size:12.5px;padding:8px 10px;border-radius:8px;background:rgba(0,180,216,.07);border:1px solid rgba(0,180,216,.25)}
+.nf-tipo{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;margin:0 6px 6px 0;border:1px solid var(--border);border-radius:20px;cursor:pointer;user-select:none}
+.nf-tipo.on{border-color:var(--accent);background:rgba(0,180,216,.1)}
+.nf-tipo em{font-style:normal;font-size:10px;color:var(--accent)}
+.nf-lido{display:block;font-size:11px;color:var(--green);margin-top:4px}
+.nf-alerta{display:block;font-size:11px;color:var(--yellow);margin-top:4px}
+/* selo clicavel nas tabelas + janela de detalhe */
+.nf-selo{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;white-space:nowrap;cursor:pointer;background:rgba(0,180,216,.1);color:var(--accent);border:1px solid rgba(0,180,216,.3)}
+.nf-selo:hover{background:rgba(0,180,216,.2)}
+.nf-det-doc{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.nf-det-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.nf-det-sub{font-size:11.5px;color:var(--text2);margin-top:3px}
+.nf-det-valor{font-family:'JetBrains Mono',monospace;font-weight:700;white-space:nowrap}
+.nf-det-chave{font-size:10.5px;color:var(--text2);margin-top:8px;word-break:break-all}
+.nf-det-total{text-align:right;font-size:14px;margin-top:4px}
+.nf-aviso-exc{margin-top:10px;font-size:12px;line-height:1.6;padding:8px 10px;border-radius:8px;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.25);color:var(--text)}
 .maq-table{width:100%;border-collapse:collapse;font-size:13px}
 .maq-table th{padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
 .maq-table td{padding:9px 14px;border-bottom:1px solid var(--border)}

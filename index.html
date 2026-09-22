@@ -90,7 +90,11 @@ a{color:var(--accent);text-decoration:none}
 .nav-scroll::-webkit-scrollbar{width:8px}
 .nav-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 .nav-scroll::-webkit-scrollbar-track{background:transparent}
-.main-content{margin-left:240px;flex:1;padding:24px;min-height:100vh}
+/* min-width:0: sem isto, a área de conteúdo (item flex ao lado do menu) cresce até caber
+   o elemento mais largo da página — uma tabela larga deixava a PÁGINA INTEIRA mais larga
+   que a tela (arrastar pro lado) e tudo com width:100% esticava junto. Com isto, tabela
+   larga rola dentro da própria caixa (.table-scroll), como já era a intenção. */
+.main-content{margin-left:240px;flex:1;padding:24px;min-height:100vh;min-width:0}
 
 /* DASHBOARD */
 .page{display:none}
@@ -192,7 +196,7 @@ tbody tr:hover{background:var(--surface2)}
 .manut-view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
 .manut-view-tab.active{background:var(--surface2);color:var(--text)}
 .manut-view-tab:hover:not(.active){color:var(--text)}
-.manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap}
+.manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap;width:fit-content;max-width:100%}
 .manut-filter-bar .filter-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;margin-right:4px}
 .manut-filter-bar .filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px}
 .manut-filter-bar .filter-select{min-width:140px}
@@ -211,8 +215,6 @@ tbody tr:hover{background:var(--surface2)}
 .manut-alert-txt strong{color:var(--red)}
 .manut-alert-txt em{color:var(--accent);font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:12px}
 
-.manut-main-grid{display:grid;grid-template-columns:1fr 380px;gap:14px;margin-bottom:14px}
-.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .manut-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;animation:fadeIn .3s ease}
 .manut-ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .manut-ph-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;color:var(--text)}
@@ -220,9 +222,9 @@ tbody tr:hover{background:var(--surface2)}
 
 .manut-matrix-wrap{overflow-x:auto;max-height:500px;overflow-y:auto}
 .manut-matrix{width:100%;border-collapse:collapse;font-size:12px}
-.manut-matrix th{font-size:10px;color:var(--text2);text-align:center;padding:0 6px 10px;letter-spacing:.04em;white-space:nowrap;text-transform:uppercase}
-.manut-matrix th:first-child{text-align:left;min-width:110px}
-.manut-matrix td{padding:7px 6px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.manut-matrix th{font-size:10px;color:var(--text2);text-align:center;padding:0 5px 8px;letter-spacing:.03em;line-height:1.25;max-width:86px;vertical-align:bottom;text-transform:uppercase}
+.manut-matrix th:first-child{text-align:left;min-width:90px}
+.manut-matrix td{padding:5px 5px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
 .manut-matrix tr:last-child td{border-bottom:none}
 .manut-matrix tr:hover td{background:rgba(255,255,255,0.02)}
 .manut-matrix td:first-child{color:var(--text)}
@@ -235,18 +237,25 @@ tbody tr:hover{background:var(--surface2)}
 .manut-chip.r{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.28)}
 .manut-chip.x{background:rgba(139,148,158,0.12);color:var(--text2);border:1px solid rgba(139,148,158,0.2)}
 
-.manut-km-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
-.manut-km-item:last-child{border-bottom:none}
-.manut-km-placa{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--accent);min-width:82px;text-align:center;flex-shrink:0}
-.manut-km-body{flex:1}
-.manut-km-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--text);line-height:1}
-.manut-km-meta{font-size:10px;color:var(--text2);margin-top:1px}
-.manut-km-bar-wrap{width:100px;flex-shrink:0}
-.manut-km-bar-lbl{display:flex;justify-content:flex-end;font-size:9px;color:var(--text2);margin-bottom:3px}
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}
 .manut-km-fill.g{background:var(--green)}.manut-km-fill.y{background:var(--yellow)}.manut-km-fill.r{background:var(--red)}
-.manut-km-rest{font-size:9px;color:var(--text2);margin-top:3px;text-align:right}
+/* KM & Próxima Troca: tabela embaixo da matriz (antes era um painel de 380px ao lado, que
+   espremia a matriz). ~5 linhas visíveis, os demais caminhões pela barra de rolagem. */
+.manut-panel{min-width:0}
+.manut-km-scroll{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+.manut-km-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.manut-km-tbl thead th{position:sticky;top:0;z-index:1;background:var(--surface2);text-align:left;font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:9px 12px;border-bottom:1px solid var(--border)}
+.manut-km-tbl td{padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.manut-km-tbl tr:last-child td{border-bottom:none}
+.manut-km-num{font-family:'JetBrains Mono',monospace;font-size:12px}
+.manut-km-tbl .manut-km-bg{height:6px;min-width:130px}
+/* Cards da Manutenção menores que o padrão. O .kpi-card é o mesmo de outras 6 páginas,
+   por isso o ajuste é só aqui (Fora e Em Garantia). */
+#kpiManut,#kpiManutGar,#kpiNfRel{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+#kpiManut .kpi-card,#kpiManutGar .kpi-card,#kpiNfRel .kpi-card{padding:10px 14px;border-radius:12px}
+#kpiManut .kpi-icon,#kpiManutGar .kpi-icon,#kpiNfRel .kpi-icon{font-size:15px;margin-bottom:3px}
+#kpiManut .kpi-value,#kpiManutGar .kpi-value,#kpiNfRel .kpi-value{font-size:20px}
 
 .manut-consumo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .manut-consumo-item:last-child{border-bottom:none}
@@ -259,17 +268,7 @@ tbody tr:hover{background:var(--surface2)}
 .manut-consumo-fill{height:100%;border-radius:2px}
 .manut-consumo-meta{font-size:10px;color:var(--text2);margin-top:4px}
 
-.manut-hist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-.manut-hist-item:last-child{border-bottom:none}
-.manut-hist-ico{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.manut-hist-body{flex:1}
-.manut-hist-tipo{font-size:12px;font-weight:500;color:var(--text)}
-.manut-hist-meta{font-size:10px;color:var(--text2);margin-top:2px}
-.manut-hist-placa-tag{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--accent);font-weight:600}
-.manut-hist-km{font-size:11px;color:var(--text2);white-space:nowrap;flex-shrink:0}
 
-@media(max-width:1000px){.manut-main-grid{grid-template-columns:1fr}}
-@media(max-width:620px){.manut-bottom-grid{grid-template-columns:1fr}}
 .state-tooltip{background:rgba(10,14,23,0.85)!important;color:#facc15!important;border:1px solid rgba(250,204,21,0.3)!important;font-family:'Outfit',sans-serif!important;font-size:11px!important;font-weight:600!important;padding:4px 10px!important;border-radius:6px!important;box-shadow:0 2px 10px rgba(0,0,0,0.3)!important}
 .leaflet-div-icon{background:none!important;border:none!important;box-shadow:none!important}
 
@@ -297,71 +296,6 @@ tbody tr:hover{background:var(--surface2)}
   .charts-grid{grid-template-columns:1fr}
 }
 
-';
-  html+='*{margin:0;padding:0;box-sizing:border-box}';
-  html+='body{font-family:"Barlow",sans-serif;background:'+bg+';color:'+txt+';padding:20px 30px}';
-  html+='h1,h2,h3,h4{font-family:"Barlow Condensed",sans-serif}';
-  html+='.page-header{margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid '+brd+'}';
-  html+='.page-title{font-size:24px}';
-  html+='.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}';
-  html+='.kpi-card{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;text-align:center}';
-  html+='.kpi-value{font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:700}';
-  html+='.kpi-label{font-size:10px;text-transform:uppercase;color:#888;margin-top:2px}';
-  html+='.kpi-icon{font-size:16px;margin-bottom:6px}';
-  html+='.kpi-card::before{display:none}';
-  html+='.charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}';
-  html+='.chart-card{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
-  html+='.chart-card.full{grid-column:1/-1}';
-  html+='.chart-title{font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:600;margin-bottom:10px;text-transform:uppercase;color:#888}';
-  html+='.chart-container{position:relative;width:100%;height:280px}';
-  html+='.chart-container img{width:100%;height:280px;object-fit:contain}';
-  html+='.table-container{background:'+surf+';border:1px solid '+brd+';border-radius:8px;overflow:hidden;margin-bottom:16px;page-break-inside:avoid}';
-  html+='.table-header{padding:10px 14px;border-bottom:1px solid '+brd+'}';
-  html+='.table-scroll{overflow-x:auto}';
-  html+='table{width:100%;border-collapse:collapse;font-size:11px}';
-  html+='th{background:'+bg+';padding:8px 10px;text-align:left;font-weight:600;border-bottom:2px solid '+brd+'}';
-  html+='td{padding:6px 10px;border-bottom:1px solid '+brd+'}';
-  html+='.filters,.manut-filter-bar{display:none!important}';
-  html+='.manut-main-grid{display:grid;grid-template-columns:1fr 350px;gap:12px;margin-bottom:12px}';
-  html+='.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}';
-  html+='.manut-panel{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
-  html+='.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid '+brd+'}';
-  html+='.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:14px;font-weight:600}';
-  html+='.manut-ph-badge{font-size:9px;color:#888;background:'+bg+';border:1px solid '+brd+';border-radius:20px;padding:2px 8px}';
-  html+='.manut-matrix{width:100%;border-collapse:collapse;font-size:11px}';
-  html+='.manut-matrix th{font-size:9px;padding:4px;text-align:center}';
-  html+='.manut-matrix th:first-child{text-align:left}';
-  html+='.manut-matrix td{padding:5px 4px;border-bottom:1px solid '+brd+';text-align:center;font-size:10px}';
-  html+='.manut-matrix td:first-child{text-align:left}';
-  html+='.manut-chip{display:inline-block;padding:2px 6px;border-radius:10px;font-size:9px}';
-  html+='.manut-chip.g{background:rgba(46,160,67,0.15);color:#2ea043}';
-  html+='.manut-chip.y{background:rgba(210,153,34,0.15);color:#d29922}';
-  html+='.manut-chip.r{background:rgba(248,81,73,0.15);color:#f85149}';
-  html+='.manut-chip.x{background:rgba(139,148,158,0.12);color:#888}';
-  html+='.manut-placa-tag{font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:600;color:#00b4d8}';
-  html+='.manut-alert{display:flex;align-items:center;gap:10px;background:rgba(248,81,73,0.08);border:1px solid rgba(248,81,73,0.25);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px}';
-  html+='.manut-km-item,.manut-consumo-item,.manut-hist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid '+brd+';font-size:11px}';
-  html+='.manut-km-placa,.manut-consumo-placa{font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:600;color:#00b4d8}';
-  html+='.manut-km-val,.manut-consumo-val{font-family:"Barlow Condensed",sans-serif;font-size:18px;font-weight:700}';
-  html+='.manut-km-meta,.manut-consumo-meta,.manut-hist-meta{font-size:9px;color:#888}';
-  html+='.manut-km-body,.manut-consumo-body{flex:1}';
-  html+='.manut-km-bar-wrap,.manut-consumo-bg{width:100px}';
-  html+='.manut-km-bg{height:4px;background:#333;border-radius:2px;overflow:hidden}';
-  html+='.manut-km-fill{height:100%;border-radius:2px}';
-  html+='.manut-km-fill.g{background:#2ea043}.manut-km-fill.y{background:#d29922}.manut-km-fill.r{background:#f85149}';
-  html+='.manut-km-bar-lbl,.manut-km-rest{font-size:9px;color:#888}';
-  html+='.manut-hist-ico{width:24px;height:24px;border-radius:6px;background:'+bg+';border:1px solid '+brd+';display:flex;align-items:center;justify-content:center;font-size:12px}';
-  html+='.manut-hist-tipo{font-size:11px;font-weight:500}';
-  html+='.manut-hist-km{font-size:10px;color:#888}';
-  html+='.manut-hist-placa-tag{font-family:"Barlow Condensed",sans-serif;font-size:10px;color:#00b4d8}';
-  html+='.manut-consumo-top{display:flex;align-items:baseline;gap:4px;margin-bottom:4px}';
-  html+='.manut-consumo-unit{font-size:12px;color:#888}';
-  html+='.manut-consumo-fill{height:4px;border-radius:2px}';
-  html+='.manut-alert-ico{font-size:16px}.manut-alert-txt{font-size:12px;line-height:1.5}';
-  html+='.manut-alert-txt strong{color:#f85149}.manut-alert-txt em{color:#00b4d8;font-style:normal}';
-  html+='.status-badge{padding:2px 6px;border-radius:4px;font-size:10px}';
-  html+='@media print{body{padding:10px}@page{size:landscape;margin:10mm}}';
-  html+='
 .login-logo-text{font-size:64px;margin-bottom:24px;text-align:center}
 
 /* Botões de ação nas tabelas */
@@ -392,6 +326,68 @@ tbody tr:hover{background:var(--surface2)}
 #maqModalOverlay .modal,#maqAbastModalOverlay .modal,#maqMtModalOverlay .modal{max-width:680px;width:92%;max-height:88vh;overflow-y:auto}
 .maq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:6px}
 #pageMaquinarios .filters select,#pageMaquinarios .filters input,#pageComboio .filters select,#pageComboio .filters input{padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+
+/* ---------- Manutenção > Peças e Serviços (js/nf-relatorio.js) ---------- */
+.nf-rel-filtros{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px}
+.nf-rel-atalhos,.nf-rel-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nf-rel-atalhos{margin-bottom:10px}
+.nf-rel-linha #nfRelBusca{min-width:240px;flex:1}
+.nf-rel-datas{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--text2)}
+.nf-rel-datas input{border:none;background:transparent;font-size:11px;color:var(--text);font-family:inherit}
+.nf-rel-nota{font-size:11px;color:var(--text2);margin-top:10px;line-height:1.5}
+.nf-rel-vazio{padding:40px;text-align:center;color:var(--text2);background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);line-height:1.7}
+.nf-rel-bloco{margin-bottom:14px}
+.nf-rel-rank{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto}
+.nf-rel-rank-lin{display:grid;grid-template-columns:24px minmax(90px,160px) 1fr 110px auto;align-items:center;gap:10px;padding:5px 6px;border-radius:6px;cursor:pointer}
+.nf-rel-rank-lin:hover{background:var(--surface2)}
+.nf-rel-pos{font-size:11px;color:var(--text2);text-align:right}
+.nf-rel-maq{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nf-rel-barra{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.nf-rel-barra div{height:100%;background:var(--accent);border-radius:4px}
+.nf-rel-split{font-size:11px;color:var(--text2);white-space:nowrap}
+.nf-rel-clica{cursor:pointer}
+.nf-rel-clica:hover td{background:var(--surface2)}
+
+/* ---------- Notas fiscais: importadores e detalhe (.nf-modal) ----------
+   Os modais vivem fora de #pageMaquinarios, entao nao herdavam o estilo de filtro acima
+   e os selects saiam com o visual cru do navegador, destoando do resto do sistema. */
+.nf-modal .modal{width:94%;max-height:90vh;overflow-y:auto}
+.nf-modal select,.nf-modal input[type=number],.nf-modal input[type=text]{padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;max-width:100%}
+.nf-modal select:focus,.nf-modal input:focus{border-color:var(--accent);outline:none}
+.nf-modal .maq-table select{font-size:12px;padding:6px 8px;min-width:112px}
+.nf-modal input[type=file]{width:100%;padding:14px;background:var(--surface2);border:1px dashed var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;cursor:pointer}
+.nf-modal input[type=file]:hover{border-color:var(--accent)}
+.nf-modal input[type=file]::file-selector-button{padding:8px 14px;margin-right:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:'Barlow',sans-serif;font-weight:600;font-size:13px;cursor:pointer}
+.nf-modal input[type=file]::file-selector-button:hover{background:var(--border)}
+.nf-modal .btn-secondary{padding:7px 12px;font-size:12.5px}
+.nf-intro{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6}
+.nf-bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
+.nf-avisos{font-size:12.5px;line-height:1.5;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+.nf-resumo{font-size:12px;margin-top:10px}
+.nf-rodape{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+/* cartao de uma revisao (caminhoes) */
+.nf-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.nf-card-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.nf-card-valores{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;margin:8px 0 10px}
+.nf-card-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:10px}
+.nf-card-campos label,.nf-card-tipos>label{display:block;font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:5px}
+.nf-card-campos select,.nf-card-campos input{width:100%}
+.nf-card-anexo{font-size:12.5px;padding:8px 10px;border-radius:8px;background:rgba(0,180,216,.07);border:1px solid rgba(0,180,216,.25)}
+.nf-tipo{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;margin:0 6px 6px 0;border:1px solid var(--border);border-radius:20px;cursor:pointer;user-select:none}
+.nf-tipo.on{border-color:var(--accent);background:rgba(0,180,216,.1)}
+.nf-tipo em{font-style:normal;font-size:10px;color:var(--accent)}
+.nf-lido{display:block;font-size:11px;color:var(--green);margin-top:4px}
+.nf-alerta{display:block;font-size:11px;color:var(--yellow);margin-top:4px}
+/* selo clicavel nas tabelas + janela de detalhe */
+.nf-selo{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;white-space:nowrap;cursor:pointer;background:rgba(0,180,216,.1);color:var(--accent);border:1px solid rgba(0,180,216,.3)}
+.nf-selo:hover{background:rgba(0,180,216,.2)}
+.nf-det-doc{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.nf-det-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.nf-det-sub{font-size:11.5px;color:var(--text2);margin-top:3px}
+.nf-det-valor{font-family:'JetBrains Mono',monospace;font-weight:700;white-space:nowrap}
+.nf-det-chave{font-size:10.5px;color:var(--text2);margin-top:8px;word-break:break-all}
+.nf-det-total{text-align:right;font-size:14px;margin-top:4px}
+.nf-aviso-exc{margin-top:10px;font-size:12px;line-height:1.6;padding:8px 10px;border-radius:8px;background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.25);color:var(--text)}
 .maq-table{width:100%;border-collapse:collapse;font-size:13px}
 .maq-table th{padding:10px 14px;text-align:left;font-weight:600;color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
 .maq-table td{padding:9px 14px;border-bottom:1px solid var(--border)}
@@ -658,6 +654,64 @@ tbody tr:hover{background:var(--surface2)}
       <button class="btn-secondary" onclick="closeMaqManutModal()">Cancelar</button>
       <button class="btn btn-primary" id="maqMtSalvarBtn" onclick="salvarManutMaq()">💾 Salvar</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== MODAL IMPORTAR NOTA FISCAL — MAQUINÁRIOS (js/maq-nfe.js) ===== -->
+<div class="modal-overlay nf-modal" id="maqNfeOverlay" onclick="if(event.target===this)closeMaqNfeModal()">
+  <div class="modal" style="max-width:1200px">
+    <h2>📄 Importar Nota Fiscal (XML)</h2>
+    <div class="nf-intro">
+      Selecione um ou vários XMLs — NF-e de peças e NFS-e de serviço. Notas da mesma OS viram um lançamento só (peças + mão de obra).<br>
+      Confira o que foi lido e aponte a máquina e/ou a fazenda. Compra de insumo a granel: deixe a máquina em "só fazenda".
+    </div>
+    <input type="file" id="maqNfeFiles" accept=".xml,text/xml" multiple onchange="maqNfeLerArquivos()">
+    <div id="maqNfeStep2" style="display:none;margin-top:14px">
+      <div class="nf-bulk">
+        <span style="color:var(--text2)">Aplicar a todas:</span>
+        <select id="maqNfeBulkMaq"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">máquina</button>
+        <select id="maqNfeBulkTipo"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">tipo</button>
+        <select id="maqNfeBulkFl"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">fazenda</button>
+      </div>
+      <div id="maqNfeAvisos" class="nf-avisos" style="display:none"></div>
+      <div class="table-container" id="maqNfeTable"></div>
+      <div id="maqNfeResumo" class="nf-resumo"></div>
+    </div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeMaqNfeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqNfeImportBtn" onclick="maqNfeImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL IMPORTAR NOTA FISCAL — CAMINHÕES (js/cam-nfe.js) ===== -->
+<div class="modal-overlay nf-modal" id="camNfeOverlay" onclick="if(event.target===this)closeCamNfeModal()">
+  <div class="modal" style="max-width:980px">
+    <h2>📄 Importar Nota Fiscal (XML) — Caminhões</h2>
+    <div class="nf-intro">
+      Selecione a NF-e das peças e a NFS-e do serviço (pode ser várias de uma vez). Notas da mesma OS viram uma revisão só.<br>
+      Placa e KM vêm da nota quando a oficina escreve; confira. Cada tipo marcado zera o alerta de KM dele — o valor fica só no primeiro.
+    </div>
+    <input type="file" id="camNfeFiles" accept=".xml,text/xml" multiple onchange="camNfeLerArquivos()">
+    <div id="camNfeAvisos" class="nf-avisos" style="display:none;margin-top:14px"></div>
+    <div id="camNfeLista" style="margin-top:14px"></div>
+    <div id="camNfeResumo" class="nf-resumo"></div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeCamNfeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="camNfeImportBtn" onclick="camNfeImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DETALHE DAS NOTAS DE UM LANÇAMENTO (js/nf-ui.js) ===== -->
+<div class="modal-overlay nf-modal" id="nfDetOverlay" onclick="if(event.target===this)nfFecharDetalhe()">
+  <div class="modal" style="max-width:860px">
+    <h2>📄 Peças e serviços da nota</h2>
+    <div id="nfDetConteudo"></div>
+    <div class="nf-rodape"><button class="btn-secondary" onclick="nfFecharDetalhe()">Fechar</button></div>
   </div>
 </div>
 
@@ -1005,7 +1059,7 @@ tbody tr:hover{background:var(--surface2)}
         <div class="tab-content" id="tabManutReal">
           <div class="form-card">
             <div class="form-section">
-              <div class="form-section-title">🔧 Registrar Manutenção Realizada</div>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>🔧 Registrar Manutenção Realizada</span><button class="btn btn-secondary btn-sm" id="camNfeBtn" onclick="openCamNfeModal()" style="display:none">📄 Importar Nota Fiscal (XML)</button></div>
               <div class="form-row">
                 <div class="form-group"><label>Placa *</label><select id="fmPlaca" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo" onchange="_atualizarDiagramaPneuForm()"></select></div>
@@ -1168,28 +1222,27 @@ tbody tr:hover{background:var(--surface2)}
         <div class="manut-view-tabs">
           <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
           <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
+          <button class="manut-view-tab" id="manutTabBtnPecas" onclick="showManutView('pecas')">🔩 Peças e Serviços</button>
         </div>
 
         <div id="manutViewFora">
           <div class="manut-filter-bar" id="filtersManut"></div>
           <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
           <div class="kpi-row" id="kpiManut"></div>
-          <div class="manut-main-grid">
-            <div class="manut-panel" id="manutMatrizPanel">
-              <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-              <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
-            </div>
-            <div class="manut-panel" id="manutKmPanel">
-              <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
-              <div id="manutKmList"></div>
-            </div>
+          <div class="manut-panel" id="manutMatrizPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
+            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
           </div>
-          <div class="manut-bottom-grid">
-            <div class="manut-panel" id="manutHistPanel">
-              <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
-              <div id="manutHistList"></div>
-            </div>
+          <div class="manut-panel" id="manutKmPanel">
+            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Troca</div><div class="manut-ph-badge" id="manutKmBadge">óleo motor</div></div>
+            <div id="manutKmList"></div>
           </div>
+        </div>
+
+        <!-- Peças e serviços das notas fiscais importadas (js/nf-relatorio.js) -->
+        <div id="manutViewPecas" style="display:none">
+          <div class="nf-rel-filtros" id="nfRelFiltros"></div>
+          <div id="nfRelConteudo"></div>
         </div>
 
         <div id="manutViewGarantia" style="display:none">
@@ -1388,6 +1441,7 @@ tbody tr:hover{background:var(--surface2)}
             <select id="maqMtFiltroFloresta" onchange="renderMaqManutTable()"><option value="">Todas as florestas</option></select>
             <select id="maqMtFiltroMaq" onchange="renderMaqManutTable()"><option value="">Todas as máquinas</option></select>
             <select id="maqMtFiltroTipo" onchange="renderMaqManutTable()"><option value="">Todos os tipos</option><option>Preventiva</option><option>Corretiva</option><option>Insumo</option></select>
+            <button class="btn btn-secondary btn-sm" id="maqNfeBtn" onclick="openMaqNfeModal()" style="display:none">📄 Importar Nota Fiscal</button>
             <button class="btn btn-primary btn-sm" id="maqMtAddBtn" onclick="openMaqManutModal()" style="display:none">➕ Registrar manutenção</button>
           </div>
           <div class="table-container">
@@ -1572,7 +1626,7 @@ tbody tr:hover{background:var(--surface2)}
 
 <script>
 // ==================== DATA (carregado do Google Sheets) ====================
-var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [], contratos: [] };
+var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [], contratos: [], nfDocumentos: [], nfItens: [] };
 var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
@@ -1668,12 +1722,13 @@ function loadFromSheets(callback) {
     sbFetchAll('maq_localizacao'), sbFetchAll('maq_abastecimento'), sbFetchAll('maq_manutencao'),
     sbFetchAll('tanques'), sbFetchAll('tanque_entradas'), sbFetchAll('frequencia'), sbFetchAll('alertas'),
     sbFetchAll('garantia_caminhoes'), sbFetchAll('manut_programada_garantia'), sbFetchAll('manut_pneus_itens'),
-    sbFetchAll('contratos'),
+    sbFetchAll('contratos'), sbFetchAll('nf_documentos'), sbFetchAll('nf_itens'),
   ]).then(function(r){
     var cadastroR=r[0], manutRR=r[1], manutPR=r[2], locaisR=r[3], motoristasR=r[4], caminhoesR=r[5],
         classesR=r[6], profilesR=r[7], maquinasR=r[8], maqLocR=r[9], maqAbR=r[10], maqManR=r[11],
         tanquesR=r[12], tanqueEntR=r[13], freqR=r[14], alertasR=r[15],
-        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19];
+        garantiaR=r[16], manutPGR=r[17], manutPneusR=r[18], contratosR=r[19],
+        nfDocR=r[20], nfItensR=r[21];
 
     DB.cadastro = cadastroR.map(function(x){ return {
       ID:x.id, MOTORISTA:x.motorista, DATA:x.data, 'SITUAÇÃO':x.situacao, ENTREGA:x.entrega, PLACA:x.placa,
@@ -1691,7 +1746,19 @@ function loadFromSheets(callback) {
     DB.manutRealizada = manutRR.map(function(x){ return {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
       KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
-      NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
+      NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id,
+      NF_PRINCIPAL_ID:x.nf_principal_id
+    };});
+
+    // notas fiscais importadas (NF-e/NFS-e) e seus itens — ver js/nf-parse.js
+    DB.nfDocumentos = nfDocR.map(function(x){ return {
+      ID:x.id, CHAVE:x.chave, MODELO:x.modelo, NUMERO:x.numero, SERIE:x.serie, DATA_EMISSAO:x.data_emissao,
+      EMITENTE_CNPJ:x.emitente_cnpj, EMITENTE_NOME:x.emitente_nome, VALOR_TOTAL:x.valor_total, OS_NUMERO:x.os_numero,
+      MAQ_MANUTENCAO_ID:x.maq_manutencao_id, MANUT_REALIZADA_ID:x.manut_realizada_id
+    };});
+    DB.nfItens = nfItensR.map(function(x){ return {
+      ID:x.id, DOCUMENTO_ID:x.documento_id, N_ITEM:x.n_item, TIPO:x.tipo, CODIGO:x.codigo, DESCRICAO:x.descricao,
+      QUANTIDADE:x.quantidade, UNIDADE:x.unidade, VALOR_BRUTO:x.valor_bruto, DESCONTO:x.desconto, VALOR:x.valor
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
@@ -1954,6 +2021,12 @@ function _rotearAction(action, data) {
     case 'addManutMaq': return sb.from('maq_manutencao').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
     case 'updateManutMaq': return sb.from('maq_manutencao').update(_lowerKeys(data.row||{})).eq('id', data.id).select().then(_unwrap);
     case 'deleteManutMaq': return sb.from('maq_manutencao').delete().eq('id', data.id).then(_unwrap);
+
+    // ---------- NOTA FISCAL (NF-e/NFS-e) ----------
+    // Uma chamada só: lançamento(s) + notas + itens gravados numa transação no banco
+    // (função importar_nf). Em passos separados, uma nota recusada por duplicata deixaria
+    // o lançamento gravado sozinho — custo em dobro sem nota ligada.
+    case 'importarNf': return sb.rpc('importar_nf', { p: data }).then(_unwrap);
 
     // ---------- COMBOIO ----------
     case 'addTanque': return sb.from('tanques').insert(_comUsuarioAtual(_lowerKeys(data))).select().then(_unwrap);
@@ -2751,8 +2824,6 @@ function exportPagePDF(filterContainerId){
   html+='td{padding:6px 10px;border-bottom:1px solid '+brd+';color:#111111}';
   html+='.btn-edit-row,.btn-delete-row{display:none!important}';
   html+='.filters,.manut-filter-bar{display:none!important}';
-  html+='.manut-main-grid{display:grid;grid-template-columns:1fr 350px;gap:12px;margin-bottom:12px}';
-  html+='.manut-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}';
   html+='.manut-panel{background:'+surf+';border:1px solid '+brd+';border-radius:8px;padding:14px;page-break-inside:avoid}';
   html+='.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid '+brd+'}';
   html+='.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:14px;font-weight:600;color:#111111}';
@@ -2779,6 +2850,12 @@ function exportPagePDF(filterContainerId){
   html+='.manut-km-fill{height:100%;border-radius:2px}';
   html+='.manut-km-fill.g{background:#2ea043}.manut-km-fill.y{background:#d29922}.manut-km-fill.r{background:#f85149}';
   html+='.manut-km-bar-lbl,.manut-km-rest{font-size:9px;color:#555555}';
+  // tabela de KM & Próxima Troca: no PDF sai inteira (sem a rolagem da tela)
+  html+='#manutKmPanel{margin-top:12px}.manut-km-scroll{max-height:none;overflow:visible}';
+  html+='.manut-km-tbl{width:100%;border-collapse:collapse;font-size:11px}';
+  html+='.manut-km-tbl th{text-align:left;font-size:9px;color:#555555;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid '+brd+'}';
+  html+='.manut-km-tbl td{padding:5px 8px;border-bottom:1px solid '+brd+'}';
+  html+='.manut-km-num{font-family:"JetBrains Mono",monospace;font-size:10px}';
   html+='.manut-hist-ico{width:24px;height:24px;border-radius:6px;background:#f0f0f0;border:1px solid '+brd+';display:flex;align-items:center;justify-content:center;font-size:12px}';
   html+='.manut-hist-tipo{font-size:11px;font-weight:500;color:#111111}';
   html+='.manut-hist-km{font-size:10px;color:#555555}';
@@ -3566,6 +3643,7 @@ function renderMaqManutTable(){
   _maqMtPopSelects();
   var admin=maqIsAdmin();
   var addBtn=document.getElementById('maqMtAddBtn'); if(addBtn) addBtn.style.display=maqCanLancar()?'inline-flex':'none';
+  var nfeBtn=document.getElementById('maqNfeBtn'); if(nfeBtn) nfeBtn.style.display=maqCanLancar()?'inline-flex':'none';
   var di=(document.getElementById('maqMtIni')||{}).value||'';
   var df=(document.getElementById('maqMtFim')||{}).value||'';
   var fMaq=(document.getElementById('maqMtFiltroMaq')||{}).value||'';
@@ -3593,7 +3671,7 @@ function renderMaqManutTable(){
     if(!acts) acts='<span style="color:var(--text2)">—</span>';
     var tipoChip=r.TIPO==='Preventiva'?'<span class="maq-chip maq-chip-g">Preventiva</span>':(r.TIPO==='Corretiva'?'<span class="maq-chip maq-chip-y">Corretiva</span>':(r.TIPO==='Insumo'?'<span class="maq-chip maq-chip-b">Insumo</span>':'<span class="maq-chip maq-chip-gray">'+_maqEsc(r.TIPO||'-')+'</span>'));
     var fl=maqFlorestaDoLancamento(r);
-    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):'<span style="color:var(--text2)">— insumo (fazenda)</span>')+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):'<span style="color:var(--text2)">— insumo (fazenda)</span>')+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+(typeof nfSeloNotas==='function'&&nfSeloNotas('maq',r.ID)?'<div style="margin-top:3px">'+nfSeloNotas('maq',r.ID)+'</div>':'')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
@@ -3708,7 +3786,7 @@ function openMaqManutDelete(id){
   if(!maqIsAdmin()){ showToast('Apenas ADMIN pode excluir',true); return; }
   var r=findManutById(id); if(!r){ showToast('Registro não encontrado',true); return; }
   _maqMtDelId=String(id);
-  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):('— insumo · '+_maqEsc(r.FLORESTA_OPC||'sem fazenda')))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>';
+  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):('— insumo · '+_maqEsc(r.FLORESTA_OPC||'sem fazenda')))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>'+(typeof nfAvisoExclusao==='function'?nfAvisoExclusao('maq',id):'');
   document.getElementById('maqMtDelOverlay').classList.add('show');
 }
 function closeMaqManutDelete(){ document.getElementById('maqMtDelOverlay').classList.remove('show'); _maqMtDelId=null; }
@@ -3725,6 +3803,982 @@ function confirmMaqManutDelete(){
 }
 // ===== FIM MÓDULO MAQUINÁRIOS (parte 4) =====
 
+</script>
+<script>
+// ============================================================
+// ===== NOTAS FISCAIS: LEITURA DE XML (compartilhado) ========
+// Lê NF-e (peças, modelo 55) e NFS-e do Padrão Nacional (serviço) e devolve um formato
+// único; junta as notas de uma mesma OS e sugere os tipos de manutenção.
+// Usado pelos importadores de Maquinários (maq-nfe.js) e Caminhões (cam-nfe.js).
+// Só lógica — nada de tela aqui, para poder ser testado fora do navegador.
+// ============================================================
+var NF_CNPJ_EMPRESA='24378345000141'; // BIOMASSA CHAPARINI — confere o destinatário
+
+function _nfDig(s){ return String(s==null?'':s).replace(/[^0-9]/g,''); }
+function _nfEl(root,tag){ if(!root) return null; var e=root.getElementsByTagNameNS('*',tag); return e.length?e[0]:null; }
+function _nfTxt(root,tag){ var e=_nfEl(root,tag); return e?String(e.textContent||'').trim():''; }
+// Número vindo do XML: NF-e e NFS-e usam SEMPRE ponto decimal e nunca separador de
+// milhar ("2506.00", "7.0000", "130.200"). O num() do app é para o formato brasileiro e
+// leria "130.200" como cento e trinta mil — por isso parseFloat direto.
+function _nfNum(root,tag){ var t=_nfTxt(root,tag); if(!t) return 0; var n=parseFloat(t); return isNaN(n)?0:n; }
+function _nfR2(v){ return Math.round((v||0)*100)/100; }
+function _nfNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); }
+
+// ---------- leitura do arquivo ----------
+// Boa parte das NF-e vem em ISO-8859-1 (a declaração no topo do XML diz qual é). Ler
+// tudo como UTF-8 embaralharia os acentos ("JOSÉ" virando "JOS�"), então lemos os bytes,
+// olhamos a declaração e decodificamos com ela.
+function nfLerArquivo(f){
+  return new Promise(function(res){
+    var fr=new FileReader();
+    fr.onload=function(){
+      var buf=fr.result, bytes=new Uint8Array(buf), cabeca='';
+      for(var i=0;i<Math.min(bytes.length,200);i++) cabeca+=String.fromCharCode(bytes[i]);
+      var m=/encoding=["']([^"']+)["']/i.exec(cabeca);
+      var texto;
+      try{ texto=new TextDecoder((m?m[1]:'utf-8').toLowerCase()).decode(buf); }
+      catch(e){ texto=new TextDecoder('utf-8').decode(buf); }
+      res(nfParse(texto,f.name));
+    };
+    fr.onerror=function(){ res({arquivo:f.name,erro:'falha ao ler o arquivo'}); };
+    fr.readAsArrayBuffer(f);
+  });
+}
+
+// ---------- parse ----------
+function nfParse(texto,arquivo){
+  var b={arquivo:arquivo};
+  // BOM ou espaço antes da declaração <?xml ...?> faz o DOMParser recusar o arquivo
+  texto=String(texto||'').replace(/^﻿/,'').replace(/^\s+/,'');
+  var doc;
+  try{ doc=new DOMParser().parseFromString(texto,'text/xml'); }
+  catch(e){ b.erro='não foi possível ler o arquivo'; return b; }
+  if(!doc || !doc.documentElement || doc.getElementsByTagName('parsererror').length){ b.erro='XML inválido ou corrompido'; return b; }
+
+  var infNFe=_nfEl(doc,'infNFe');   if(infNFe)  return _nfParseNFe(doc,infNFe,b);
+  var infNFSe=_nfEl(doc,'infNFSe'); if(infNFSe) return _nfParseNFSe(doc,infNFSe,b);
+  // layout antigo de prefeitura (ABRASF): cada cidade tem o seu, não dá para ler com segurança
+  if(_nfEl(doc,'InfNfse')||_nfEl(doc,'CompNfse')||_nfEl(doc,'Rps')){ b.erro='NFS-e no formato antigo da prefeitura — ainda não suportada, lance à mão'; return b; }
+  b.erro='não é uma NF-e nem uma NFS-e'; return b;
+}
+
+function _nfParseNFe(doc,inf,b){
+  b.modelo='NFE';
+  // chave: atributo Id ("NFe" + 44 dígitos); o protocolo repete em chNFe
+  var chave=_nfDig(inf.getAttribute('Id')||'');
+  if(chave.length!==44) chave=_nfDig(_nfTxt(doc,'chNFe'));
+  if(chave.length!==44){ b.erro='NF-e sem chave de acesso válida (44 dígitos)'; return b; }
+
+  var ide=_nfEl(inf,'ide'), emit=_nfEl(inf,'emit'), dest=_nfEl(inf,'dest');
+  // o total sai de dentro de ICMSTot: "vProd" solto pegaria o primeiro item
+  var tot=_nfEl(_nfEl(inf,'total'),'ICMSTot');
+  b.chave=chave;
+  b.numero=_nfTxt(ide,'nNF');
+  b.serie=_nfTxt(ide,'serie');
+  b.data=String(_nfTxt(ide,'dhEmi')||_nfTxt(ide,'dEmi')).slice(0,10);
+  b.emitNome=_nfTxt(emit,'xNome');
+  b.emitCnpj=_nfDig(_nfTxt(emit,'CNPJ')||_nfTxt(emit,'CPF'));
+  b.destNome=_nfTxt(dest,'xNome');
+  b.destCnpj=_nfDig(_nfTxt(dest,'CNPJ')||_nfTxt(dest,'CPF'));
+  b.valor=_nfR2(_nfNum(tot,'vNF'));
+
+  b.itens=[];
+  var dets=inf.getElementsByTagNameNS('*','det'), soma=0;
+  for(var i=0;i<dets.length;i++){
+    var det=dets[i], prod=_nfEl(det,'prod'), imp=_nfEl(det,'imposto');
+    if(!prod) continue;
+    var bruto=_nfNum(prod,'vProd'), desc=_nfNum(prod,'vDesc');
+    // valor do item que efetivamente compõe o total da nota: com o desconto aplicado e
+    // somando frete/seguro/outros/ST/IPI do item. Com o valor cheio, a revisão da TECAR
+    // somaria R$ 5.700,62 em itens para uma nota de R$ 4.723,72.
+    var liq=_nfR2(bruto-desc+_nfNum(prod,'vFrete')+_nfNum(prod,'vSeg')+_nfNum(prod,'vOutro')
+                  +_nfNum(imp,'vICMSST')+_nfNum(imp,'vFCPST')+_nfNum(_nfEl(imp,'IPI'),'vIPI'));
+    soma+=liq;
+    b.itens.push({n_item:parseInt(det.getAttribute('nItem'),10)||(i+1), tipo:'PECA',
+      codigo:_nfTxt(prod,'cProd'), descricao:_nfTxt(prod,'xProd'),
+      quantidade:_nfNum(prod,'qCom'), unidade:_nfTxt(prod,'uCom'),
+      valor_bruto:bruto, desconto:desc, valor:liq});
+  }
+  if(b.itens.length && Math.abs(_nfR2(soma)-b.valor)>0.05)
+    b.avisoItens='a soma dos itens ('+_nfR2(soma).toFixed(2)+') não bate com o total da nota ('+b.valor.toFixed(2)+')';
+
+  b.textoLivre=_nfTxt(_nfEl(inf,'infAdic'),'infCpl');
+  _nfAplicarOS(b);
+  return _nfValidar(b);
+}
+
+function _nfParseNFSe(doc,inf,b){
+  b.modelo='NFSE';
+  var chave=_nfDig(inf.getAttribute('Id')||'');
+  if(chave.length!==50){ b.erro='NFS-e sem chave de acesso válida (50 dígitos)'; return b; }
+
+  var dps=_nfEl(inf,'infDPS')||_nfEl(doc,'infDPS');
+  var emit=_nfEl(inf,'emit'), toma=_nfEl(dps,'toma'), serv=_nfEl(dps,'serv');
+  b.chave=chave;
+  b.numero=_nfTxt(inf,'nNFSe');
+  b.serie=_nfTxt(dps,'serie');
+  b.data=String(_nfTxt(dps,'dhEmi')||_nfTxt(dps,'dCompet')||_nfTxt(inf,'dhProc')).slice(0,10);
+  b.emitNome=_nfTxt(emit,'xNome');
+  b.emitCnpj=_nfDig(_nfTxt(emit,'CNPJ')||_nfTxt(emit,'CPF'));
+  b.destNome=_nfTxt(toma,'xNome');
+  b.destCnpj=_nfDig(_nfTxt(toma,'CNPJ')||_nfTxt(toma,'CPF'));
+  // custo = valor do serviço menos desconto incondicionado. NÃO usar vLiq: retenções
+  // (ISS retido, IR, PIS...) reduzem o que se paga à oficina mas continuam sendo custo
+  // da empresa — só que recolhido ao governo.
+  var vServ=_nfNum(_nfEl(dps,'vServPrest'),'vServ')||_nfNum(dps,'vServ');
+  b.valor=_nfR2(vServ-_nfNum(dps,'vDescIncond'));
+
+  b.textoLivre=_nfTxt(serv,'xDescServ');
+  b.itens=_nfItensServico(b.textoLivre,b.valor);
+  _nfAplicarOS(b);
+  return _nfValidar(b);
+}
+
+// A NFS-e não tem lista de itens: o serviço é um texto livre (xDescServ). Sistema de
+// concessionária (ex.: TECAR) escreve "CÓDIGO - descrição = valor" em sequência; quando
+// dá para separar E a soma bate com o total, vira um item por serviço. Senão, um item só
+// com o texto inteiro — nunca inventar valor por item.
+function _nfItensServico(desc,total){
+  var re=/(\d{6,}) - (.+?) = (\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2})/g, m, itens=[], soma=0;
+  while((m=re.exec(desc||''))){
+    var v=parseFloat(m[3].replace(/\./g,'').replace(',','.'));
+    soma+=v;
+    itens.push({n_item:itens.length+1, tipo:'SERVICO', codigo:m[1], descricao:m[2].trim(),
+      quantidade:null, unidade:null, valor_bruto:v, desconto:0, valor:v});
+  }
+  if(itens.length && Math.abs(_nfR2(soma)-total)<0.02) return itens;
+  return [{n_item:1, tipo:'SERVICO', codigo:'', descricao:String(desc||'Serviço').slice(0,500),
+    quantidade:null, unidade:null, valor_bruto:total, desconto:0, valor:total}];
+}
+
+// OS, placa e KM que oficinas escrevem no texto livre da nota. Na TECAR:
+//   NF-e : "Numero OS: 12252 Placa: RSA3C28  Chassi: ... KM: 361176"
+//   NFS-e: "Numero O.S:12252 ,Chassi:... ,Placa:RSA3C28  ,KM:361176"
+// Sempre pelo rótulo ("Placa:", "KM:"): procurar formato de placa solto no texto pega
+// coisa errada — na nota da TECAR, "DIN7603" (norma de uma arruela) parece placa.
+function nfExtrairOS(texto){
+  var t=String(texto||''), r={os:'',placa:'',km:0}, m;
+  m=/N[uú]mero\s*(?:da\s*)?O\.?\s*S\.?\s*:?\s*(\d{3,})/i.exec(t) || /\bO\.?\s?S\.?\s*(?:n[º°o]\.?\s*)?:\s*(\d{3,})\b/i.exec(t);
+  if(m) r.os=m[1];
+  m=/Placa\s*:?\s*([A-Z]{3})[\s-]?(\d[A-Z0-9]\d{2})\b/i.exec(t);
+  if(m) r.placa=(m[1]+m[2]).toUpperCase();
+  m=/\bKM\s*:?\s*(\d{1,3}(?:\.\d{3})+|\d+)/i.exec(t);
+  if(m) r.km=parseInt(m[1].replace(/\./g,''),10)||0;
+  return r;
+}
+function _nfAplicarOS(b){ var x=nfExtrairOS(b.textoLivre); b.os=x.os; b.placa=x.placa; b.km=x.km; }
+
+function _nfValidar(b){
+  if(!b.data) b.erro='sem data de emissão';
+  else if(!(b.valor>0)) b.erro='valor total da nota é zero';
+  return b;
+}
+
+// ---------- o que já está no sistema ----------
+function nfDocPorChave(chave){
+  if(!chave || !DB.nfDocumentos) return null;
+  for(var i=0;i<DB.nfDocumentos.length;i++){ if(_nfDig(DB.nfDocumentos[i].CHAVE)===chave) return DB.nfDocumentos[i]; }
+  return null;
+}
+// Outra nota da MESMA OS da mesma oficina, já lançada antes (ex.: peças ontem, serviço hoje)
+function nfDocMesmaOS(emitCnpj,os){
+  if(!emitCnpj || !os || !DB.nfDocumentos) return null;
+  for(var i=0;i<DB.nfDocumentos.length;i++){
+    var d=DB.nfDocumentos[i];
+    if(_nfDig(d.EMITENTE_CNPJ)===emitCnpj && String(d.OS_NUMERO||'')===String(os)) return d;
+  }
+  return null;
+}
+function _nfDestinoDoc(d){ return d.MAQ_MANUTENCAO_ID?'maq':(d.MANUT_REALIZADA_ID?'caminhao':''); }
+
+// ---------- montar a lista de conferência ----------
+// Separa o que não entra (erro, repetido na seleção, já lançado) e junta o resto em
+// grupos: notas da mesma oficina com a mesma OS são UMA manutenção (peças + serviço).
+// Sem OS, junta pela mesma oficina + placa + data. Cada grupo vira um lançamento.
+function nfMontarLista(docs,destino){
+  var rejeitados=[], vistas={}, validos=[];
+  docs.forEach(function(d){
+    if(d.erro){ rejeitados.push({doc:d,motivo:'Erro',det:d.erro}); return; }
+    if(vistas[d.chave]){ rejeitados.push({doc:d,motivo:'Repetida',det:'selecionada duas vezes'}); return; }
+    vistas[d.chave]=1;
+    if(nfDocPorChave(d.chave)){ rejeitados.push({doc:d,motivo:'Já lançada',det:'já estava no sistema'}); return; }
+    validos.push(d);
+  });
+
+  var grupos=[], porChave={};
+  validos.forEach(function(d){
+    var k = d.os&&d.emitCnpj ? 'OS|'+d.emitCnpj+'|'+d.os
+          : (d.placa&&d.emitCnpj ? 'PD|'+d.emitCnpj+'|'+d.placa+'|'+d.data : 'DOC|'+d.chave);
+    var g=porChave[k];
+    if(!g){ g=porChave[k]={docs:[]}; grupos.push(g); }
+    g.docs.push(d);
+  });
+
+  grupos.forEach(function(g){
+    // NF-e (peças) primeiro, depois NFS-e (serviço)
+    g.docs.sort(function(a,b){ return a.modelo===b.modelo?0:(a.modelo==='NFE'?-1:1); });
+    var d0=g.docs[0];
+    g.emitNome=d0.emitNome; g.emitCnpj=d0.emitCnpj; g.os=d0.os;
+    g.data=g.docs.map(function(d){return d.data;}).sort()[0];
+    g.placa=''; g.km=0;
+    g.docs.forEach(function(d){ if(!g.placa&&d.placa) g.placa=d.placa; if(!g.km&&d.km) g.km=d.km; });
+    g.pecas=_nfR2(g.docs.filter(function(d){return d.modelo==='NFE';}).reduce(function(a,d){return a+d.valor;},0));
+    g.servicos=_nfR2(g.docs.filter(function(d){return d.modelo==='NFSE';}).reduce(function(a,d){return a+d.valor;},0));
+    g.total=_nfR2(g.pecas+g.servicos);
+    g.itens=[]; g.docs.forEach(function(d){ g.itens=g.itens.concat(d.itens||[]); });
+    g.outroCnpj=g.docs.filter(function(d){ return d.destCnpj && d.destCnpj!==NF_CNPJ_EMPRESA; }).map(function(d){return d.destNome||d.destCnpj;})[0]||'';
+
+    // a outra nota desta OS já foi lançada? então esta se ANEXA ao lançamento existente
+    var irma=nfDocMesmaOS(g.emitCnpj,g.os);
+    if(irma){
+      var dest=_nfDestinoDoc(irma);
+      if(dest!==destino) g.erro='a outra nota desta OS (nº '+irma.NUMERO+') foi lançada em '+(dest==='maq'?'Maquinários':'Caminhões');
+      else g.anexarA={id:dest==='maq'?irma.MAQ_MANUTENCAO_ID:irma.MANUT_REALIZADA_ID, numero:irma.NUMERO};
+    }
+  });
+  return {grupos:grupos, rejeitados:rejeitados};
+}
+
+// ---------- sugestão de tipo (caminhões) ----------
+// Pelo texto de cada peça/serviço. "item" reconhece o que foi feito; "tipo" acha o nome
+// correspondente no catálogo (que tem "Filro de Óleo", com erro de digitação — por isso
+// FILT?RO). Freio só com troca de peça de verdade: "tambor de freio para determinar o
+// diagnóstico" foi só verificação (confirmado pelo usuário) e não pode zerar o alerta.
+var NF_REGRAS_TIPO=[
+  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:/OLEO\s+(DO\s+|DE\s+)?MOTOR/},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:/FILT?RO\s+DE\s+OLEO/},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:/FILTRO\s+DE\s+AR\b/},
+  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:/FILTRO\s+DE\s+COMBUST/},
+  {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:/FREIO/},
+  {item:/CORREIA\s+DENTADA/, tipo:/CORREIA\s+DENTADA/},
+  {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:/ALINHAMENTO/}
+];
+// Tipos que o importador oferece: os de pneu ficam de fora porque exigem marcar posição
+// e número de cada pneu no diagrama, o que a nota não traz.
+function nfTiposImportaveis(){
+  return (DB.manutProgramada||[]).filter(function(p){ return p.TIPO_MANUTENCAO && !p.CONTROLA_PNEUS; })
+    .map(function(p){ return p.TIPO_MANUTENCAO; });
+}
+function nfSugerirTipos(itens,tipos){
+  var sugeridos=[];
+  NF_REGRAS_TIPO.forEach(function(r){
+    var bateu=(itens||[]).some(function(it){ var t=_nfNorm(it.descricao); return r.item.test(t) && !(r.nao && r.nao.test(t)); });
+    if(!bateu) return;
+    for(var i=0;i<tipos.length;i++){
+      if(r.tipo.test(_nfNorm(tipos[i]))){ if(sugeridos.indexOf(tipos[i])<0) sugeridos.push(tipos[i]); break; }
+    }
+  });
+  // na ordem do catálogo, que é a ordem em que viram lançamentos (o 1º é o principal)
+  return tipos.filter(function(t){ return sugeridos.indexOf(t)>=0; });
+}
+
+// ---------- textos ----------
+function nfRotuloDoc(d){ return (d.modelo==='NFSE'?'NFS-e ':'NF-e ')+(d.numero||'?'); }
+function nfRotuloNotas(g){ return g.docs.map(nfRotuloDoc).join(' + '); }
+// Resumo curto para o campo de serviço/observação — o detalhe completo fica nos itens
+function nfResumoItens(g){
+  var pc=g.itens.filter(function(i){return i.tipo==='PECA';}), sv=g.itens.filter(function(i){return i.tipo==='SERVICO';});
+  if(g.itens.length===1){
+    var it=g.itens[0];
+    return it.descricao+(it.quantidade?(' ('+fmt(it.quantidade,(it.quantidade%1)?2:0)+(it.unidade?' '+it.unidade:'')+')'):'');
+  }
+  var partes=[];
+  if(g.os) partes.push('OS '+g.os);
+  if(pc.length) partes.push(pc.length+(pc.length===1?' peça':' peças'));
+  if(sv.length) partes.push(sv.length+(sv.length===1?' serviço':' serviços'));
+  return partes.join(' · ');
+}
+
+// O banco é a autoridade sobre duplicata: mesmo que a conferência local não perceba
+// (página com JS em cache, outra aba, outro usuário importando junto), a gravação é
+// recusada. Sem tradução, isso chegava como "duplicate key value violates unique
+// constraint" resumido em "1 com erro" — e parecia que nada tinha acontecido.
+function nfErroAmigavel(msg){
+  var m=String((msg&&msg.message)||msg||'');
+  if(/nf_documentos_chave_key|duplicate key|23505/i.test(m)) return 'esta nota já foi lançada no sistema';
+  if(/chave_formato/i.test(m)) return 'chave da nota em formato inválido';
+  if(/destino_check/i.test(m)) return 'faltou escolher máquina ou fazenda';
+  if(/tipo_check/i.test(m)) return 'tipo inválido';
+  if(/placa_fkey/i.test(m)) return 'placa não cadastrada em Cadastro → Caminhões';
+  if(/importar_nf:\s*/i.test(m)) return m.replace(/^.*importar_nf:\s*/i,'');
+  if(/row-level security|permission denied|42501/i.test(m)) return 'sem permissão para lançar';
+  return m||'erro desconhecido';
+}
+// ===== FIM NOTAS FISCAIS: LEITURA =====
+</script>
+<script>
+// ============================================================
+// ===== NOTAS FISCAIS: TELA (compartilhado) ==================
+// Janela de detalhe (peças e serviços de cada nota ligada a um lançamento) e a caixa de
+// avisos dos importadores. Lógica de leitura fica em js/nf-parse.js.
+// ============================================================
+function _nfEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Caminhão: registros "acompanhantes" de uma revisão não guardam nota — ela fica no principal
+function _nfIdPrincipal(destino,id){
+  if(destino!=='caminhao') return id;
+  var r=(typeof findManutRealById==='function')?findManutRealById(id):null;
+  return (r && r.NF_PRINCIPAL_ID)?r.NF_PRINCIPAL_ID:id;
+}
+function nfDocsDoLancamento(destino,id){
+  var alvo=String(_nfIdPrincipal(destino,id)), campo=destino==='maq'?'MAQ_MANUTENCAO_ID':'MANUT_REALIZADA_ID';
+  return (DB.nfDocumentos||[]).filter(function(d){ return String(d[campo])===alvo; })
+    .sort(function(a,b){ return a.MODELO===b.MODELO?0:(a.MODELO==='NFE'?-1:1); });
+}
+// Selo clicável "📄 NF-e 19311 + NFS-e 1118" (vazio quando o lançamento não veio de nota)
+function nfSeloNotas(destino,id){
+  var docs=nfDocsDoLancamento(destino,id);
+  if(!docs.length) return '';
+  var txt=docs.map(function(d){ return (d.MODELO==='NFSE'?'NFS-e ':'NF-e ')+d.NUMERO; }).join(' + ');
+  return '<span class="nf-selo" title="Ver peças e serviços da nota" onclick="nfAbrirDetalhe(\''+destino+'\',\''+id+'\')">📄 '+_nfEsc(txt)+'</span>';
+}
+
+function nfAbrirDetalhe(destino,id){
+  var docs=nfDocsDoLancamento(destino,id);
+  if(!docs.length){ showToast('Este lançamento não veio de nota fiscal',true); return; }
+  var total=0, h='';
+  docs.forEach(function(d){
+    var itens=(DB.nfItens||[]).filter(function(i){ return String(i.DOCUMENTO_ID)===String(d.ID); })
+      .sort(function(a,b){ return (a.N_ITEM||0)-(b.N_ITEM||0); });
+    var servico=d.MODELO==='NFSE', temDesc=itens.some(function(i){ return num(i.DESCONTO)>0; });
+    total+=num(d.VALOR_TOTAL);
+    h+='<div class="nf-det-doc">'+
+       '<div class="nf-det-cab"><div><strong>'+(servico?'🧾 NFS-e ':'📄 NF-e ')+_nfEsc(d.NUMERO)+'</strong> '+
+       '<span class="maq-chip '+(servico?'maq-chip-b':'maq-chip-g')+'">'+(servico?'Serviços':'Peças')+'</span>'+
+       '<div class="nf-det-sub">'+_nfEsc(d.EMITENTE_NOME||'-')+' · '+_nfEsc(formatDateBR(d.DATA_EMISSAO))+(d.OS_NUMERO?(' · OS '+_nfEsc(d.OS_NUMERO)):'')+'</div></div>'+
+       '<div class="nf-det-valor">'+fmtR(num(d.VALOR_TOTAL))+'</div></div>'+
+       '<div class="table-scroll"><table class="maq-table"><thead><tr><th>Descrição</th>'+(servico?'':'<th>Qtd</th>')+
+       (temDesc?'<th>Valor cheio</th><th>Desconto</th>':'')+'<th>Valor</th></tr></thead><tbody>';
+    itens.forEach(function(i){
+      var q=num(i.QUANTIDADE);
+      h+='<tr><td>'+_nfEsc(i.DESCRICAO)+'</td>'+
+         (servico?'':'<td class="maq-mono">'+(q?(fmt(q,(q%1)?2:0)+(i.UNIDADE?' '+_nfEsc(i.UNIDADE):'')):'—')+'</td>')+
+         (temDesc?'<td class="maq-mono">'+fmtR(num(i.VALOR_BRUTO))+'</td><td class="maq-mono" style="color:var(--green)">'+(num(i.DESCONTO)?'− '+fmtR(num(i.DESCONTO)):'—')+'</td>':'')+
+         '<td class="maq-mono"><strong>'+fmtR(num(i.VALOR))+'</strong></td></tr>';
+    });
+    h+='</tbody></table></div>'+
+       '<div class="nf-det-chave">Chave de acesso: <span class="maq-mono">'+_nfEsc(d.CHAVE)+'</span></div></div>';
+  });
+  if(docs.length>1) h+='<div class="nf-det-total">Total das notas: <strong>'+fmtR(Math.round(total*100)/100)+'</strong></div>';
+  document.getElementById('nfDetConteudo').innerHTML=h;
+  document.getElementById('nfDetOverlay').classList.add('show');
+}
+function nfFecharDetalhe(){ document.getElementById('nfDetOverlay').classList.remove('show'); }
+
+// Texto para os modais de exclusão: o que mais some junto com o lançamento
+function nfAvisoExclusao(destino,id){
+  var docs=nfDocsDoLancamento(destino,id), linhas=[];
+  if(destino==='caminhao'){
+    var r=findManutRealById(id);
+    if(r && r.NF_PRINCIPAL_ID){
+      var p=findManutRealById(r.NF_PRINCIPAL_ID);
+      return '<div class="nf-aviso-exc">Este registro faz parte da revisão lançada como <strong>'+_nfEsc(p?p.TIPO_MANUTENCAO:'?')+'</strong>. Só ele será apagado; a nota e o valor continuam no registro principal.</div>';
+    }
+    var acomp=DB.manutRealizada.filter(function(x){ return String(x.NF_PRINCIPAL_ID)===String(id); });
+    if(acomp.length) linhas.push(acomp.length+' registro(s) da mesma revisão ('+_nfEsc(acomp.map(function(x){return x.TIPO_MANUTENCAO;}).join(', '))+')');
+  }
+  if(docs.length) linhas.push('a(s) nota(s) '+_nfEsc(docs.map(function(d){ return (d.MODELO==='NFSE'?'NFS-e ':'NF-e ')+d.NUMERO; }).join(' e '))+' com todos os itens — poderão ser importadas de novo');
+  if(!linhas.length) return '';
+  return '<div class="nf-aviso-exc">⚠️ Também serão apagados:<br>• '+linhas.join('<br>• ')+'</div>';
+}
+
+// ---------- caixa de avisos dos importadores ----------
+var _NF_MOTIVOS={
+  'Já lançada':{cor:'var(--yellow)',ic:'⚠️',msg:'já tinha sido importada antes e foi ignorada'},
+  'Repetida'  :{cor:'var(--yellow)',ic:'⚠️',msg:'foi selecionada duas vezes — só uma entra'},
+  'Erro'      :{cor:'var(--red)',   ic:'❌',msg:'não pôde ser lida'},
+  'Recusada'  :{cor:'var(--red)',   ic:'❌',msg:'foi recusada pelo banco'}
+};
+// Aviso no topo, agrupado por motivo e com o número das notas. Um chip discreto na
+// linha passava batido e o botão de importar sumia sem explicar nada.
+function nfRenderAvisos(elId,rejeitados,grupos){
+  var por={}, extra='';
+  (rejeitados||[]).forEach(function(r){
+    var d=r.doc||{};
+    (por[r.motivo]=por[r.motivo]||[]).push((d.numero?nfRotuloDoc(d):(d.arquivo||'?'))+(r.motivo==='Erro'||r.motivo==='Recusada'?': '+r.det:''));
+  });
+  var h='';
+  Object.keys(por).forEach(function(k){
+    var t=_NF_MOTIVOS[k]||{cor:'var(--text2)',ic:'•',msg:k}, l=por[k];
+    h+='<div style="color:'+t.cor+';margin-bottom:5px">'+t.ic+' <strong>'+l.length+'</strong> nota(s) '+t.msg+
+       ' <span style="color:var(--text2)">('+_nfEsc(l.slice(0,6).join(' · '))+(l.length>6?(' · +'+(l.length-6)):'')+')</span></div>';
+  });
+  (grupos||[]).forEach(function(g){
+    if(g.outroCnpj) extra+='<div style="color:var(--orange);margin-bottom:5px">❗ '+_nfEsc(nfRotuloNotas(g))+': destinatário não é a Biomassa ('+_nfEsc(g.outroCnpj)+') — confira antes de importar</div>';
+    if(g.erro) extra+='<div style="color:var(--red);margin-bottom:5px">❌ '+_nfEsc(nfRotuloNotas(g))+': '+_nfEsc(g.erro)+'</div>';
+  });
+  h+=extra;
+  var el=document.getElementById(elId);
+  el.innerHTML=h;
+  el.style.display=h?'':'none';
+}
+
+// Lê os arquivos escolhidos; qualquer falha aqui vira aviso na tela (sem isto, um erro
+// virava "promise rejeitada" no console e a tela simplesmente não mudava).
+function nfLerSelecao(inputEl,destino,cb){
+  var arqs=inputEl.files?Array.prototype.slice.call(inputEl.files):[];
+  if(!arqs.length) return;
+  Promise.all(arqs.map(nfLerArquivo)).then(function(docs){
+    cb(nfMontarLista(docs,destino));
+  }).catch(function(e){
+    console.error('[NF] falha ao ler os XMLs:',e);
+    showToast('❌ Erro ao ler os XMLs: '+((e&&e.message)||e),true);
+  });
+}
+
+// Grava grupo a grupo, em sequência: em lote grande, disparar tudo de uma vez entope a
+// conexão e deixa o erro de uma nota difícil de ligar ao arquivo que o causou.
+function nfGravarGrupos(grupos,montarPayload,btn,aoTerminar){
+  var ok=0, falhas=[], rotulo=btn.textContent;
+  btn.disabled=true;
+  (function proximo(k){
+    if(k>=grupos.length){ btn.disabled=false; btn.textContent=rotulo; aoTerminar(ok,falhas); return; }
+    btn.textContent='Importando '+(k+1)+'/'+grupos.length+'...';
+    saveToSheets('importarNf',montarPayload(grupos[k]),function(sucesso,res){
+      if(sucesso) ok++;
+      else falhas.push({grupo:grupos[k],det:nfErroAmigavel(res&&res.error)});
+      proximo(k+1);
+    });
+  })(0);
+}
+function nfDocPayload(d){
+  return {chave:d.chave, modelo:d.modelo, numero:d.numero, serie:d.serie, data_emissao:d.data,
+    emitente_cnpj:d.emitCnpj, emitente_nome:d.emitNome, valor_total:d.valor, os_numero:d.os||'',
+    itens:d.itens||[]};
+}
+// ===== FIM NOTAS FISCAIS: TELA =====
+</script>
+<script>
+// ============================================================
+// ===== MAQUINÁRIOS: IMPORTAR NF-e / NFS-e (XML) =============
+// Uma linha por manutenção: a NF-e das peças e a NFS-e da mão de obra da mesma OS viram
+// UM lançamento (peças → custo_pecas, serviço → custo_mao_obra). O usuário confere e
+// aponta o destino (máquina e/ou fazenda) — nada entra sem passar pela conferência.
+// Leitura dos XML: js/nf-parse.js · detalhe/avisos/gravação: js/nf-ui.js
+// ============================================================
+var _maqNfe={grupos:[],rejeitados:[]};
+
+function openMaqNfeModal(){
+  if(!maqCanLancar()){ showToast('Sem permissão',true); return; }
+  _maqNfe={grupos:[],rejeitados:[]};
+  document.getElementById('maqNfeFiles').value='';
+  document.getElementById('maqNfeStep2').style.display='none';
+  document.getElementById('maqNfeImportBtn').style.display='none';
+  document.getElementById('maqNfeResumo').innerHTML='';
+  document.getElementById('maqNfeAvisos').style.display='none';
+  document.getElementById('maqNfeOverlay').classList.add('show');
+}
+function closeMaqNfeModal(){ document.getElementById('maqNfeOverlay').classList.remove('show'); _maqNfe={grupos:[],rejeitados:[]}; }
+
+function maqNfeLerArquivos(){
+  nfLerSelecao(document.getElementById('maqNfeFiles'),'maq',function(L){
+    // compra sem OS (insumo a granel) já nasce como Insumo; com serviço/OS o usuário escolhe
+    L.grupos.forEach(function(g){ g.maq=''; g.floresta=''; g.tipo=(!g.os && !g.servicos)?'Insumo':''; });
+    _maqNfe=L;
+    _maqNfeRender();
+    var n=L.grupos.filter(_maqNfeImportavel).length, fora=L.rejeitados.length+L.grupos.filter(function(g){return g.erro;}).length;
+    if(fora) showToast('⚠️ '+fora+' nota(s) ficaram de fora — veja o aviso no topo',true);
+    else if(n) showToast('✅ '+n+' lançamento(s) montados — escolha o destino e confira');
+  });
+}
+
+function _maqNfeImportavel(g){ return !g.erro; }
+function _maqNfeCompleto(g){ return g.anexarA || ((g.maq||g.floresta) && g.tipo); }
+
+function _maqNfeOpcoesMaq(sel){
+  var o='<option value="">— só fazenda —</option>';
+  DB.maquinas.slice().sort(function(a,b){return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'})})
+    .forEach(function(m){ o+='<option value="'+m.ID+'"'+(String(sel)===String(m.ID)?' selected':'')+'>'+_nfEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  return o;
+}
+function _maqNfeOpcoesFl(sel){
+  var o='<option value="">—</option>';
+  _maqOrdAlfa(locaisFiltrados(BASE.localCarga,'Ativos')).forEach(function(fl){ o+='<option'+(String(sel)===String(fl)?' selected':'')+'>'+_nfEsc(fl)+'</option>'; });
+  return o;
+}
+function _maqNfeOpcoesTipo(sel,vazio){
+  var o=vazio?'<option value="">—</option>':'';
+  MAQ_MANUT_TIPOS.forEach(function(t){ o+='<option'+(String(sel)===t?' selected':'')+'>'+t+'</option>'; });
+  return o;
+}
+
+function _maqNfeRender(){
+  var G=_maqNfe.grupos;
+  document.getElementById('maqNfeStep2').style.display='';
+  document.getElementById('maqNfeBulkMaq').innerHTML=_maqNfeOpcoesMaq('');
+  document.getElementById('maqNfeBulkTipo').innerHTML=_maqNfeOpcoesTipo('',true);
+  document.getElementById('maqNfeBulkFl').innerHTML=_maqNfeOpcoesFl('');
+  nfRenderAvisos('maqNfeAvisos',_maqNfe.rejeitados,G);
+
+  var cont=document.getElementById('maqNfeTable');
+  var imp=G.filter(_maqNfeImportavel);
+  if(!imp.length){ cont.innerHTML=''; _maqNfeResumo(); return; }
+  var h='<table class="maq-table"><thead><tr><th>Notas</th><th>Data</th><th>Fornecedor</th><th>Itens</th><th>Peças</th><th>Serviço</th><th>Máquina</th><th>Tipo</th><th>Fazenda</th><th></th></tr></thead><tbody>';
+  G.forEach(function(g,i){
+    if(g.erro) return;
+    var destino;
+    if(g.anexarA){
+      destino='<td colspan="3" style="font-size:11.5px"><span class="maq-chip maq-chip-b">Anexar</span> '+
+              'soma ao lançamento da '+_nfEsc('NF-e '+g.anexarA.numero)+', já importada (mesma OS '+_nfEsc(g.os)+')</td>';
+    } else {
+      destino='<td><select onchange="_maqNfeSet('+i+',&quot;maq&quot;,this.value)">'+_maqNfeOpcoesMaq(g.maq)+'</select></td>'+
+              '<td><select onchange="_maqNfeSet('+i+',&quot;tipo&quot;,this.value)">'+_maqNfeOpcoesTipo(g.tipo,true)+'</select></td>'+
+              '<td><select onchange="_maqNfeSet('+i+',&quot;floresta&quot;,this.value)">'+_maqNfeOpcoesFl(g.floresta)+'</select></td>';
+    }
+    h+='<tr>'+
+      '<td class="maq-mono" style="font-size:11.5px">'+_nfEsc(nfRotuloNotas(g))+(g.os?'<div style="color:var(--text2)">OS '+_nfEsc(g.os)+'</div>':'')+'</td>'+
+      '<td class="maq-mono">'+_nfEsc(formatDateBR(g.data))+'</td>'+
+      '<td style="max-width:150px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
+      '<td style="max-width:200px;font-size:11px">'+_nfEsc(nfResumoItens(g))+'</td>'+
+      '<td class="maq-mono">'+(g.pecas?fmtR(g.pecas):'—')+'</td>'+
+      '<td class="maq-mono">'+(g.servicos?fmtR(g.servicos):'—')+'</td>'+
+      destino+
+      '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
+      '</tr>';
+  });
+  cont.innerHTML=h+'</tbody></table>';
+  _maqNfeResumo();
+}
+
+function _maqNfeResumo(){
+  var imp=_maqNfe.grupos.filter(_maqNfeImportavel);
+  var incompletos=imp.filter(function(g){ return !_maqNfeCompleto(g); });
+  var total=imp.reduce(function(a,g){ return a+g.total; },0);
+  var msg;
+  if(!imp.length) msg='<strong>Nada para importar.</strong> <span style="color:var(--text2)">Todas as notas selecionadas ficaram de fora pelo motivo acima.</span>';
+  else {
+    msg='<strong>'+imp.length+'</strong> lançamento(s), somando <strong>'+fmtR(Math.round(total*100)/100)+'</strong>';
+    if(incompletos.length) msg+='<div style="color:var(--yellow);margin-top:4px">⚠️ '+incompletos.length+' sem destino (máquina ou fazenda) ou sem tipo — complete para poder importar.</div>';
+  }
+  document.getElementById('maqNfeResumo').innerHTML=msg;
+  var btn=document.getElementById('maqNfeImportBtn');
+  btn.style.display=imp.length?'inline-flex':'none';
+  btn.disabled=!imp.length||incompletos.length>0;
+  btn.textContent='📥 Importar '+imp.length+' lançamento(s)';
+}
+
+function _maqNfeSet(i,campo,valor){ if(_maqNfe.grupos[i]){ _maqNfe.grupos[i][campo]=valor; _maqNfeResumo(); } }
+function _maqNfeRemover(i){ _maqNfe.grupos.splice(i,1); _maqNfeRender(); }
+function maqNfeAplicarTodos(campo){
+  var id={maq:'maqNfeBulkMaq',tipo:'maqNfeBulkTipo',floresta:'maqNfeBulkFl'}[campo];
+  var v=(document.getElementById(id)||{}).value||'';
+  if(campo==='tipo' && !v){ showToast('Escolha o tipo primeiro',true); return; }
+  _maqNfe.grupos.forEach(function(g){ if(!g.erro && !g.anexarA) g[campo]=v; });
+  _maqNfeRender();
+}
+
+function _maqNfePayload(g){
+  var docs=g.docs.map(nfDocPayload);
+  if(g.anexarA) return {destino:'maq', anexar_a:g.anexarA.id, documentos:docs};
+  return {destino:'maq', documentos:docs, lancamentos:[{
+    data:g.data, id_maquina:g.maq||'', tipo:g.tipo, servico:nfResumoItens(g),
+    custo_pecas:g.pecas, custo_mao_obra:g.servicos, custo_terceiros:0,
+    oficina_fornecedor:g.emitNome||'', floresta_opc:g.floresta||'',
+    obs:nfRotuloNotas(g)+(g.os?' · OS '+g.os:''),
+    usuario_nome_legado:currentUserData?currentUserData.nome:''
+  }]};
+}
+
+function maqNfeImportar(){
+  var imp=_maqNfe.grupos.filter(_maqNfeImportavel);
+  if(!imp.length) return;
+  if(imp.some(function(g){ return !_maqNfeCompleto(g); })){ showToast('Complete destino e tipo de todas as linhas',true); return; }
+  nfGravarGrupos(imp,_maqNfePayload,document.getElementById('maqNfeImportBtn'),function(ok,falhas){
+    // recarrega sempre: mesmo com falhas, o que entrou tem que aparecer na tabela
+    loadFromSheets(function(){
+      if(document.getElementById('pageMaquinarios').classList.contains('active')) renderMaqManutTable();
+      if(!falhas.length){ showToast('✅ '+ok+' lançamento(s) importado(s)!'); closeMaqNfeModal(); return; }
+      // modal FICA aberto mostrando só o que o banco recusou e por quê
+      console.warn('NF recusadas pelo banco:',falhas);
+      _maqNfe.grupos=[];
+      _maqNfe.rejeitados=[];
+      falhas.forEach(function(f){ f.grupo.docs.forEach(function(d){ _maqNfe.rejeitados.push({doc:d,motivo:'Recusada',det:f.det}); }); });
+      _maqNfeRender();
+      showToast('⚠️ '+ok+' importado(s), '+falhas.length+' recusado(s) — motivo na tela',true);
+    });
+  });
+}
+// ===== FIM IMPORTAR NF (MAQUINÁRIOS) =====
+</script>
+<script>
+// ============================================================
+// ===== CAMINHÕES: IMPORTAR NF-e / NFS-e (XML) ===============
+// Uma revisão costuma cobrir vários tipos do catálogo (óleo, filtro de ar, filtro de
+// combustível...) e manut_realizada guarda um tipo por linha. Então cada tipo marcado
+// vira um registro — é o que zera o alerta de KM de cada um — mas o VALOR e as notas
+// ficam só no primeiro (principal); os outros apontam para ele (nf_principal_id). Sem
+// isso o custo de uma revisão apareceria uma vez por tipo.
+// Placa e KM vêm do texto da nota quando a oficina escreve (a TECAR escreve); senão,
+// o usuário escolhe/digita. Leitura: js/nf-parse.js · tela comum: js/nf-ui.js
+// ============================================================
+var _camNfe={grupos:[],rejeitados:[]};
+
+function _camNfePodeLancar(){ return currentUserData && (currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'); }
+
+function openCamNfeModal(){
+  if(!_camNfePodeLancar()){ showToast('Sem permissão',true); return; }
+  _camNfe={grupos:[],rejeitados:[]};
+  document.getElementById('camNfeFiles').value='';
+  document.getElementById('camNfeLista').innerHTML='';
+  document.getElementById('camNfeResumo').innerHTML='';
+  document.getElementById('camNfeAvisos').style.display='none';
+  document.getElementById('camNfeImportBtn').style.display='none';
+  document.getElementById('camNfeOverlay').classList.add('show');
+}
+function closeCamNfeModal(){ document.getElementById('camNfeOverlay').classList.remove('show'); _camNfe={grupos:[],rejeitados:[]}; }
+
+function camNfeLerArquivos(){
+  nfLerSelecao(document.getElementById('camNfeFiles'),'caminhao',function(L){
+    var tipos=nfTiposImportaveis();
+    L.grupos.forEach(function(g){
+      // placa da nota só vale se estiver cadastrada; senão o usuário escolhe
+      g.placaNota=g.placa;
+      g.placa=(g.placa && BASE.placas.indexOf(g.placa)>=0)?g.placa:'';
+      g.kmNota=g.km;
+      g.tipos=nfSugerirTipos(g.itens,tipos);
+      g.sugeridos=g.tipos.slice();
+    });
+    _camNfe=L;
+    _camNfeRender();
+    var fora=L.rejeitados.length+L.grupos.filter(function(g){return g.erro;}).length;
+    if(fora) showToast('⚠️ '+fora+' nota(s) ficaram de fora — veja o aviso no topo',true);
+    else if(L.grupos.length) showToast('✅ '+L.grupos.length+' manutenção(ões) montadas — confira placa, KM e tipos');
+  });
+}
+
+function _camNfeImportavel(g){ return !g.erro; }
+function _camNfeFaltando(g){
+  if(g.anexarA) return '';
+  if(!g.placa) return 'placa';
+  if(!(g.km>0)) return 'KM';
+  if(!g.tipos.length) return 'tipo';
+  return '';
+}
+// KM lido da nota é conferido contra a última manutenção da placa: menor que ela quase
+// sempre é erro de digitação da oficina ou nota de outro caminhão.
+function _camNfeUltimoKm(placa){
+  var mx=0;
+  DB.manutRealizada.forEach(function(r){ if(r.PLACA===placa && num(r.KM_NA_MANUTENCAO)>mx) mx=num(r.KM_NA_MANUTENCAO); });
+  return mx;
+}
+
+function _camNfeRender(){
+  var G=_camNfe.grupos, tipos=nfTiposImportaveis();
+  nfRenderAvisos('camNfeAvisos',_camNfe.rejeitados,G);
+  var h='';
+  G.forEach(function(g,i){
+    if(g.erro) return;
+    var cab='<div class="nf-card-cab"><div><strong>'+_nfEsc(g.emitNome||'-')+'</strong>'+
+      '<div class="nf-det-sub">'+_nfEsc(formatDateBR(g.data))+(g.os?' · OS '+_nfEsc(g.os):'')+' · '+_nfEsc(nfRotuloNotas(g))+'</div></div>'+
+      '<span class="maq-act" title="Tirar da lista" onclick="_camNfeRemover('+i+')">✖</span></div>';
+    var valores='<div class="nf-card-valores">'+
+      (g.pecas?'<span>📄 Peças <strong>'+fmtR(g.pecas)+'</strong></span>':'')+
+      (g.servicos?'<span>🧾 Serviço <strong>'+fmtR(g.servicos)+'</strong></span>':'')+
+      '<span>Total <strong>'+fmtR(g.total)+'</strong></span>'+
+      '<span style="color:var(--text2)">'+_nfEsc(nfResumoItens(g))+'</span></div>';
+
+    if(g.anexarA){
+      h+='<div class="nf-card">'+cab+valores+
+         '<div class="nf-card-anexo"><span class="maq-chip maq-chip-b">Anexar</span> A NF-e '+_nfEsc(g.anexarA.numero)+
+         ' desta mesma OS já foi lançada. Esta nota vai <strong>somar</strong> ao valor daquela revisão, sem criar registros novos.</div></div>';
+      return;
+    }
+
+    var opPl='<option value="">— escolha —</option>';
+    BASE.placas.forEach(function(p){ opPl+='<option'+(p===g.placa?' selected':'')+'>'+_nfEsc(p)+'</option>'; });
+    var avPlaca='';
+    if(g.placaNota && g.placa===g.placaNota) avPlaca='<span class="nf-lido">✓ lida da nota</span>';
+    else if(g.placaNota) avPlaca='<span class="nf-alerta">a nota diz '+_nfEsc(g.placaNota)+', que não está cadastrada</span>';
+    var avKm='';
+    if(g.kmNota && g.km===g.kmNota) avKm='<span class="nf-lido">✓ lido da nota</span>';
+    var ult=g.placa?_camNfeUltimoKm(g.placa):0;
+    if(g.km>0 && ult && g.km<ult) avKm+=' <span class="nf-alerta">menor que a última manutenção desta placa ('+fmt(ult,0)+' km)</span>';
+
+    var chk='';
+    tipos.forEach(function(t){
+      var mk=g.tipos.indexOf(t)>=0, sug=g.sugeridos.indexOf(t)>=0;
+      chk+='<label class="nf-tipo'+(mk?' on':'')+'"><input type="checkbox"'+(mk?' checked':'')+
+           ' onchange="_camNfeTipo('+i+',this)" data-tipo="'+_nfEsc(t)+'"> '+_nfEsc(t)+(sug?' <em>sugerido</em>':'')+'</label>';
+    });
+
+    h+='<div class="nf-card">'+cab+valores+
+      '<div class="nf-card-campos">'+
+        '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
+        '<div><label>KM *</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
+      '</div>'+
+      '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro</span></label><div>'+chk+'</div></div>'+
+      '</div>';
+  });
+  document.getElementById('camNfeLista').innerHTML=h;
+  _camNfeResumo();
+}
+
+function _camNfeResumo(){
+  var imp=_camNfe.grupos.filter(_camNfeImportavel);
+  var faltando=imp.filter(function(g){ return _camNfeFaltando(g); });
+  var total=imp.reduce(function(a,g){ return a+g.total; },0);
+  var msg;
+  if(!imp.length) msg='<strong>Nada para importar.</strong> <span style="color:var(--text2)">Todas as notas selecionadas ficaram de fora pelo motivo acima.</span>';
+  else {
+    msg='<strong>'+imp.length+'</strong> manutenção(ões), somando <strong>'+fmtR(Math.round(total*100)/100)+'</strong>';
+    if(faltando.length) msg+='<div style="color:var(--yellow);margin-top:4px">⚠️ '+faltando.length+' com '+
+      faltando.map(_camNfeFaltando).filter(function(v,i,a){return a.indexOf(v)===i;}).join(', ')+' em branco — complete para poder importar.</div>';
+  }
+  document.getElementById('camNfeResumo').innerHTML=msg;
+  var btn=document.getElementById('camNfeImportBtn');
+  btn.style.display=imp.length?'inline-flex':'none';
+  btn.disabled=!imp.length||faltando.length>0;
+  btn.textContent='📥 Importar '+imp.length+' manutenção(ões)';
+}
+
+function _camNfeSet(i,campo,valor){
+  var g=_camNfe.grupos[i]; if(!g) return;
+  g[campo]=(campo==='km')?(parseInt(valor,10)||0):valor;
+  _camNfeRender();
+}
+function _camNfeTipo(i,el){
+  var g=_camNfe.grupos[i], t=el.getAttribute('data-tipo'); if(!g) return;
+  if(el.checked){ if(g.tipos.indexOf(t)<0) g.tipos.push(t); }
+  else g.tipos=g.tipos.filter(function(x){ return x!==t; });
+  // mantém a ordem do catálogo: é ela que decide qual registro é o principal
+  var ordem=nfTiposImportaveis();
+  g.tipos.sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
+  el.parentNode.classList.toggle('on',el.checked);
+  _camNfeResumo();
+}
+function _camNfeRemover(i){ _camNfe.grupos.splice(i,1); _camNfeRender(); }
+
+function _camNfePayload(g){
+  var docs=g.docs.map(nfDocPayload), notas=nfRotuloNotas(g);
+  if(g.anexarA) return {destino:'caminhao', anexar_a:g.anexarA.id, nota_fiscal_txt:notas, documentos:docs};
+  var nome=currentUserData?currentUserData.nome:'';
+  var detalhe=(g.os?'OS '+g.os+' · ':'')+(g.pecas?'peças '+fmtR(g.pecas):'')+(g.pecas&&g.servicos?' + ':'')+(g.servicos?'serviço '+fmtR(g.servicos):'');
+  return {destino:'caminhao', documentos:docs, lancamentos:g.tipos.map(function(t,k){
+    return {
+      placa:g.placa, tipo_manutencao:t, data_manutencao:g.data, km:g.km,
+      valor:k===0?g.total:'',
+      local_servico:g.emitNome||'', nota_fiscal:notas,
+      observacao:k===0
+        ? detalhe+(g.tipos.length>1?' · cobre também: '+g.tipos.slice(1).join(', '):'')
+        : 'Mesma revisão de "'+g.tipos[0]+'" — valor e itens da nota estão lá',
+      usuario_nome_legado:nome
+    };
+  })};
+}
+
+function camNfeImportar(){
+  var imp=_camNfe.grupos.filter(_camNfeImportavel);
+  if(!imp.length) return;
+  if(imp.some(_camNfeFaltando)){ showToast('Complete placa, KM e tipo de todas as manutenções',true); return; }
+  nfGravarGrupos(imp,_camNfePayload,document.getElementById('camNfeImportBtn'),function(ok,falhas){
+    loadFromSheets(function(){
+      if(typeof renderManutRealTable==='function') renderManutRealTable();
+      if(document.getElementById('pageManutencao').classList.contains('active')) buildManutencao();
+      if(!falhas.length){ showToast('✅ '+ok+' manutenção(ões) importada(s)!'); closeCamNfeModal(); return; }
+      console.warn('NF recusadas pelo banco:',falhas);
+      _camNfe.grupos=[];
+      _camNfe.rejeitados=[];
+      falhas.forEach(function(f){ f.grupo.docs.forEach(function(d){ _camNfe.rejeitados.push({doc:d,motivo:'Recusada',det:f.det}); }); });
+      _camNfeRender();
+      showToast('⚠️ '+ok+' importada(s), '+falhas.length+' recusada(s) — motivo na tela',true);
+    });
+  });
+}
+// ===== FIM IMPORTAR NF (CAMINHÕES) =====
+</script>
+<script>
+// ============================================================
+// ===== MANUTENÇÃO > PEÇAS E SERVIÇOS (itens das notas) ======
+// Consulta as peças e serviços das notas fiscais importadas (nf_itens) para responder:
+// quanto se gastou em filtro de ar, quantos litros de óleo uma placa levou, quanto de cada
+// revisão foi peça e quanto foi mão de obra, quem gasta mais em freio.
+// Só existe item para o que entrou por XML — lançamento digitado à mão tem só o total.
+// ============================================================
+var nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''};
+
+// Mesmo reconhecimento do importador (js/nf-parse.js NF_REGRAS_TIPO), para "filtro de ar"
+// não pegar o filtro de cabine nem "óleo motor" pegar óleo de câmbio. Freio aqui é GASTO
+// com freio, então entra diagnóstico também — diferente da sugestão de tipo, que zera alerta.
+var NF_REL_ATALHOS=[
+  {id:'oleo',  rotulo:'🛢️ Óleo motor',          re:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE|\b(5|10|15|20)W-?\d{2}\b/},
+  {id:'foleo', rotulo:'Filtro de óleo',          re:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/},
+  {id:'far',   rotulo:'Filtro de ar',            re:/FILTRO\s+(DE\s+|DO\s+)?AR\b/},
+  {id:'fcomb', rotulo:'Filtro de combustível',   re:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/},
+  {id:'freio', rotulo:'🛑 Freio',                re:/FREIO|PASTILHA|\bLONA\b/},
+  {id:'pneu',  rotulo:'🛞 Pneu',                 re:/PNEU|CAMARA\s+DE\s+AR|RECAP/}
+];
+
+function _nfRelUn(u){
+  var n=_nfNorm(u).trim();
+  if(/^(L|LT|LTS|LITRO|LITROS)$/.test(n)) return 'L';
+  return n||'UN';
+}
+// De onde veio cada nota: placa do caminhão, ou máquina (ou "insumo" da fazenda)
+function _nfRelOrigem(d){
+  if(d.MANUT_REALIZADA_ID){
+    var r=findManutRealById(d.MANUT_REALIZADA_ID);
+    return {origem:'caminhao', alvo:r?r.PLACA:'?', id:d.MANUT_REALIZADA_ID};
+  }
+  var m=findManutById(d.MAQ_MANUTENCAO_ID);
+  var alvo=m?(m.ID_MAQUINA?maqNome(m.ID_MAQUINA):'Insumo · '+(m.FLORESTA_OPC||'sem fazenda')):'?';
+  return {origem:'maq', alvo:alvo, id:d.MAQ_MANUTENCAO_ID};
+}
+function _nfRelLinhas(){
+  var docs={};
+  (DB.nfDocumentos||[]).forEach(function(d){ docs[d.ID]=d; });
+  var out=[];
+  (DB.nfItens||[]).forEach(function(i){
+    var d=docs[i.DOCUMENTO_ID]; if(!d) return;
+    var o=_nfRelOrigem(d);
+    out.push({item:i, doc:d, origem:o.origem, alvo:o.alvo, lancId:o.id,
+      data:String(d.DATA_EMISSAO||'').slice(0,10), norm:_nfNorm(i.DESCRICAO), valor:num(i.VALOR)});
+  });
+  return out;
+}
+function _nfRelFiltrar(linhas){
+  var at=NF_REL_ATALHOS.filter(function(a){ return a.id===nfRel.atalho; })[0];
+  var palavras=_nfNorm(nfRel.busca).split(/\s+/).filter(Boolean);
+  return linhas.filter(function(l){
+    if(nfRel.origem && l.origem!==nfRel.origem) return false;
+    if(nfRel.alvo && l.alvo!==nfRel.alvo) return false;
+    if(nfRel.tipo && l.item.TIPO!==nfRel.tipo) return false;
+    if(nfRel.dtIni && l.data<nfRel.dtIni) return false;
+    if(nfRel.dtFim && l.data>nfRel.dtFim) return false;
+    if(at && !at.re.test(l.norm)) return false;
+    for(var k=0;k<palavras.length;k++){ if(l.norm.indexOf(palavras[k])<0) return false; }
+    return true;
+  });
+}
+
+// soResultado: redesenha só o resultado, sem refazer a barra de filtros (usado pela busca,
+// para o campo de texto não perder o foco a cada letra digitada)
+function buildNfRelatorio(soResultado){
+  var cont=document.getElementById('nfRelConteudo'); if(!cont) return;
+  var todas=_nfRelLinhas();
+  if(!soResultado) _nfRelFiltros(todas);
+  if(!todas.length){
+    cont.innerHTML='<div class="nf-rel-vazio">Nenhuma nota fiscal importada ainda.<br>Importe em Cadastro → Manutenção Realizada (caminhões) ou Maquinários → Manutenção.</div>';
+    return;
+  }
+  var L=_nfRelFiltrar(todas);
+  if(!L.length){ cont.innerHTML='<div class="nf-rel-vazio">Nada encontrado com esses filtros.</div>'; return; }
+
+  // ---- totais ----
+  var tot=0, pc=0, sv=0, un={}, notas={};
+  L.forEach(function(l){
+    tot+=l.valor;
+    if(l.item.TIPO==='SERVICO') sv+=l.valor; else pc+=l.valor;
+    notas[l.doc.ID]=1;
+    var q=num(l.item.QUANTIDADE);
+    if(l.item.TIPO==='PECA' && q){ var u=_nfRelUn(l.item.UNIDADE); un[u]=(un[u]||0)+q; }
+  });
+  // quantidade somada por unidade, sem converter (balde de 20 L não vira litro sozinho)
+  var qtdTxt=Object.keys(un).sort(function(a,b){ return a==='L'?-1:(b==='L'?1:a.localeCompare(b)); })
+    .map(function(u){ return fmt(un[u],(un[u]%1)?1:0)+' '+u; }).join(' · ')||'—';
+  var h='<div class="kpi-row" id="kpiNfRel">'+
+    '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">'+fmtR(Math.round(tot*100)/100)+'</div><div class="kpi-label">Total</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">🔩</div><div class="kpi-value">'+fmtR(Math.round(pc*100)/100)+'</div><div class="kpi-label">Peças'+(tot?' · '+Math.round(pc/tot*100)+'%':'')+'</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">🧰</div><div class="kpi-value">'+fmtR(Math.round(sv*100)/100)+'</div><div class="kpi-label">Mão de obra'+(tot?' · '+Math.round(sv/tot*100)+'%':'')+'</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value" title="'+_nfEsc(qtdTxt)+'">'+_nfEsc(qtdTxt)+'</div><div class="kpi-label">Quantidade (peças)</div></div>'+
+    '<div class="kpi-card"><div class="kpi-icon">📄</div><div class="kpi-value">'+Object.keys(notas).length+'</div><div class="kpi-label">Notas</div></div>'+
+    '</div>';
+
+  // ---- ranking por placa/máquina ----
+  var rk={};
+  L.forEach(function(l){ var k=l.alvo; if(!rk[k]) rk[k]={v:0,pc:0,sv:0,origem:l.origem}; rk[k].v+=l.valor; if(l.item.TIPO==='SERVICO') rk[k].sv+=l.valor; else rk[k].pc+=l.valor; });
+  var rkL=Object.keys(rk).sort(function(a,b){ return rk[b].v-rk[a].v; }), mx=rkL.length?rk[rkL[0]].v:0;
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Quem gastou mais</div><div class="manut-ph-badge">'+rkL.length+' placa(s)/máquina(s)</div></div><div class="nf-rel-rank">';
+  rkL.forEach(function(k,i){
+    var o=rk[k];
+    h+='<div class="nf-rel-rank-lin" onclick="_nfRelSetAlvo(\''+_nfEsc(k).replace(/'/g,"\\'")+'\')" title="Filtrar só esta">'+
+       '<span class="nf-rel-pos">'+(i+1)+'</span>'+
+       '<span class="'+(o.origem==='caminhao'?'manut-placa-tag':'nf-rel-maq')+'">'+_nfEsc(k)+'</span>'+
+       '<div class="nf-rel-barra"><div style="width:'+(mx?Math.max(2,Math.round(o.v/mx*100)):0)+'%"></div></div>'+
+       '<span class="manut-km-num">'+fmtR(Math.round(o.v*100)/100)+'</span>'+
+       '<span class="nf-rel-split">peça '+fmtR(Math.round(o.pc*100)/100)+' · serviço '+fmtR(Math.round(o.sv*100)/100)+'</span></div>';
+  });
+  h+='</div></div>';
+
+  // ---- por manutenção (revisão): quanto foi peça e quanto foi mão de obra ----
+  var mt={};
+  L.forEach(function(l){
+    var k=l.origem+'|'+l.lancId;
+    if(!mt[k]) mt[k]={origem:l.origem, id:l.lancId, alvo:l.alvo, data:l.data, oficina:l.doc.EMITENTE_NOME, os:l.doc.OS_NUMERO, pc:0, sv:0, docs:{}};
+    var m=mt[k];
+    if(l.data<m.data) m.data=l.data;
+    if(l.item.TIPO==='SERVICO') m.sv+=l.valor; else m.pc+=l.valor;
+    m.docs[l.doc.ID]=(l.doc.MODELO==='NFSE'?'NFS-e ':'NF-e ')+l.doc.NUMERO;
+  });
+  var mtL=Object.keys(mt).sort(function(a,b){ return String(mt[b].data).localeCompare(String(mt[a].data)); });
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Por manutenção — peça × mão de obra</div><div class="manut-ph-badge">'+mtL.length+' manutenção(ões)</div></div>'+
+     '<div class="table-scroll" style="max-height:320px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>Placa / Máquina</th><th>Oficina</th><th>Notas</th><th>Peças</th><th>Mão de obra</th><th>Total</th><th>% peças</th></tr></thead><tbody>';
+  mtL.forEach(function(k){
+    var m=mt[k], t=m.pc+m.sv;
+    h+='<tr class="nf-rel-clica" onclick="nfAbrirDetalhe(\''+m.origem+'\',\''+m.id+'\')" title="Ver as peças e serviços">'+
+       '<td class="manut-km-num">'+_nfEsc(formatDateBR(m.data))+'</td>'+
+       '<td>'+(m.origem==='caminhao'?'<span class="manut-placa-tag">'+_nfEsc(m.alvo)+'</span>':_nfEsc(m.alvo))+'</td>'+
+       '<td style="white-space:normal;max-width:220px">'+_nfEsc(m.oficina||'-')+(m.os?' <span style="color:var(--text2)">· OS '+_nfEsc(m.os)+'</span>':'')+'</td>'+
+       '<td style="font-size:11.5px">📄 '+_nfEsc(Object.keys(m.docs).map(function(d){return m.docs[d];}).join(' + '))+'</td>'+
+       '<td class="manut-km-num">'+(m.pc?fmtR(Math.round(m.pc*100)/100):'—')+'</td>'+
+       '<td class="manut-km-num">'+(m.sv?fmtR(Math.round(m.sv*100)/100):'—')+'</td>'+
+       '<td class="manut-km-num"><strong>'+fmtR(Math.round(t*100)/100)+'</strong></td>'+
+       '<td class="manut-km-num">'+(t?Math.round(m.pc/t*100)+'%':'—')+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+
+  // ---- itens ----
+  L.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)) || (b.valor-a.valor); });
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Peças e serviços</div><div class="manut-ph-badge">'+L.length+' item(ns)</div></div>'+
+     '<div class="table-scroll" style="max-height:420px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>Placa / Máquina</th><th>Descrição</th><th></th><th>Qtd</th><th>Valor</th><th>Nota</th></tr></thead><tbody>';
+  L.forEach(function(l){
+    var q=num(l.item.QUANTIDADE), sv=l.item.TIPO==='SERVICO';
+    h+='<tr class="nf-rel-clica" onclick="nfAbrirDetalhe(\''+l.origem+'\',\''+l.lancId+'\')">'+
+       '<td class="manut-km-num">'+_nfEsc(formatDateBR(l.data))+'</td>'+
+       '<td>'+(l.origem==='caminhao'?'<span class="manut-placa-tag">'+_nfEsc(l.alvo)+'</span>':_nfEsc(l.alvo))+'</td>'+
+       '<td style="white-space:normal;min-width:260px">'+_nfEsc(l.item.DESCRICAO)+'</td>'+
+       '<td><span class="maq-chip '+(sv?'maq-chip-b':'maq-chip-g')+'">'+(sv?'Serviço':'Peça')+'</span></td>'+
+       '<td class="manut-km-num">'+(q?fmt(q,(q%1)?2:0)+' '+_nfEsc(_nfRelUn(l.item.UNIDADE)):'—')+'</td>'+
+       '<td class="manut-km-num"><strong>'+fmtR(l.valor)+'</strong></td>'+
+       '<td style="font-size:11.5px;color:var(--text2)">'+(l.doc.MODELO==='NFSE'?'NFS-e ':'NF-e ')+_nfEsc(l.doc.NUMERO)+'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  cont.innerHTML=h;
+}
+
+// ---- barra de filtros ----
+function _nfRelFiltros(todas){
+  var el=document.getElementById('nfRelFiltros'); if(!el) return;
+  var alvos={};
+  todas.forEach(function(l){ if(!nfRel.origem || l.origem===nfRel.origem) alvos[l.alvo]=l.origem; });
+  var alvoL=Object.keys(alvos).sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
+  if(nfRel.alvo && !alvos[nfRel.alvo]) nfRel.alvo='';
+  var sel=function(v,o){ return v===o?' selected':''; };
+  var h='<div class="nf-rel-atalhos"><span class="filter-label">Atalhos</span>';
+  NF_REL_ATALHOS.forEach(function(a){
+    h+='<div class="manut-filter-tag'+(nfRel.atalho===a.id?' active':'')+'" onclick="_nfRelSet(\'atalho\',\''+(nfRel.atalho===a.id?'':a.id)+'\')">'+a.rotulo+'</div>';
+  });
+  h+='</div><div class="nf-rel-linha">'+
+    '<input type="text" class="filter-select" id="nfRelBusca" placeholder="🔎 Buscar na descrição (ex.: correia, graxa)" value="'+_nfEsc(nfRel.busca)+'" oninput="_nfRelBuscar(this.value)">'+
+    '<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>'+
+    '<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
+      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>'+
+    '<select class="filter-select" onchange="_nfRelSet(\'tipo\',this.value)"><option value="">Peças e serviços</option><option value="PECA"'+sel(nfRel.tipo,'PECA')+'>Só peças</option><option value="SERVICO"'+sel(nfRel.tipo,'SERVICO')+'>Só mão de obra</option></select>'+
+    '<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>'+
+    '<button class="manut-filter-reset" onclick="_nfRelLimpar()">↺ Limpar</button></div>'+
+    '<div class="nf-rel-nota">ℹ️ Só entra o que foi importado por nota fiscal (XML). Manutenção digitada à mão não tem as peças, só o total. '+
+    'Busca por texto pega peça e serviço: "filtro de ar" também acha a mão de obra "substituir filtro de ar" — use "Só peças" para separar.</div>';
+  el.innerHTML=h;
+}
+function _nfRelSet(campo,v){ nfRel[campo]=v; buildNfRelatorio(); }
+function _nfRelSetAlvo(a){ nfRel.alvo=(nfRel.alvo===a)?'':a; buildNfRelatorio(); }
+var _nfRelTimer=null;
+function _nfRelBuscar(v){
+  nfRel.busca=v;
+  clearTimeout(_nfRelTimer);
+  _nfRelTimer=setTimeout(function(){ buildNfRelatorio(true); },250);
+}
+function _nfRelLimpar(){ nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''}; buildNfRelatorio(); }
+// ===== FIM PEÇAS E SERVIÇOS =====
 </script>
 <script>
 // ============================================================
@@ -4184,10 +5238,12 @@ function renderManutRealTable(){
   var data=DB.manutRealizada;
   var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+(r.NOTA_FISCAL||'-')+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutRealContainer').innerHTML=h;
+  var nfBtn=document.getElementById('camNfeBtn');
+  if(nfBtn) nfBtn.style.display=(currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'))?'inline-flex':'none';
 }
 
 function findManutProgById(id){
@@ -5696,7 +6752,7 @@ function buildFinanceiro(){
 // ==================== MANUTENCAO ====================
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
-var manutViewAtual='fora'; // 'fora' ou 'garantia'
+var manutViewAtual='fora'; // 'fora', 'garantia' ou 'pecas'
 
 // Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
 // Detalhamento, que é comum às duas. Chamado por navigateTo/switchTab e por
@@ -5705,14 +6761,18 @@ function buildManutencao(){
   buildManutencaoFora();
   buildManutencaoGarantia();
   buildManutDetalhamento();
+  if(typeof buildNfRelatorio==='function') buildNfRelatorio();
 }
 
 function showManutView(view){
   manutViewAtual=view;
   document.getElementById('manutViewFora').style.display=view==='fora'?'':'none';
   document.getElementById('manutViewGarantia').style.display=view==='garantia'?'':'none';
+  document.getElementById('manutViewPecas').style.display=view==='pecas'?'':'none';
   document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
   document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
+  document.getElementById('manutTabBtnPecas').classList.toggle('active',view==='pecas');
+  if(view==='pecas') buildNfRelatorio();
 }
 
 // ---------- Helpers compartilhados entre Fora de Garantia e Em Garantia ----------
@@ -5919,57 +6979,47 @@ function buildManutencaoFora(){
   document.getElementById('manutMatrizBody').innerHTML=tbody;
   document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões';
 
-  // KM & PRÓXIMA TROCA (top 5 most urgent for oil change)
-  var kmListH='';
-  var sorted=filtered.slice().sort(function(a,b){
-    var aOil=a.items[0];var bOil=b.items[0];
-    var aR=(aOil&&aOil.kmRest!=null)?aOil.kmRest:999999;
-    var bR=(bOil&&bOil.kmRest!=null)?bOil.kmRest:999999;
-    return aR-bR;
+  // KM & PRÓXIMA TROCA (óleo motor) — TODOS os caminhões, do mais urgente ao menos; a
+  // caixa mostra ~5 linhas e rola para o resto (antes cortava em 5 e mandava usar o filtro).
+  // O tipo é achado pelo NOME: antes pegava "o 1º do catálogo" presumindo que fosse o óleo,
+  // e reordenar/apagar esse tipo trocaria o painel de assunto sem aviso.
+  var iOleo=-1;
+  progs.forEach(function(p,i){
+    if(iOleo<0 && /OLEO\s+(DO\s+|DE\s+)?MOTOR/.test(String(p.TIPO_MANUTENCAO).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase())) iOleo=i;
   });
-  sorted.slice(0,5).forEach(function(a){
-    var oil=a.items[0];
-    var prox=oil&&oil.proxM?oil.proxM:0;
-    var faltam=oil&&oil.kmRest!=null?oil.kmRest:0;
-    var barPct=prox>0?Math.min(Math.max(100-Math.round((a.kmAtual/prox)*100),5),100):5;
-    var cor=barPct>40?'g':barPct>15?'y':'r';
-    kmListH+='<div class="manut-km-item">';
-    kmListH+='<div class="manut-km-placa">'+a.placa+'</div>';
-    kmListH+='<div class="manut-km-body"><div class="manut-km-val">'+Number(a.kmAtual).toLocaleString('pt-BR')+' km</div>';
-    kmListH+='<div class="manut-km-meta">Próx. troca: '+(prox>0?Number(prox).toLocaleString('pt-BR')+' km':'N/A')+'</div></div>';
-    kmListH+='<div class="manut-km-bar-wrap"><div class="manut-km-bar-lbl">faltam</div>';
-    kmListH+='<div class="manut-km-bg"><div class="manut-km-fill '+cor+'" style="width:'+barPct+'%"></div></div>';
-    kmListH+='<div class="manut-km-rest">'+(faltam!=null?Number(faltam).toLocaleString('pt-BR')+' km':'N/A')+'</div></div>';
-    kmListH+='</div>';
-  });
-  if(filtered.length>5) kmListH+='<div style="text-align:center;padding:10px 0;font-size:11px;color:var(--text2)">+ '+(filtered.length-5)+' caminhões — use o filtro de placa para ver todos</div>';
+  var kmListH;
+  if(iOleo<0){
+    kmListH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Cadastre o tipo "Troca de Óleo Motor" com intervalo de KM (Cadastro → Tipos de Manutenção) para ver a próxima troca.</div>';
+  } else {
+    var semReg=999999999;
+    var sorted=filtered.slice().sort(function(a,b){
+      var ra=a.items[iOleo].kmRest, rb=b.items[iOleo].kmRest;
+      return (ra!=null?ra:semReg)-(rb!=null?rb:semReg);
+    });
+    var corTxt={g:'var(--green)',y:'var(--yellow)',r:'var(--red)',x:'var(--text2)'};
+    kmListH='<div class="manut-km-scroll"><table class="manut-km-tbl"><thead><tr><th>Placa</th><th>KM atual</th><th>Próxima troca</th><th>Faltam</th><th></th></tr></thead><tbody>';
+    sorted.forEach(function(a){
+      var oil=a.items[iOleo];
+      // Barra = quanto do intervalo ainda resta, na cor do status (mesmos limites de
+      // alerta da matriz). A conta antiga (100 − KM atual/próxima troca) dava ~20% e
+      // amarelo para um caminhão que acabou de trocar o óleo.
+      var pct=(oil.kmRest!=null && oil.intervalo>0)?Math.max(0,Math.min(100,Math.round(oil.kmRest/oil.intervalo*100))):0;
+      kmListH+='<tr>'+
+        '<td><span class="manut-placa-tag">'+a.placa+'</span></td>'+
+        '<td class="manut-km-num">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</td>'+
+        '<td class="manut-km-num">'+(oil.proxM!=null?Math.round(oil.proxM).toLocaleString('pt-BR')+' km':'<span style="color:var(--text2)">sem registro</span>')+'</td>'+
+        '<td class="manut-km-num" style="color:'+corTxt[oil.status]+'">'+(oil.kmRest!=null?(oil.kmRest<0?'vencido há '+Math.round(-oil.kmRest).toLocaleString('pt-BR'):Math.round(oil.kmRest).toLocaleString('pt-BR'))+' km':'—')+'</td>'+
+        '<td><div class="manut-km-bg"><div class="manut-km-fill '+(oil.status==='x'?'':oil.status)+'" style="width:'+pct+'%"></div></div></td>'+
+        '</tr>';
+    });
+    kmListH+='</tbody></table></div>';
+  }
+  document.getElementById('manutKmBadge').textContent='óleo motor · '+filtered.length+' caminhões';
   document.getElementById('manutKmList').innerHTML=kmListH;
 
   // CONSUMO MÉDIO movido para a aba Consumo (buildConsumo)
-
-  // HISTÓRICO RECENTE
-  var histH='';
-  var icons={'Troca de Óleo Motor':'🔧','Filtro de Óleo':'🛢️','Filtro de Ar':'🌬️','Filtro de Combustível':'⛽','Alinhamento e Balanceamento':'🛞','Revisão de Freios':'🛞','Troca de Correia Dentada':'⚙️','Troca de Fluido de Arla 32':'💧'};
-  var histFiltrado=DB.manutRealizada.slice();
-  // Aplica filtros vigentes ao histórico
-  if(manutFiltro.placa) histFiltrado=histFiltrado.filter(function(r){return String(r.PLACA||'').replace(/\s+/g,'')===manutFiltro.placa;});
-  if(manutFiltro.tipo) histFiltrado=histFiltrado.filter(function(r){return r.TIPO_MANUTENCAO===manutFiltro.tipo;});
-  if(manutFiltro.dtIni || manutFiltro.dtFim){
-    histFiltrado=histFiltrado.filter(function(r){return dateInRange(r.DATA_MANUTENCAO,manutFiltro.dtIni,manutFiltro.dtFim);});
-  }
-  histFiltrado.sort(function(a,b){return(b.DATA_MANUTENCAO||'').localeCompare(a.DATA_MANUTENCAO||'')}).slice(0,6).forEach(function(r){
-    var ico=icons[r.TIPO_MANUTENCAO]||'🔧';
-    var dt=r.DATA_MANUTENCAO||'';
-    if(dt.indexOf('-')>0){var dp=dt.split('-');dt=dp[2]+'/'+dp[1]+'/'+dp[0];}
-    histH+='<div class="manut-hist-item">';
-    histH+='<div class="manut-hist-ico">'+ico+'</div>';
-    histH+='<div class="manut-hist-body"><div class="manut-hist-tipo">'+r.TIPO_MANUTENCAO+'</div>';
-    histH+='<div class="manut-hist-meta"><span class="manut-hist-placa-tag">'+r.PLACA+'</span> · '+dt+'</div></div>';
-    histH+='<div class="manut-hist-km">'+Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR')+' km</div>';
-    histH+='</div>';
-  });
-  if(histH==='') histH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Sem registros no período/filtro selecionado</div>';
-  document.getElementById('manutHistList').innerHTML=histH;
+  // "Histórico Recente" (6 últimas) removido: o Detalhamento de Manutenção logo abaixo
+  // mostra o histórico completo, com filtros próprios.
 }
 
 function toggleManutTag(cor,el){
@@ -6121,7 +7171,7 @@ function buildManutDetalhamento(){
       '<td>'+(r.MOTORISTA||'-')+'</td>'+
       '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
       '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
-      '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
+      '<td style="'+mono+'">'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td>'+
       '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+
       '<td>'+pneuCell+'</td>'+actCell+'</tr>';
     if(itensPneu.length){
@@ -6242,7 +7292,7 @@ function openManutRealDelete(id){
   if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
   var r=findManutRealById(id); if(!r){showToast('Registro não encontrado',true);return;}
   _mrDelId=String(id);
-  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>';
+  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>'+(typeof nfAvisoExclusao==='function'?nfAvisoExclusao('caminhao',id):'');
   document.getElementById('mrDelOverlay').classList.add('show');
 }
 function closeManutRealDelete(){ document.getElementById('mrDelOverlay').classList.remove('show'); _mrDelId=null; }

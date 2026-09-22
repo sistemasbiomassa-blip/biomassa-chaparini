@@ -24,6 +24,7 @@ function renderMaqManutTable(){
   _maqMtPopSelects();
   var admin=maqIsAdmin();
   var addBtn=document.getElementById('maqMtAddBtn'); if(addBtn) addBtn.style.display=maqCanLancar()?'inline-flex':'none';
+  var nfeBtn=document.getElementById('maqNfeBtn'); if(nfeBtn) nfeBtn.style.display=maqCanLancar()?'inline-flex':'none';
   var di=(document.getElementById('maqMtIni')||{}).value||'';
   var df=(document.getElementById('maqMtFim')||{}).value||'';
   var fMaq=(document.getElementById('maqMtFiltroMaq')||{}).value||'';
@@ -51,7 +52,7 @@ function renderMaqManutTable(){
     if(!acts) acts='<span style="color:var(--text2)">—</span>';
     var tipoChip=r.TIPO==='Preventiva'?'<span class="maq-chip maq-chip-g">Preventiva</span>':(r.TIPO==='Corretiva'?'<span class="maq-chip maq-chip-y">Corretiva</span>':(r.TIPO==='Insumo'?'<span class="maq-chip maq-chip-b">Insumo</span>':'<span class="maq-chip maq-chip-gray">'+_maqEsc(r.TIPO||'-')+'</span>'));
     var fl=maqFlorestaDoLancamento(r);
-    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):'<span style="color:var(--text2)">— insumo (fazenda)</span>')+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_maqEsc(formatDateBR(r.DATA))+'</td><td>'+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):'<span style="color:var(--text2)">— insumo (fazenda)</span>')+'</td><td>'+tipoChip+'</td><td>'+_maqEsc(r.SERVICO||'-')+(typeof nfSeloNotas==='function'&&nfSeloNotas('maq',r.ID)?'<div style="margin-top:3px">'+nfSeloNotas('maq',r.ID)+'</div>':'')+'</td><td>'+(fl?_maqEsc(fl):'<span style="color:var(--text2)">— sem localização</span>')+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_PECAS))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_MAO_OBRA))+'</td><td class="maq-mono">'+fmtR(num(r.CUSTO_TERCEIROS))+'</td><td class="maq-mono"><strong>'+fmtR(num(r.CUSTO_TOTAL))+'</strong></td><td>'+_maqEsc(r.OFICINA_FORNECEDOR||'-')+'</td><td style="text-align:center;white-space:nowrap">'+acts+'</td></tr>';
   });
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
@@ -166,7 +167,7 @@ function openMaqManutDelete(id){
   if(!maqIsAdmin()){ showToast('Apenas ADMIN pode excluir',true); return; }
   var r=findManutById(id); if(!r){ showToast('Registro não encontrado',true); return; }
   _maqMtDelId=String(id);
-  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):('— insumo · '+_maqEsc(r.FLORESTA_OPC||'sem fazenda')))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>';
+  document.getElementById('maqMtDelDetails').innerHTML='<div><strong>Máquina:</strong> '+(_maqMtTemMaquina(r)?_maqEsc(maqNome(r.ID_MAQUINA)):('— insumo · '+_maqEsc(r.FLORESTA_OPC||'sem fazenda')))+'</div><div><strong>Serviço:</strong> '+_maqEsc(r.SERVICO||'-')+'</div><div><strong>Total:</strong> '+fmtR(num(r.CUSTO_TOTAL))+'</div>'+(typeof nfAvisoExclusao==='function'?nfAvisoExclusao('maq',id):'');
   document.getElementById('maqMtDelOverlay').classList.add('show');
 }
 function closeMaqManutDelete(){ document.getElementById('maqMtDelOverlay').classList.remove('show'); _maqMtDelId=null; }

@@ -214,6 +214,64 @@
   </div>
 </div>
 
+<!-- ===== MODAL IMPORTAR NOTA FISCAL — MAQUINÁRIOS (js/maq-nfe.js) ===== -->
+<div class="modal-overlay nf-modal" id="maqNfeOverlay" onclick="if(event.target===this)closeMaqNfeModal()">
+  <div class="modal" style="max-width:1200px">
+    <h2>📄 Importar Nota Fiscal (XML)</h2>
+    <div class="nf-intro">
+      Selecione um ou vários XMLs — NF-e de peças e NFS-e de serviço. Notas da mesma OS viram um lançamento só (peças + mão de obra).<br>
+      Confira o que foi lido e aponte a máquina e/ou a fazenda. Compra de insumo a granel: deixe a máquina em "só fazenda".
+    </div>
+    <input type="file" id="maqNfeFiles" accept=".xml,text/xml" multiple onchange="maqNfeLerArquivos()">
+    <div id="maqNfeStep2" style="display:none;margin-top:14px">
+      <div class="nf-bulk">
+        <span style="color:var(--text2)">Aplicar a todas:</span>
+        <select id="maqNfeBulkMaq"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">máquina</button>
+        <select id="maqNfeBulkTipo"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">tipo</button>
+        <select id="maqNfeBulkFl"></select>
+        <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">fazenda</button>
+      </div>
+      <div id="maqNfeAvisos" class="nf-avisos" style="display:none"></div>
+      <div class="table-container" id="maqNfeTable"></div>
+      <div id="maqNfeResumo" class="nf-resumo"></div>
+    </div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeMaqNfeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="maqNfeImportBtn" onclick="maqNfeImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL IMPORTAR NOTA FISCAL — CAMINHÕES (js/cam-nfe.js) ===== -->
+<div class="modal-overlay nf-modal" id="camNfeOverlay" onclick="if(event.target===this)closeCamNfeModal()">
+  <div class="modal" style="max-width:980px">
+    <h2>📄 Importar Nota Fiscal (XML) — Caminhões</h2>
+    <div class="nf-intro">
+      Selecione a NF-e das peças e a NFS-e do serviço (pode ser várias de uma vez). Notas da mesma OS viram uma revisão só.<br>
+      Placa e KM vêm da nota quando a oficina escreve; confira. Cada tipo marcado zera o alerta de KM dele — o valor fica só no primeiro.
+    </div>
+    <input type="file" id="camNfeFiles" accept=".xml,text/xml" multiple onchange="camNfeLerArquivos()">
+    <div id="camNfeAvisos" class="nf-avisos" style="display:none;margin-top:14px"></div>
+    <div id="camNfeLista" style="margin-top:14px"></div>
+    <div id="camNfeResumo" class="nf-resumo"></div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeCamNfeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="camNfeImportBtn" onclick="camNfeImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DETALHE DAS NOTAS DE UM LANÇAMENTO (js/nf-ui.js) ===== -->
+<div class="modal-overlay nf-modal" id="nfDetOverlay" onclick="if(event.target===this)nfFecharDetalhe()">
+  <div class="modal" style="max-width:860px">
+    <h2>📄 Peças e serviços da nota</h2>
+    <div id="nfDetConteudo"></div>
+    <div class="nf-rodape"><button class="btn-secondary" onclick="nfFecharDetalhe()">Fechar</button></div>
+  </div>
+</div>
+
 <!-- ===== MODAL EXCLUIR MANUTENÇÃO ===== -->
 <div class="modal-overlay" id="maqMtDelOverlay" onclick="if(event.target===this)closeMaqManutDelete()">
   <div class="modal" style="max-width:420px">
@@ -558,7 +616,7 @@
         <div class="tab-content" id="tabManutReal">
           <div class="form-card">
             <div class="form-section">
-              <div class="form-section-title">🔧 Registrar Manutenção Realizada</div>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>🔧 Registrar Manutenção Realizada</span><button class="btn btn-secondary btn-sm" id="camNfeBtn" onclick="openCamNfeModal()" style="display:none">📄 Importar Nota Fiscal (XML)</button></div>
               <div class="form-row">
                 <div class="form-group"><label>Placa *</label><select id="fmPlaca" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo" onchange="_atualizarDiagramaPneuForm()"></select></div>
@@ -721,28 +779,27 @@
         <div class="manut-view-tabs">
           <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
           <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
+          <button class="manut-view-tab" id="manutTabBtnPecas" onclick="showManutView('pecas')">🔩 Peças e Serviços</button>
         </div>
 
         <div id="manutViewFora">
           <div class="manut-filter-bar" id="filtersManut"></div>
           <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
           <div class="kpi-row" id="kpiManut"></div>
-          <div class="manut-main-grid">
-            <div class="manut-panel" id="manutMatrizPanel">
-              <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-              <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
-            </div>
-            <div class="manut-panel" id="manutKmPanel">
-              <div class="manut-ph"><div class="manut-ph-title">KM & Próxima Troca</div><div class="manut-ph-badge">óleo motor</div></div>
-              <div id="manutKmList"></div>
-            </div>
+          <div class="manut-panel" id="manutMatrizPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
+            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
           </div>
-          <div class="manut-bottom-grid">
-            <div class="manut-panel" id="manutHistPanel">
-              <div class="manut-ph"><div class="manut-ph-title">Histórico Recente</div><div class="manut-ph-badge">MANUT_REALIZADA</div></div>
-              <div id="manutHistList"></div>
-            </div>
+          <div class="manut-panel" id="manutKmPanel">
+            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Troca</div><div class="manut-ph-badge" id="manutKmBadge">óleo motor</div></div>
+            <div id="manutKmList"></div>
           </div>
+        </div>
+
+        <!-- Peças e serviços das notas fiscais importadas (js/nf-relatorio.js) -->
+        <div id="manutViewPecas" style="display:none">
+          <div class="nf-rel-filtros" id="nfRelFiltros"></div>
+          <div id="nfRelConteudo"></div>
         </div>
 
         <div id="manutViewGarantia" style="display:none">
@@ -941,6 +998,7 @@
             <select id="maqMtFiltroFloresta" onchange="renderMaqManutTable()"><option value="">Todas as florestas</option></select>
             <select id="maqMtFiltroMaq" onchange="renderMaqManutTable()"><option value="">Todas as máquinas</option></select>
             <select id="maqMtFiltroTipo" onchange="renderMaqManutTable()"><option value="">Todos os tipos</option><option>Preventiva</option><option>Corretiva</option><option>Insumo</option></select>
+            <button class="btn btn-secondary btn-sm" id="maqNfeBtn" onclick="openMaqNfeModal()" style="display:none">📄 Importar Nota Fiscal</button>
             <button class="btn btn-primary btn-sm" id="maqMtAddBtn" onclick="openMaqManutModal()" style="display:none">➕ Registrar manutenção</button>
           </div>
           <div class="table-container">
@@ -1131,6 +1189,11 @@
 <script src="js/maq-localizacao.js"></script>
 <script src="js/maq-abastecimento.js"></script>
 <script src="js/maq-manutencao.js"></script>
+<script src="js/nf-parse.js"></script>
+<script src="js/nf-ui.js"></script>
+<script src="js/maq-nfe.js"></script>
+<script src="js/cam-nfe.js"></script>
+<script src="js/nf-relatorio.js"></script>
 <script src="js/maq-custo.js"></script>
 <script src="js/app-init.js"></script>
 <script src="js/cadastro.js"></script>

@@ -1,7 +1,7 @@
 // ==================== MANUTENCAO ====================
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
-var manutViewAtual='fora'; // 'fora' ou 'garantia'
+var manutViewAtual='fora'; // 'fora', 'garantia' ou 'pecas'
 
 // Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
 // Detalhamento, que é comum às duas. Chamado por navigateTo/switchTab e por
@@ -10,14 +10,18 @@ function buildManutencao(){
   buildManutencaoFora();
   buildManutencaoGarantia();
   buildManutDetalhamento();
+  if(typeof buildNfRelatorio==='function') buildNfRelatorio();
 }
 
 function showManutView(view){
   manutViewAtual=view;
   document.getElementById('manutViewFora').style.display=view==='fora'?'':'none';
   document.getElementById('manutViewGarantia').style.display=view==='garantia'?'':'none';
+  document.getElementById('manutViewPecas').style.display=view==='pecas'?'':'none';
   document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
   document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
+  document.getElementById('manutTabBtnPecas').classList.toggle('active',view==='pecas');
+  if(view==='pecas') buildNfRelatorio();
 }
 
 // ---------- Helpers compartilhados entre Fora de Garantia e Em Garantia ----------
@@ -224,57 +228,47 @@ function buildManutencaoFora(){
   document.getElementById('manutMatrizBody').innerHTML=tbody;
   document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões';
 
-  // KM & PRÓXIMA TROCA (top 5 most urgent for oil change)
-  var kmListH='';
-  var sorted=filtered.slice().sort(function(a,b){
-    var aOil=a.items[0];var bOil=b.items[0];
-    var aR=(aOil&&aOil.kmRest!=null)?aOil.kmRest:999999;
-    var bR=(bOil&&bOil.kmRest!=null)?bOil.kmRest:999999;
-    return aR-bR;
+  // KM & PRÓXIMA TROCA (óleo motor) — TODOS os caminhões, do mais urgente ao menos; a
+  // caixa mostra ~5 linhas e rola para o resto (antes cortava em 5 e mandava usar o filtro).
+  // O tipo é achado pelo NOME: antes pegava "o 1º do catálogo" presumindo que fosse o óleo,
+  // e reordenar/apagar esse tipo trocaria o painel de assunto sem aviso.
+  var iOleo=-1;
+  progs.forEach(function(p,i){
+    if(iOleo<0 && /OLEO\s+(DO\s+|DE\s+)?MOTOR/.test(String(p.TIPO_MANUTENCAO).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase())) iOleo=i;
   });
-  sorted.slice(0,5).forEach(function(a){
-    var oil=a.items[0];
-    var prox=oil&&oil.proxM?oil.proxM:0;
-    var faltam=oil&&oil.kmRest!=null?oil.kmRest:0;
-    var barPct=prox>0?Math.min(Math.max(100-Math.round((a.kmAtual/prox)*100),5),100):5;
-    var cor=barPct>40?'g':barPct>15?'y':'r';
-    kmListH+='<div class="manut-km-item">';
-    kmListH+='<div class="manut-km-placa">'+a.placa+'</div>';
-    kmListH+='<div class="manut-km-body"><div class="manut-km-val">'+Number(a.kmAtual).toLocaleString('pt-BR')+' km</div>';
-    kmListH+='<div class="manut-km-meta">Próx. troca: '+(prox>0?Number(prox).toLocaleString('pt-BR')+' km':'N/A')+'</div></div>';
-    kmListH+='<div class="manut-km-bar-wrap"><div class="manut-km-bar-lbl">faltam</div>';
-    kmListH+='<div class="manut-km-bg"><div class="manut-km-fill '+cor+'" style="width:'+barPct+'%"></div></div>';
-    kmListH+='<div class="manut-km-rest">'+(faltam!=null?Number(faltam).toLocaleString('pt-BR')+' km':'N/A')+'</div></div>';
-    kmListH+='</div>';
-  });
-  if(filtered.length>5) kmListH+='<div style="text-align:center;padding:10px 0;font-size:11px;color:var(--text2)">+ '+(filtered.length-5)+' caminhões — use o filtro de placa para ver todos</div>';
+  var kmListH;
+  if(iOleo<0){
+    kmListH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Cadastre o tipo "Troca de Óleo Motor" com intervalo de KM (Cadastro → Tipos de Manutenção) para ver a próxima troca.</div>';
+  } else {
+    var semReg=999999999;
+    var sorted=filtered.slice().sort(function(a,b){
+      var ra=a.items[iOleo].kmRest, rb=b.items[iOleo].kmRest;
+      return (ra!=null?ra:semReg)-(rb!=null?rb:semReg);
+    });
+    var corTxt={g:'var(--green)',y:'var(--yellow)',r:'var(--red)',x:'var(--text2)'};
+    kmListH='<div class="manut-km-scroll"><table class="manut-km-tbl"><thead><tr><th>Placa</th><th>KM atual</th><th>Próxima troca</th><th>Faltam</th><th></th></tr></thead><tbody>';
+    sorted.forEach(function(a){
+      var oil=a.items[iOleo];
+      // Barra = quanto do intervalo ainda resta, na cor do status (mesmos limites de
+      // alerta da matriz). A conta antiga (100 − KM atual/próxima troca) dava ~20% e
+      // amarelo para um caminhão que acabou de trocar o óleo.
+      var pct=(oil.kmRest!=null && oil.intervalo>0)?Math.max(0,Math.min(100,Math.round(oil.kmRest/oil.intervalo*100))):0;
+      kmListH+='<tr>'+
+        '<td><span class="manut-placa-tag">'+a.placa+'</span></td>'+
+        '<td class="manut-km-num">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</td>'+
+        '<td class="manut-km-num">'+(oil.proxM!=null?Math.round(oil.proxM).toLocaleString('pt-BR')+' km':'<span style="color:var(--text2)">sem registro</span>')+'</td>'+
+        '<td class="manut-km-num" style="color:'+corTxt[oil.status]+'">'+(oil.kmRest!=null?(oil.kmRest<0?'vencido há '+Math.round(-oil.kmRest).toLocaleString('pt-BR'):Math.round(oil.kmRest).toLocaleString('pt-BR'))+' km':'—')+'</td>'+
+        '<td><div class="manut-km-bg"><div class="manut-km-fill '+(oil.status==='x'?'':oil.status)+'" style="width:'+pct+'%"></div></div></td>'+
+        '</tr>';
+    });
+    kmListH+='</tbody></table></div>';
+  }
+  document.getElementById('manutKmBadge').textContent='óleo motor · '+filtered.length+' caminhões';
   document.getElementById('manutKmList').innerHTML=kmListH;
 
   // CONSUMO MÉDIO movido para a aba Consumo (buildConsumo)
-
-  // HISTÓRICO RECENTE
-  var histH='';
-  var icons={'Troca de Óleo Motor':'🔧','Filtro de Óleo':'🛢️','Filtro de Ar':'🌬️','Filtro de Combustível':'⛽','Alinhamento e Balanceamento':'🛞','Revisão de Freios':'🛞','Troca de Correia Dentada':'⚙️','Troca de Fluido de Arla 32':'💧'};
-  var histFiltrado=DB.manutRealizada.slice();
-  // Aplica filtros vigentes ao histórico
-  if(manutFiltro.placa) histFiltrado=histFiltrado.filter(function(r){return String(r.PLACA||'').replace(/\s+/g,'')===manutFiltro.placa;});
-  if(manutFiltro.tipo) histFiltrado=histFiltrado.filter(function(r){return r.TIPO_MANUTENCAO===manutFiltro.tipo;});
-  if(manutFiltro.dtIni || manutFiltro.dtFim){
-    histFiltrado=histFiltrado.filter(function(r){return dateInRange(r.DATA_MANUTENCAO,manutFiltro.dtIni,manutFiltro.dtFim);});
-  }
-  histFiltrado.sort(function(a,b){return(b.DATA_MANUTENCAO||'').localeCompare(a.DATA_MANUTENCAO||'')}).slice(0,6).forEach(function(r){
-    var ico=icons[r.TIPO_MANUTENCAO]||'🔧';
-    var dt=r.DATA_MANUTENCAO||'';
-    if(dt.indexOf('-')>0){var dp=dt.split('-');dt=dp[2]+'/'+dp[1]+'/'+dp[0];}
-    histH+='<div class="manut-hist-item">';
-    histH+='<div class="manut-hist-ico">'+ico+'</div>';
-    histH+='<div class="manut-hist-body"><div class="manut-hist-tipo">'+r.TIPO_MANUTENCAO+'</div>';
-    histH+='<div class="manut-hist-meta"><span class="manut-hist-placa-tag">'+r.PLACA+'</span> · '+dt+'</div></div>';
-    histH+='<div class="manut-hist-km">'+Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR')+' km</div>';
-    histH+='</div>';
-  });
-  if(histH==='') histH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Sem registros no período/filtro selecionado</div>';
-  document.getElementById('manutHistList').innerHTML=histH;
+  // "Histórico Recente" (6 últimas) removido: o Detalhamento de Manutenção logo abaixo
+  // mostra o histórico completo, com filtros próprios.
 }
 
 function toggleManutTag(cor,el){
@@ -426,7 +420,7 @@ function buildManutDetalhamento(){
       '<td>'+(r.MOTORISTA||'-')+'</td>'+
       '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
       '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
-      '<td style="'+mono+'">'+(r.NOTA_FISCAL||'-')+'</td>'+
+      '<td style="'+mono+'">'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td>'+
       '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+
       '<td>'+pneuCell+'</td>'+actCell+'</tr>';
     if(itensPneu.length){
@@ -547,7 +541,7 @@ function openManutRealDelete(id){
   if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode excluir',true);return;}
   var r=findManutRealById(id); if(!r){showToast('Registro não encontrado',true);return;}
   _mrDelId=String(id);
-  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>';
+  document.getElementById('mrDelDetails').innerHTML='<div><strong>Placa:</strong> '+(r.PLACA||'-')+'</div><div><strong>Tipo:</strong> '+(r.TIPO_MANUTENCAO||'-')+'</div><div><strong>Data:</strong> '+formatDateBR(r.DATA_MANUTENCAO)+'</div>'+(typeof nfAvisoExclusao==='function'?nfAvisoExclusao('caminhao',id):'');
   document.getElementById('mrDelOverlay').classList.add('show');
 }
 function closeManutRealDelete(){ document.getElementById('mrDelOverlay').classList.remove('show'); _mrDelId=null; }
