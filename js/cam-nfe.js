@@ -51,6 +51,13 @@ function _camNfeFaltando(g){
   if(!g.tipos.length) return 'tipo';
   return '';
 }
+// Tipo com intervalo de KM cadastrado é o que entra na matriz e gera alerta (ver
+// js/manutencao.js: progs filtra por INTERVALO_KM). "Outros" e "Troca de Óleo e Filtro"
+// não têm intervalo: servem para registrar o serviço sem mexer em alerta nenhum.
+function _camNfeTemAlerta(tipo){
+  var p=(DB.manutProgramada||[]).filter(function(x){ return x.TIPO_MANUTENCAO===tipo; })[0];
+  return !!(p && num(p.INTERVALO_KM)>0);
+}
 // KM lido da nota é conferido contra a última manutenção da placa: menor que ela quase
 // sempre é erro de digitação da oficina ou nota de outro caminhão.
 function _camNfeUltimoKm(placa){
@@ -94,8 +101,12 @@ function _camNfeRender(){
     var chk='';
     tipos.forEach(function(t){
       var mk=g.tipos.indexOf(t)>=0, sug=g.sugeridos.indexOf(t)>=0;
-      chk+='<label class="nf-tipo'+(mk?' on':'')+'"><input type="checkbox"'+(mk?' checked':'')+
-           ' onchange="_camNfeTipo('+i+',this)" data-tipo="'+_nfEsc(t)+'"> '+_nfEsc(t)+(sug?' <em>sugerido</em>':'')+'</label>';
+      // tipo sem intervalo de KM cadastrado não entra na matriz nem gera alerta — é o
+      // caso de "Outros", para nota que não se encaixa em nenhum tipo (troca de um tubo etc.)
+      var semAlerta=!_camNfeTemAlerta(t);
+      chk+='<label class="nf-tipo'+(mk?' on':'')+'" title="'+(semAlerta?'Não gera alerta de KM':'Marcar zera o alerta de KM deste tipo')+'">'+
+           '<input type="checkbox"'+(mk?' checked':'')+' onchange="_camNfeTipo('+i+',this)" data-tipo="'+_nfEsc(t)+'"> '+_nfEsc(t)+
+           (sug?' <em>sugerido</em>':(semAlerta?' <i class="nf-tipo-na">sem alerta</i>':''))+'</label>';
     });
 
     h+='<div class="nf-card">'+cab+valores+
@@ -103,7 +114,7 @@ function _camNfeRender(){
         '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
         '<div><label>KM *</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
       '</div>'+
-      '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro</span></label><div>'+chk+'</div></div>'+
+      '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro. Não se encaixa em nenhum (troca de um tubo, um conserto avulso)? Marque <strong>Outros</strong>.</span></label><div>'+chk+'</div></div>'+
       '</div>';
   });
   document.getElementById('camNfeLista').innerHTML=h;

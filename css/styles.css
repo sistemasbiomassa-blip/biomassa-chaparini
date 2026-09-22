@@ -362,6 +362,7 @@ tbody tr:hover{background:var(--surface2)}
 .nf-tipo{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 10px;margin:0 6px 6px 0;border:1px solid var(--border);border-radius:20px;cursor:pointer;user-select:none}
 .nf-tipo.on{border-color:var(--accent);background:rgba(0,180,216,.1)}
 .nf-tipo em{font-style:normal;font-size:10px;color:var(--accent)}
+.nf-tipo .nf-tipo-na{font-style:normal;font-size:10px;color:var(--text2)}
 .nf-lido{display:block;font-size:11px;color:var(--green);margin-top:4px}
 .nf-alerta{display:block;font-size:11px;color:var(--yellow);margin-top:4px}
 /* selo clicavel nas tabelas + janela de detalhe */
