@@ -12,6 +12,11 @@
 --               que hoje esconde esse módulo dele; corrigido a pedido do usuário).
 --               Em CADASTRO tem exceções extras confirmadas pelo usuário: pode INSERIR,
 --               e pode EDITAR (só os próprios lançamentos, igual ANALISTA) — mas NUNCA exclui.
+--   RH       -> adicionado em 0026_perfil_rh.sql. Só FREQUÊNCIA (lê e grava) + MOTORISTAS
+--               (leitura, é de onde sai a grade) + a própria linha de PROFILES.
+--               Todo o resto volta VAZIO pra ele — as policies de SELECT abaixo que diziam
+--               `auth.uid() is not null` passaram a usar public.pode_ver_operacional(),
+--               que é "logado e não é RH".
 -- ============================================================
 
 -- ---------- FUNÇÕES AUXILIARES ----------
@@ -120,6 +125,8 @@ end $$;
 -- esconde este módulo dele via classe .freq-visible — corrigido a pedido do usuário).
 -- Sem restrição de "dono" na edição — o app grava em lote (saveFrequenciaMes) e sempre
 -- permitiu ADMIN/ANALISTA sobrescreverem qualquer marcação, não só a própria.
+-- Atualizada em 0026_perfil_rh.sql: o perfil RH também insere/edita/exclui aqui
+-- (insert/update/delete viraram `public.pode_lancar() or public.is_rh()`).
 alter table public.frequencia enable row level security;
 
 create policy frequencia_select on public.frequencia

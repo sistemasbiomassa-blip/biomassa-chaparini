@@ -3,7 +3,7 @@ function renderUsuariosTable(){
   var h='<div class="table-header"><h3>Usuários Cadastrados</h3><span class="chart-badge">'+USUARIOS.length+' usuários</span></div><div class="table-scroll"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Primeiro Acesso</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
   USUARIOS.forEach(function(u,i){
     var perfil=(u.PERFIL||'ANALISTA').toUpperCase();
-    var perfilClass=perfil==='ADMIN'?'admin':(perfil==='DIRETOR'?'diretor':'analista');
+    var perfilClass=perfil==='ADMIN'?'admin':(perfil==='DIRETOR'?'diretor':(perfil==='RH'?'rh':'analista'));
     var ativo=u.ATIVO?u.ATIVO.toUpperCase()!=='FALSE':true;
     var primeiroAcesso=u.PRIMEIRO_ACESSO?u.PRIMEIRO_ACESSO.toUpperCase()==='TRUE':false;
     h+='<tr>';
@@ -75,7 +75,7 @@ function openPerfilModal(idx){
   var perfilAtual=(u.PERFIL||'ANALISTA').toUpperCase();
   document.getElementById('perfilModalNome').textContent=u.NOME||u.EMAIL;
   var sel=document.getElementById('perfilModalSelect');
-  sel.innerHTML=['ADMIN','DIRETOR','ANALISTA'].map(function(p){return '<option value="'+p+'"'+(p===perfilAtual?' selected':'')+'>'+p+'</option>';}).join('');
+  sel.innerHTML=['ADMIN','DIRETOR','ANALISTA','RH'].map(function(p){return '<option value="'+p+'"'+(p===perfilAtual?' selected':'')+'>'+p+'</option>';}).join('');
   document.getElementById('perfilModalOverlay').classList.add('show');
 }
 function closePerfilModal(){ document.getElementById('perfilModalOverlay').classList.remove('show'); _perfilEditIdx=null; }

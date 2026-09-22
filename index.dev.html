@@ -949,7 +949,7 @@
               <div class="form-group"><label>Usuário (opcional)</label><input type="text" id="nuUser" placeholder="referência antiga, não é mais o login"></div>
               <div class="form-group"><label>Nome Completo *</label><input type="text" id="nuNome" placeholder="Nome exibido"></div>
               <div class="form-group"><label>Senha Inicial *</label><input type="text" id="nuSenha" placeholder="Senha temporária"></div>
-              <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option></select></div>
+              <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option><option value="RH">RH (só Frequência)</option></select></div>
             </div>
             <div style="display:flex;gap:12px;margin-top:8px">
               <button class="btn btn-primary btn-sm" onclick="salvarNovoUsuario()">💾 Salvar</button>
@@ -1123,7 +1123,7 @@
           <div class="table-scroll" id="freqGridContainer" style="overflow:auto;max-height:65vh"></div>
         </div>
 
-        <div class="table-container" style="margin-top:16px">
+        <div class="table-container" id="freqCruzamentoBloco" style="margin-top:16px">
           <div class="table-header" style="flex-wrap:wrap;gap:8px">
             <h3>⚠️ Cruzamento — frequência × entregas</h3>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">

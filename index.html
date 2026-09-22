@@ -69,10 +69,12 @@ a{color:var(--accent);text-decoration:none}
 .user-badge .role-admin{background:rgba(163,113,247,0.15);color:var(--purple)}
 .user-badge .role-diretor{background:rgba(34,197,94,0.15);color:var(--green)}
 .user-badge .role-analista{background:rgba(0,180,216,0.15);color:var(--accent)}
+.user-badge .role-rh{background:rgba(245,158,11,0.15);color:var(--yellow)}
 .historico-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;display:inline-block}
 .historico-badge.admin{background:rgba(163,113,247,0.15);color:var(--purple)}
 .historico-badge.diretor{background:rgba(34,197,94,0.15);color:var(--green)}
 .historico-badge.analista{background:rgba(0,180,216,0.15);color:var(--accent)}
+.historico-badge.rh{background:rgba(245,158,11,0.15);color:var(--yellow)}
 
 /* APP LAYOUT */
 #appPage{display:none}
@@ -1398,7 +1400,7 @@ tbody tr:hover{background:var(--surface2)}
               <div class="form-group"><label>Usuário (opcional)</label><input type="text" id="nuUser" placeholder="referência antiga, não é mais o login"></div>
               <div class="form-group"><label>Nome Completo *</label><input type="text" id="nuNome" placeholder="Nome exibido"></div>
               <div class="form-group"><label>Senha Inicial *</label><input type="text" id="nuSenha" placeholder="Senha temporária"></div>
-              <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option></select></div>
+              <div class="form-group"><label>Perfil *</label><select id="nuPerfil"><option value="ANALISTA">Analista</option><option value="DIRETOR">Diretor</option><option value="ADMIN">Administrador</option><option value="RH">RH (só Frequência)</option></select></div>
             </div>
             <div style="display:flex;gap:12px;margin-top:8px">
               <button class="btn btn-primary btn-sm" onclick="salvarNovoUsuario()">💾 Salvar</button>
@@ -1572,7 +1574,7 @@ tbody tr:hover{background:var(--surface2)}
           <div class="table-scroll" id="freqGridContainer" style="overflow:auto;max-height:65vh"></div>
         </div>
 
-        <div class="table-container" style="margin-top:16px">
+        <div class="table-container" id="freqCruzamentoBloco" style="margin-top:16px">
           <div class="table-header" style="flex-wrap:wrap;gap:8px">
             <h3>⚠️ Cruzamento — frequência × entregas</h3>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -3093,25 +3095,40 @@ function enterApp(){
   // Show/hide admin elements
   var isAdmin=currentUserData.perfil==='ADMIN';
   var isDiretor=currentUserData.perfil==='DIRETOR';
+  var isRh=currentUserData.perfil==='RH';
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=isAdmin?'flex':'none'});
   document.querySelectorAll('.diretor-only').forEach(function(el){el.style.display=(isAdmin||isDiretor)?'flex':'none'});
   document.querySelectorAll('.freq-visible').forEach(function(el){el.style.display='flex'}); // DIRETOR também enxerga Frequência (decisão de RLS)
+  // RH só enxerga Frequência: some com todo item de menu que leve a outra página
+  // (o "Sair" não tem data-page, então continua visível). Quem não é RH tem os itens
+  // restaurados aqui — sem isso, trocar de usuário na mesma aba deixaria o menu mutilado.
+  document.querySelectorAll('.nav-item[data-page]').forEach(function(el){
+    var pg=el.getAttribute('data-page');
+    if(isRh){ el.style.display=(pg==='frequencia')?'flex':'none'; }
+    else if(!el.classList.contains('admin-only') && !el.classList.contains('diretor-only')){ el.style.display='flex'; }
+  });
+  // O cruzamento frequência × entregas lê o Cadastro, que o RH não acessa (RLS) —
+  // ficaria um painel vazio acusando "trabalhou e não entregou" pra todo mundo.
+  var cruz=document.getElementById('freqCruzamentoBloco');
+  if(cruz) cruz.style.display=isRh?'none':'';
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
   ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn','tabGarantiaBtn'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
   });
   // User badge
-  var roleClass=isAdmin?'role-admin':(isDiretor?'role-diretor':'role-analista');
-  var roleLabel=isAdmin?'Admin':(isDiretor?'Diretor':'Analista');
+  var roleClass=isAdmin?'role-admin':(isDiretor?'role-diretor':(isRh?'role-rh':'role-analista'));
+  var roleLabel=isAdmin?'Admin':(isDiretor?'Diretor':(isRh?'RH':'Analista'));
   document.getElementById('userBadge').innerHTML='<span>👤</span><span class="user-name">'+currentUserData.nome+'</span><span class="user-role '+roleClass+'">'+roleLabel+'</span>';
   initApp();
-  checkComboioAlert();
-  renderAlertasBanner();
+  if(!isRh){
+    checkComboioAlert();
+    renderAlertasBanner();
+  }
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
   // outro usuário na mesma aba do navegador (sem dar F5), a última página aberta
   // (ex: Usuários, só de ADMIN) continuava visível pro novo usuário.
-  navigateTo('cadastro');
+  navigateTo(isRh?'frequencia':'cadastro');
 }
 
 function doChangePass(){
@@ -3150,6 +3167,9 @@ function doLogout(){
 
 // ==================== NAVIGATION ====================
 function navigateTo(page){
+  // Trava de navegação do RH: o menu já esconde o resto, isso só evita que uma
+  // chamada solta (link antigo, console) abra outra página.
+  if(currentUserData && currentUserData.perfil==='RH' && page!=='frequencia') page='frequencia';
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');
@@ -9113,7 +9133,7 @@ function freqLimparMes(){
 }
 
 function freqSalvarMes(){
-  if(!(currentUserData && (currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'))){
+  if(!(currentUserData && (currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'||currentUserData.perfil==='RH'))){
     showToast('Sem permissão para salvar frequência',true); return;
   }
   var ano=document.getElementById('freqAno').value;
@@ -9584,7 +9604,7 @@ function renderUsuariosTable(){
   var h='<div class="table-header"><h3>Usuários Cadastrados</h3><span class="chart-badge">'+USUARIOS.length+' usuários</span></div><div class="table-scroll"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Primeiro Acesso</th><th>Ativo</th><th>Ações</th></tr></thead><tbody>';
   USUARIOS.forEach(function(u,i){
     var perfil=(u.PERFIL||'ANALISTA').toUpperCase();
-    var perfilClass=perfil==='ADMIN'?'admin':(perfil==='DIRETOR'?'diretor':'analista');
+    var perfilClass=perfil==='ADMIN'?'admin':(perfil==='DIRETOR'?'diretor':(perfil==='RH'?'rh':'analista'));
     var ativo=u.ATIVO?u.ATIVO.toUpperCase()!=='FALSE':true;
     var primeiroAcesso=u.PRIMEIRO_ACESSO?u.PRIMEIRO_ACESSO.toUpperCase()==='TRUE':false;
     h+='<tr>';
@@ -9656,7 +9676,7 @@ function openPerfilModal(idx){
   var perfilAtual=(u.PERFIL||'ANALISTA').toUpperCase();
   document.getElementById('perfilModalNome').textContent=u.NOME||u.EMAIL;
   var sel=document.getElementById('perfilModalSelect');
-  sel.innerHTML=['ADMIN','DIRETOR','ANALISTA'].map(function(p){return '<option value="'+p+'"'+(p===perfilAtual?' selected':'')+'>'+p+'</option>';}).join('');
+  sel.innerHTML=['ADMIN','DIRETOR','ANALISTA','RH'].map(function(p){return '<option value="'+p+'"'+(p===perfilAtual?' selected':'')+'>'+p+'</option>';}).join('');
   document.getElementById('perfilModalOverlay').classList.add('show');
 }
 function closePerfilModal(){ document.getElementById('perfilModalOverlay').classList.remove('show'); _perfilEditIdx=null; }

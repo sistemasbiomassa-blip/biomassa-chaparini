@@ -85,25 +85,40 @@ function enterApp(){
   // Show/hide admin elements
   var isAdmin=currentUserData.perfil==='ADMIN';
   var isDiretor=currentUserData.perfil==='DIRETOR';
+  var isRh=currentUserData.perfil==='RH';
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=isAdmin?'flex':'none'});
   document.querySelectorAll('.diretor-only').forEach(function(el){el.style.display=(isAdmin||isDiretor)?'flex':'none'});
   document.querySelectorAll('.freq-visible').forEach(function(el){el.style.display='flex'}); // DIRETOR também enxerga Frequência (decisão de RLS)
+  // RH só enxerga Frequência: some com todo item de menu que leve a outra página
+  // (o "Sair" não tem data-page, então continua visível). Quem não é RH tem os itens
+  // restaurados aqui — sem isso, trocar de usuário na mesma aba deixaria o menu mutilado.
+  document.querySelectorAll('.nav-item[data-page]').forEach(function(el){
+    var pg=el.getAttribute('data-page');
+    if(isRh){ el.style.display=(pg==='frequencia')?'flex':'none'; }
+    else if(!el.classList.contains('admin-only') && !el.classList.contains('diretor-only')){ el.style.display='flex'; }
+  });
+  // O cruzamento frequência × entregas lê o Cadastro, que o RH não acessa (RLS) —
+  // ficaria um painel vazio acusando "trabalhou e não entregou" pra todo mundo.
+  var cruz=document.getElementById('freqCruzamentoBloco');
+  if(cruz) cruz.style.display=isRh?'none':'';
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
   ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn','tabGarantiaBtn'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
   });
   // User badge
-  var roleClass=isAdmin?'role-admin':(isDiretor?'role-diretor':'role-analista');
-  var roleLabel=isAdmin?'Admin':(isDiretor?'Diretor':'Analista');
+  var roleClass=isAdmin?'role-admin':(isDiretor?'role-diretor':(isRh?'role-rh':'role-analista'));
+  var roleLabel=isAdmin?'Admin':(isDiretor?'Diretor':(isRh?'RH':'Analista'));
   document.getElementById('userBadge').innerHTML='<span>👤</span><span class="user-name">'+currentUserData.nome+'</span><span class="user-role '+roleClass+'">'+roleLabel+'</span>';
   initApp();
-  checkComboioAlert();
-  renderAlertasBanner();
+  if(!isRh){
+    checkComboioAlert();
+    renderAlertasBanner();
+  }
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
   // outro usuário na mesma aba do navegador (sem dar F5), a última página aberta
   // (ex: Usuários, só de ADMIN) continuava visível pro novo usuário.
-  navigateTo('cadastro');
+  navigateTo(isRh?'frequencia':'cadastro');
 }
 
 function doChangePass(){
@@ -142,6 +157,9 @@ function doLogout(){
 
 // ==================== NAVIGATION ====================
 function navigateTo(page){
+  // Trava de navegação do RH: o menu já esconde o resto, isso só evita que uma
+  // chamada solta (link antigo, console) abra outra página.
+  if(currentUserData && currentUserData.perfil==='RH' && page!=='frequencia') page='frequencia';
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
   var ni=document.querySelector('.nav-item[data-page="'+page+'"]');
   if(ni) ni.classList.add('active');

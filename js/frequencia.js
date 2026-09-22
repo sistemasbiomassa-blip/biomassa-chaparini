@@ -170,7 +170,7 @@ function freqLimparMes(){
 }
 
 function freqSalvarMes(){
-  if(!(currentUserData && (currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'))){
+  if(!(currentUserData && (currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA'||currentUserData.perfil==='RH'))){
     showToast('Sem permissão para salvar frequência',true); return;
   }
   var ano=document.getElementById('freqAno').value;
