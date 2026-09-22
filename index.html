@@ -243,6 +243,11 @@ tbody tr:hover{background:var(--surface2)}
 /* KM & Próxima Troca: tabela embaixo da matriz (antes era um painel de 380px ao lado, que
    espremia a matriz). ~5 linhas visíveis, os demais caminhões pela barra de rolagem. */
 .manut-panel{min-width:0}
+.manut-km-sel{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.manut-km-sel-lbl{font-size:10.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.manut-km-sel select{padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'Barlow',sans-serif;font-weight:600}
+.manut-km-sel select:focus{border-color:var(--accent);outline:none}
+.manut-km-sel-n{font-size:10px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
 .manut-km-scroll{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
 .manut-km-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
 .manut-km-tbl thead th{position:sticky;top:0;z-index:1;background:var(--surface2);text-align:left;font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:9px 12px;border-bottom:1px solid var(--border)}
@@ -1235,7 +1240,7 @@ tbody tr:hover{background:var(--surface2)}
             <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
           </div>
           <div class="manut-panel" id="manutKmPanel">
-            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Troca</div><div class="manut-ph-badge" id="manutKmBadge">óleo motor</div></div>
+            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Manutenção</div><div class="manut-km-sel" id="manutKmBadge"></div></div>
             <div id="manutKmList"></div>
           </div>
         </div>
@@ -1247,6 +1252,9 @@ tbody tr:hover{background:var(--surface2)}
         </div>
 
         <div id="manutViewGarantia" style="display:none">
+          <!-- Sem garantia cadastrada, a matriz saía vazia e a aba parecia igual à de fora
+               de garantia; este aviso explica para que serve e onde cadastrar. -->
+          <div class="nf-rel-vazio" id="manutGarVazio" style="display:none"></div>
           <div class="manut-filter-bar" id="filtersManutGar"></div>
           <div class="kpi-row" id="kpiManutGar"></div>
           <div class="table-container">
@@ -1255,12 +1263,15 @@ tbody tr:hover{background:var(--surface2)}
           </div>
         </div>
 
+        <!-- Detalhamento e Consulta de Pneu são das visões de caminhão (Fora/Em Garantia);
+             ficam escondidos na aba Peças e Serviços, onde não têm a ver. -->
+        <div id="manutSecoesCaminhao">
         <div style="margin-top:16px">
           <div class="filters" id="filtersManutDet"></div>
           <div class="table-container" id="tblManutDet"></div>
         </div>
 
-        <div class="table-container" style="margin-top:16px">
+        <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
           <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
           <div style="padding:16px">
             <div class="pneu-search-bar">
@@ -1269,6 +1280,7 @@ tbody tr:hover{background:var(--surface2)}
             </div>
             <div id="pneuBuscaResultado"></div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -2716,6 +2728,85 @@ function showDespesaDetail(categoria){
   openDetailModal('💸 '+categoria,'Detalhamento de despesas nesta categoria',h);
 }
 
+// Logo usada nos PDFs (era uma variável local dentro do exportPagePDF; virou constante
+// para a exportação de seção usar a mesma sem duplicar o base64).
+var PDF_LOGO='data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD/wAARCAD8APwDACIAAREBAhEB/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMAAAERAhEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASiiql5fW9hD5tw+yPOM7SefwpSkoq72BJt2RboNZI8SaSf+Xsf98t/hT117THO0Xkf61kq9N7SX3lulUX2X9x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';
+
+// Ajustes comuns a qualquer PDF, do quadro ou da página inteira:
+//  - caixas com rolagem abrem inteiras (senão sai só o pedaço visível na tela);
+//  - linhas recolhidas (detalhe de pneus) e a coluna "Ações" saem (botão no papel não serve);
+//  - campo de formulário vira texto: um <select> impresso aparece vazio, mas o que ele diz
+//    (ex: o tipo escolhido em "KM & Próxima Manutenção") faz falta no papel;
+//  - caixa de busca (ex: Consulta de Pneu) sai inteira: no papel não há o que buscar.
+function _pdfPrepararClone(clone){
+  clone.querySelectorAll('.table-scroll,.manut-matrix-wrap,.manut-km-scroll,.nf-rel-rank').forEach(function(d){
+    d.style.maxHeight='none'; d.style.overflow='visible';
+  });
+  clone.querySelectorAll('tr').forEach(function(tr){ if(tr.style.display==='none') tr.parentNode.removeChild(tr); });
+  clone.querySelectorAll('table').forEach(function(tb){
+    var idx=-1;
+    tb.querySelectorAll('thead th').forEach(function(th,i){ if(th.textContent.trim().toLowerCase()==='ações') idx=i; });
+    if(idx<0) return;
+    tb.querySelectorAll('tr').forEach(function(tr){ var c=tr.children[idx]; if(c) c.parentNode.removeChild(c); });
+  });
+  clone.querySelectorAll('select').forEach(function(sel){
+    var op=sel.options&&sel.selectedIndex>=0?sel.options[sel.selectedIndex]:null;
+    var span=document.createElement('strong');
+    span.textContent=op?op.textContent:'';
+    sel.parentNode.replaceChild(span,sel);
+  });
+  // a busca de pneu some junto com o quadro dela; os demais campos/botões, só eles
+  var busca=clone.querySelector('#pneuBuscaInput');
+  if(busca){ var cx=busca.closest('.table-container'); if(cx) cx.parentNode.removeChild(cx); }
+  clone.querySelectorAll('input,button,.manut-view-tabs').forEach(function(el){ el.parentNode.removeChild(el); });
+}
+
+// Exporta SÓ uma seção (um quadro/tabela), em vez da página inteira. O botão genérico dos
+// filtros chama exportPagePDF, que clona a página toda — no Detalhamento de Manutenção
+// isso levava junto a matriz, o painel de KM e os cards.
+function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem){
+  var el=document.getElementById(elId);
+  if(!el){ showToast('Nada para exportar',true); return; }
+  // abre a janela já no clique (gesto do usuário), senão o navegador bloqueia em silêncio
+  var printWin=window.open('','_blank');
+  if(!printWin){ showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true); return; }
+  var clone=el.cloneNode(true);
+  _pdfPrepararClone(clone);
+  var brd='#cccccc', agora=new Date();
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' - Biomassa Chaparini</title>';
+  html+='<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">';
+  html+='<style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box}';
+  html+='body{font-family:"Barlow",sans-serif;background:#ffffff;color:#111111;padding:20px 26px}';
+  html+='.pdf-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:2px solid '+brd+';margin-bottom:12px;background:#ffffff}';
+  html+='.pdf-filtros{font-size:10px;color:#555555;margin-bottom:10px}';
+  html+='.table-header,.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}';
+  html+='.table-header h3,.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:600}';
+  html+='.chart-badge,.manut-ph-badge{font-size:9px;color:#555555;border:1px solid '+brd+';border-radius:20px;padding:2px 8px}';
+  html+='table{width:100%;border-collapse:collapse;font-size:10px}';
+  html+='th{text-align:left;font-size:8.5px;text-transform:uppercase;color:#555555;border-bottom:1px solid '+brd+';padding:5px 6px}';
+  html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee}';
+  html+='tr{page-break-inside:avoid}';
+  html+='thead{display:table-header-group}';
+  html+='.manut-placa-tag,.nf-selo{color:#0066aa;font-weight:600}';
+  html+='.maq-chip,.manut-chip{font-size:8.5px;border:1px solid '+brd+';border-radius:20px;padding:1px 6px}';
+  html+='.manut-chip-dot{display:none}';
+  html+='@media print{body{padding:8px}@page{size:'+(paisagem?'landscape':'portrait')+';margin:18mm 8mm 8mm 8mm}.pdf-header{position:fixed;top:0;left:0;right:0}}';
+  html+='</style></head><body>';
+  html+='<div class="pdf-header"><div style="display:flex;align-items:center;gap:12px">';
+  html+='<img src="'+PDF_LOGO+'" style="height:40px;width:auto;object-fit:contain" alt="Biomassa Chaparini">';
+  html+='<div><div style="font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700;color:#1a4a2e;letter-spacing:0.5px">BIOMASSA CHAPARINI</div>';
+  html+='<div style="font-size:9px;color:#555555">Sistema de Gestão de Frota</div></div></div>';
+  html+='<div style="text-align:right"><div style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:600">'+titulo+'</div>';
+  html+='<div style="font-size:8px;color:#555555;margin-top:2px">Gerado em '+agora.toLocaleDateString('pt-BR')+' às '+agora.toLocaleTimeString('pt-BR')+'</div></div></div>';
+  if(filtrosTxt) html+='<div class="pdf-filtros"><b>Filtros aplicados:</b> '+filtrosTxt+'</div>';
+  html+=clone.innerHTML;
+  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<'+'/script>';
+  html+='</body></html>';
+  printWin.document.write(html);
+  printWin.document.close();
+}
+
 function exportPagePDF(filterContainerId){
   var pageMap={filtersProd:'pageProducao',filtersFin:'pageFinanceiro',filtersTempo:'pageTempoEspera',filtersManut:'pageManutencao'};
   var pageId=pageMap[filterContainerId];
@@ -2775,6 +2866,7 @@ function exportPagePDF(filterContainerId){
   // Remove filters from clone
   var filters=clone.querySelector('.filters,.manut-filter-bar');
   if(filters) filters.style.display='none';
+  _pdfPrepararClone(clone);
   var notaWrap=clone.querySelector('#fpNotaWrap');
   if(notaWrap) notaWrap.style.display='none';
   // Produção: KPIs simplificados só no PDF (tela continua com os 7 cards originais)
@@ -2794,7 +2886,7 @@ function exportPagePDF(filterContainerId){
   var txt='#111111';
   var surf='#f8f9fa';
   var brd='#cccccc';
-  var logoData='data:image/jpeg;base64,/9j/4AAQSkZJRgABAgAAAQABAAD/wAARCAD8APwDACIAAREBAhEB/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/9sAQwEJCQkMCwwYDQ0YMiEcITIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMAAAERAhEAPwD3+iiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooASiiql5fW9hD5tw+yPOM7SefwpSkoq72BJt2RboNZI8SaSf+Xsf98t/hT117THO0Xkf61kq9N7SX3lulUX2X9x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';
+  var logoData=PDF_LOGO;
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8">';
   html+='<title>'+titleText+' - Biomassa Chaparini</title>';
   html+='<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">';
@@ -2880,6 +2972,7 @@ function exportPagePDF(filterContainerId){
     html+='#chartsProd .chart-container img{height:210px}';
     html+='#tblProd{page-break-before:always}';
   }
+  html+='thead{display:table-header-group}tr{page-break-inside:avoid}';
   html+='@media print{';
   html+='  body{padding:10px}';
   html+='  @page{size:'+(isProd?'portrait':'landscape')+';margin:22mm 10mm 10mm 10mm}';
@@ -5250,7 +5343,7 @@ function renderManutRealTable(){
   var data=DB.manutRealizada;
   var h='<table><thead><tr><th>Placa</th><th>Tipo</th><th>Data</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th></tr></thead><tbody>';
   data.forEach(function(r){
-    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
+    h+='<tr><td>'+(r.PLACA||'-')+'</td><td>'+(r.TIPO_MANUTENCAO||'-')+'</td><td>'+formatDateBR(r.DATA_MANUTENCAO)+'</td><td>'+(r.KM_NA_MANUTENCAO?numBR(r.KM_NA_MANUTENCAO,2):'-')+'</td><td>'+(r.MOTORISTA||'-')+'</td><td>'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td><td>'+(r.LOCAL_SERVICO||'-')+'</td><td>'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td><td>'+(r['OBSERVAÇÃO']||'-')+'</td></tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblManutRealContainer').innerHTML=h;
@@ -6765,6 +6858,7 @@ function buildFinanceiro(){
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
 var manutViewAtual='fora'; // 'fora', 'garantia' ou 'pecas'
+var manutKmTipo=''; // tipo mostrado no painel KM & Próxima Troca ('' = troca de óleo)
 
 // Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
 // Detalhamento, que é comum às duas. Chamado por navigateTo/switchTab e por
@@ -6784,6 +6878,13 @@ function showManutView(view){
   document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
   document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
   document.getElementById('manutTabBtnPecas').classList.toggle('active',view==='pecas');
+  var secoes=document.getElementById('manutSecoesCaminhao');
+  if(secoes) secoes.style.display=view==='pecas'?'none':'';
+  // A consulta de pneu busca em TODOS os pneus lançados (js/pneus.js), sem olhar aba nem
+  // garantia — então fica só na visão principal, em vez de repetida em cada aba.
+  var pneu=document.getElementById('manutConsultaPneu');
+  if(pneu) pneu.style.display=view==='fora'?'':'none';
+  if(view!=='pecas') buildManutDetalhamento();   // o Detalhamento muda conforme a visão
   if(view==='pecas') buildNfRelatorio();
 }
 
@@ -6854,10 +6955,7 @@ function buildManutencaoFora(){
   var savedPlaca=document.getElementById('fmDashPlaca')?document.getElementById('fmDashPlaca').value:manutFiltro.placa;
   var savedTipo=document.getElementById('fmDashTipo')?document.getElementById('fmDashTipo').value:manutFiltro.tipo;
   var savedMot=document.getElementById('fmDashMot')?document.getElementById('fmDashMot').value:manutFiltro.motorista;
-  var savedDtIni=document.getElementById('fmDashDtIni')?document.getElementById('fmDashDtIni').value:manutFiltro.dtIni;
-  var savedDtFim=document.getElementById('fmDashDtFim')?document.getElementById('fmDashDtFim').value:manutFiltro.dtFim;
   manutFiltro.placa=savedPlaca;manutFiltro.tipo=savedTipo;manutFiltro.motorista=savedMot;
-  manutFiltro.dtIni=savedDtIni;manutFiltro.dtFim=savedDtFim;
 
   var motPlacas={};
   DB.cadastro.forEach(function(r){
@@ -6890,8 +6988,6 @@ function buildManutencaoFora(){
   fbH+='<div class="manut-filter-tag'+(attTag?' active':'')+'" onclick="toggleManutTag(&#39;y&#39;,this)"><span class="manut-tag-dot" style="background:var(--yellow)"></span>Atenção</div>';
   fbH+='<div class="manut-filter-tag'+(okTag?' active green':'')+'" onclick="toggleManutTag(&#39;g&#39;,this)"><span class="manut-tag-dot" style="background:var(--green)"></span>OK</div>';
   fbH+='<div class="manut-filter-tag'+(xTag?' active':'')+'" onclick="toggleManutTag(&#39;x&#39;,this)"><span class="manut-tag-dot" style="background:var(--text2)"></span>Sem registro</div>';
-  fbH+='<div class="filter-sep" style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>';
-  fbH+='<div style="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:2px 6px;font-size:11px;color:var(--text2)">📅 De <input type="date" id="fmDashDtIni" value="'+(savedDtIni||'')+'" onchange="manutFiltro.dtIni=this.value;buildManutencao()" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:inherit"> até <input type="date" id="fmDashDtFim" value="'+(savedDtFim||'')+'" onchange="manutFiltro.dtFim=this.value;buildManutencao()" style="border:none;background:transparent;font-size:11px;color:var(--text);font-family:inherit"></div>';
   fbH+='<button class="manut-filter-reset" onclick="resetManutFiltros()">↺ Limpar filtros</button>';
   fbH+='<button class="filter-btn-pdf" onclick="exportPagePDF(&#39;filtersManut&#39;)">📄 Exportar PDF</button>';
   fb.innerHTML=fbH;
@@ -6906,8 +7002,10 @@ function buildManutencaoFora(){
   if(manutFiltro.status.length>0) filtered=filtered.filter(function(a){return manutFiltro.status.indexOf(a.worst)>=0});
 
   // Count totals from filtered
-  var urgCnt=0,attCnt=0,okCnt=0,semRegCnt=0;
+  var urgCnt=0,attCnt=0,okCnt=0,semRegCnt=0,totalItens=0,urgPlacasSet={};
   filtered.forEach(function(a){
+    totalItens+=a.items.length;
+    if(a.items.some(function(i){return i.status==='r';})) urgPlacasSet[a.placa]=1;
     a.items.forEach(function(i){
       if(i.status==='r') urgCnt++;
       else if(i.status==='x') semRegCnt++;
@@ -6915,6 +7013,8 @@ function buildManutencaoFora(){
       else okCnt++;
     });
   });
+
+  var urgPlacas=Object.keys(urgPlacasSet).length;
 
   // Compute fleet km/L
   var totalKm=0,totalLit=0;
@@ -6960,9 +7060,9 @@ function buildManutencaoFora(){
 
   // KPIs
   document.getElementById('kpiManut').innerHTML=
-    '<div class="kpi-card red"><div class="kpi-icon">🔴</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Urgentes</div></div>'+
-    '<div class="kpi-card yellow"><div class="kpi-icon">🟡</div><div class="kpi-value">'+attCnt+'</div><div class="kpi-label">Em Atenção</div></div>'+
-    '<div class="kpi-card"><div class="kpi-icon">⚪</div><div class="kpi-value">'+semRegCnt+'</div><div class="kpi-label">Sem Registro</div></div>'+
+    '<div class="kpi-card red" title="Cada item é uma combinação caminhão + tipo de manutenção"><div class="kpi-icon">🔴</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Itens urgentes'+(urgPlacas?' · '+urgPlacas+' caminhõe'+(urgPlacas>1?'s':'')+'':'')+'</div></div>'+
+    '<div class="kpi-card yellow" title="Cada item é uma combinação caminhão + tipo de manutenção"><div class="kpi-icon">🟡</div><div class="kpi-value">'+attCnt+'</div><div class="kpi-label">Itens em atenção</div></div>'+
+    '<div class="kpi-card" title="Combinações caminhão + tipo que nunca tiveram manutenção lançada — sem isso o sistema não sabe calcular a próxima"><div class="kpi-icon">⚪</div><div class="kpi-value">'+semRegCnt+'</div><div class="kpi-label">Itens sem registro'+(totalItens?' de '+totalItens:'')+'</div></div>'+
     '<div class="kpi-card green"><div class="kpi-icon">🚛</div><div class="kpi-value">'+filtered.length+'</div><div class="kpi-label">Caminhões</div></div>';
 
   // MATRIX TABLE
@@ -6975,8 +7075,15 @@ function buildManutencaoFora(){
   document.getElementById('manutMatrizHead').innerHTML=thead;
 
   var chipLabel={g:'OK',y:'Atenção',r:'Urgente',x:'Sem reg.'};
+  // Ordem: urgente > atenção > ok > sem registro (placa em ordem alfabética dentro do grupo).
+  // Só alfabética, com 31 caminhões e a maioria "sem registro", deixava o urgente perdido
+  // no meio da lista — quem abre a tela quer ver primeiro o que precisa de ação.
+  var ordStatus={r:0,y:1,g:2,x:3};
+  var ordenados=filtered.slice().sort(function(a,b){
+    return (ordStatus[a.worst]-ordStatus[b.worst]) || a.placa.localeCompare(b.placa,'pt-BR');
+  });
   var tbody='';
-  filtered.forEach(function(a){
+  ordenados.forEach(function(a){
     tbody+='<tr><td><span class="manut-placa-tag">'+a.placa+'</span></td>';
     a.items.forEach(function(i){
       // Filter by tipo if active
@@ -6989,44 +7096,55 @@ function buildManutencaoFora(){
     tbody+='</tr>';
   });
   document.getElementById('manutMatrizBody').innerHTML=tbody;
-  document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões';
+  document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões · mais urgente primeiro';
 
   // KM & PRÓXIMA TROCA (óleo motor) — TODOS os caminhões, do mais urgente ao menos; a
   // caixa mostra ~5 linhas e rola para o resto (antes cortava em 5 e mandava usar o filtro).
   // O tipo é achado pelo NOME: antes pegava "o 1º do catálogo" presumindo que fosse o óleo,
   // e reordenar/apagar esse tipo trocaria o painel de assunto sem aviso.
-  var iOleo=-1;
+  // Qual tipo o painel mostra: o escolhido no seletor do próprio painel; por padrão a
+  // troca de óleo, achada pelo NOME (antes pegava "o 1º do catálogo" presumindo que fosse
+  // o óleo, e reordenar/apagar esse tipo trocaria o painel de assunto sem aviso).
+  var iOleo=-1, iSel=-1;
   progs.forEach(function(p,i){
     if(iOleo<0 && /OLEO\s+(DO\s+|DE\s+)?MOTOR/.test(String(p.TIPO_MANUTENCAO).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase())) iOleo=i;
+    if(manutKmTipo && p.TIPO_MANUTENCAO===manutKmTipo) iSel=i;
   });
+  if(iSel<0) iSel=(iOleo>=0?iOleo:(progs.length?0:-1));
+  var tipoPainel=iSel>=0?progs[iSel].TIPO_MANUTENCAO:'';
   var kmListH;
-  if(iOleo<0){
-    kmListH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Cadastre o tipo "Troca de Óleo Motor" com intervalo de KM (Cadastro → Tipos de Manutenção) para ver a próxima troca.</div>';
+  if(iSel<0){
+    kmListH='<div style="padding:14px;color:var(--text2);font-size:12px;text-align:center">Nenhum tipo de manutenção com intervalo de KM cadastrado (Cadastro → Tipos de Manutenção).</div>';
   } else {
     var semReg=999999999;
     var sorted=filtered.slice().sort(function(a,b){
-      var ra=a.items[iOleo].kmRest, rb=b.items[iOleo].kmRest;
+      var ra=a.items[iSel].kmRest, rb=b.items[iSel].kmRest;
       return (ra!=null?ra:semReg)-(rb!=null?rb:semReg);
     });
     var corTxt={g:'var(--green)',y:'var(--yellow)',r:'var(--red)',x:'var(--text2)'};
-    kmListH='<div class="manut-km-scroll"><table class="manut-km-tbl"><thead><tr><th>Placa</th><th>KM atual</th><th>Próxima troca</th><th>Faltam</th><th></th></tr></thead><tbody>';
+    kmListH='<div class="manut-km-scroll"><table class="manut-km-tbl"><thead><tr><th>Placa</th><th>KM atual</th><th>Próxima em</th><th>Faltam</th><th></th></tr></thead><tbody>';
     sorted.forEach(function(a){
-      var oil=a.items[iOleo];
+      var it=a.items[iSel];
       // Barra = quanto do intervalo ainda resta, na cor do status (mesmos limites de
       // alerta da matriz). A conta antiga (100 − KM atual/próxima troca) dava ~20% e
       // amarelo para um caminhão que acabou de trocar o óleo.
-      var pct=(oil.kmRest!=null && oil.intervalo>0)?Math.max(0,Math.min(100,Math.round(oil.kmRest/oil.intervalo*100))):0;
+      var pct=(it.kmRest!=null && it.intervalo>0)?Math.max(0,Math.min(100,Math.round(it.kmRest/it.intervalo*100))):0;
       kmListH+='<tr>'+
         '<td><span class="manut-placa-tag">'+a.placa+'</span></td>'+
         '<td class="manut-km-num">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</td>'+
-        '<td class="manut-km-num">'+(oil.proxM!=null?Math.round(oil.proxM).toLocaleString('pt-BR')+' km':'<span style="color:var(--text2)">sem registro</span>')+'</td>'+
-        '<td class="manut-km-num" style="color:'+corTxt[oil.status]+'">'+(oil.kmRest!=null?(oil.kmRest<0?'vencido há '+Math.round(-oil.kmRest).toLocaleString('pt-BR'):Math.round(oil.kmRest).toLocaleString('pt-BR'))+' km':'—')+'</td>'+
-        '<td><div class="manut-km-bg"><div class="manut-km-fill '+(oil.status==='x'?'':oil.status)+'" style="width:'+pct+'%"></div></div></td>'+
+        '<td class="manut-km-num">'+(it.proxM!=null?Math.round(it.proxM).toLocaleString('pt-BR')+' km':'<span style="color:var(--text2)">sem registro</span>')+'</td>'+
+        '<td class="manut-km-num" style="color:'+corTxt[it.status]+'">'+(it.kmRest!=null?(it.kmRest<0?'vencido há '+Math.round(-it.kmRest).toLocaleString('pt-BR'):Math.round(it.kmRest).toLocaleString('pt-BR'))+' km':'—')+'</td>'+
+        '<td><div class="manut-km-bg"><div class="manut-km-fill '+(it.status==='x'?'':it.status)+'" style="width:'+pct+'%"></div></div></td>'+
         '</tr>';
     });
     kmListH+='</tbody></table></div>';
   }
-  document.getElementById('manutKmBadge').textContent='óleo motor · '+filtered.length+' caminhões';
+  // o tipo mostrado vira um seletor no cabeçalho do painel: antes era um selo discreto
+  // ("óleo motor"), que passava batido e prendia o painel na troca de óleo
+  var selH='<span class="manut-km-sel-lbl">tipo:</span><select id="manutKmSel" onchange="manutKmTipo=this.value;buildManutencao()">';
+  progs.forEach(function(p){ selH+='<option'+(p.TIPO_MANUTENCAO===tipoPainel?' selected':'')+'>'+p.TIPO_MANUTENCAO+'</option>'; });
+  selH+='</select><span class="manut-km-sel-n">'+filtered.length+' caminhões</span>';
+  document.getElementById('manutKmBadge').innerHTML=selH;
   document.getElementById('manutKmList').innerHTML=kmListH;
 
   // CONSUMO MÉDIO movido para a aba Consumo (buildConsumo)
@@ -7046,6 +7164,13 @@ function resetManutFiltros(){
   buildManutencaoFora();
 }
 
+// Atalho do aviso da aba Em Garantia para o cadastro (Cadastro → Garantia)
+function irParaCadastroGarantia(){
+  navigateTo('cadastro');
+  var btn=document.getElementById('tabGarantiaBtn');
+  if(btn) switchTab(btn,'tabGarantia');
+}
+
 // ==================== EM GARANTIA ====================
 var manutGarFiltro={placa:'',tipo:'',status:[]};
 
@@ -7053,6 +7178,25 @@ function buildManutencaoGarantia(){
   var kmByPlaca=_manutCalcKmByPlaca();
   var lastManut=_manutCalcLastManut();
   var garantiasAtivas=DB.garantiaCaminhoes.filter(garantiaEstaAtiva);
+
+  // Sem garantia cadastrada a aba ficava só com tabela vazia, idêntica à de fora de
+  // garantia. Explica para que serve e onde cadastrar (só ADMIN cadastra).
+  var vazio=document.getElementById('manutGarVazio');
+  if(vazio){
+    var temCadastro=DB.garantiaCaminhoes.length>0, admin=currentUserData&&currentUserData.perfil==='ADMIN';
+    if(!garantiasAtivas.length){
+      vazio.innerHTML=temCadastro
+        ? '<strong>Nenhuma garantia vigente.</strong><br>As '+DB.garantiaCaminhoes.length+' garantia(s) cadastrada(s) já venceram — por data ou por KM. Esses caminhões passam a aparecer em <em>Fora de Garantia</em>.'
+        : '<strong>Nenhum caminhão em garantia cadastrado.</strong><br>Caminhão novo, dentro da garantia da fábrica, segue o plano de revisão da concessionária (intervalos e tipos próprios) em vez do plano de vocês. Cadastrando a garantia aqui, ele sai da matriz de fora de garantia e passa a ser cobrado pelo plano certo.'
+          +(admin?'<br><button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="irParaCadastroGarantia()">Cadastrar garantia</button>':'<br><span style="font-size:11px">Só um ADMIN pode cadastrar (Cadastro → Garantia).</span>');
+      vazio.style.display='';
+    } else vazio.style.display='none';
+    // com a aba vazia, filtros e tabela só poluem
+    ['filtersManutGar','kpiManutGar'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display=garantiasAtivas.length?'':'none'; });
+    var tab=document.querySelector('#manutViewGarantia .table-container');
+    if(tab) tab.style.display=garantiasAtivas.length?'':'none';
+    if(!garantiasAtivas.length) return;
+  }
 
   var fb=document.getElementById('filtersManutGar');
   var savedPlaca=document.getElementById('fgDashPlaca')?document.getElementById('fgDashPlaca').value:manutGarFiltro.placa;
@@ -7149,14 +7293,23 @@ function buildManutDetalhamento(){
     {id:'fmdPlaca',label:'Placa',options:uPlaca,onChange:buildManutDetalhamento},
     {id:'fmdTipo',label:'Tipo',options:uTipo,onChange:buildManutDetalhamento},
     {type:'dateRange',idIni:'fmdDtIni',idFim:'fmdDtFim',onChange:buildManutDetalhamento}
-  ], '', function(){ clearFilters(['fmdPlaca','fmdTipo','fmdDtIni','fmdDtFim'],buildManutDetalhamento); });
+  ], '<button class="filter-btn-pdf" onclick="exportManutDetPDF()">📄 Exportar PDF</button>',
+     function(){ clearFilters(['fmdPlaca','fmdTipo','fmdDtIni','fmdDtFim'],buildManutDetalhamento); },
+     true);   // noPdfBtn: o botão genérico exporta a PÁGINA inteira; aqui queremos só este quadro
 
   var fPlaca=(document.getElementById('fmdPlaca')||{}).value||'';
   var fTipo=(document.getElementById('fmdTipo')||{}).value||'';
   var fDtIni=(document.getElementById('fmdDtIni')||{}).value||'';
   var fDtFim=(document.getElementById('fmdDtFim')||{}).value||'';
 
+  // O Detalhamento é o mesmo quadro nas duas visões; em "Em Garantia" ele mostra só os
+  // caminhões com garantia vigente, senão as duas abas exibem exatamente a mesma lista.
+  var soGarantia=manutViewAtual==='garantia';
+  var placasGarantia={};
+  if(soGarantia) DB.garantiaCaminhoes.filter(garantiaEstaAtiva).forEach(function(g){ placasGarantia[String(g.PLACA).replace(/\s+/g,'')]=1; });
+
   var rows=DB.manutRealizada.filter(function(r){
+    if(soGarantia && !placasGarantia[String(r.PLACA||'').replace(/\s+/g,'')]) return false;
     if(fPlaca && r.PLACA!==fPlaca) return false;
     if(fTipo && r.TIPO_MANUTENCAO!==fTipo) return false;
     if((fDtIni||fDtFim) && !dateInRange(r.DATA_MANUTENCAO,fDtIni,fDtFim)) return false;
@@ -7166,7 +7319,7 @@ function buildManutDetalhamento(){
   var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   var colCount=canEdit?11:10;
-  var tH='<div class="table-header"><h3>Detalhamento de Manutenção</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção'+(soGarantia?' — em garantia':'')+'</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   rows.forEach(function(r){
     var actCell='';
     if(canEdit){
@@ -7179,7 +7332,7 @@ function buildManutDetalhamento(){
     tH+='<tr><td style="'+mono+'">'+formatDateBR(r.DATA_MANUTENCAO)+'</td>'+
       '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
       '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
-      '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?Number(r.KM_NA_MANUTENCAO).toLocaleString('pt-BR'):'-')+'</td>'+
+      '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?numBR(r.KM_NA_MANUTENCAO,2):'-')+'</td>'+
       '<td>'+(r.MOTORISTA||'-')+'</td>'+
       '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
       '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
@@ -7195,6 +7348,15 @@ function buildManutDetalhamento(){
   });
   tH+='</tbody></table></div>';
   document.getElementById('tblManutDet').innerHTML=tH;
+}
+// PDF só do Detalhamento (o botão do topo da página continua exportando a página toda)
+function exportManutDetPDF(){
+  var v=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var f=[];
+  if(v('fmdPlaca')) f.push('Placa: '+v('fmdPlaca'));
+  if(v('fmdTipo')) f.push('Tipo: '+v('fmdTipo'));
+  if(v('fmdDtIni')||v('fmdDtFim')) f.push('Período: '+(v('fmdDtIni')?formatDateBR(v('fmdDtIni')):'início')+' até '+(v('fmdDtFim')?formatDateBR(v('fmdDtFim')):'hoje'));
+  exportSecaoPDF('tblManutDet','Detalhamento de Manutenção',f.join(' · ')||'nenhum (todos os registros)',true);
 }
 function _toggleManutDetPneu(id){
   var row=document.getElementById('mdPneuExp_'+id);

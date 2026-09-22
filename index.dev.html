@@ -791,7 +791,7 @@
             <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
           </div>
           <div class="manut-panel" id="manutKmPanel">
-            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Troca</div><div class="manut-ph-badge" id="manutKmBadge">óleo motor</div></div>
+            <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Manutenção</div><div class="manut-km-sel" id="manutKmBadge"></div></div>
             <div id="manutKmList"></div>
           </div>
         </div>
@@ -803,6 +803,9 @@
         </div>
 
         <div id="manutViewGarantia" style="display:none">
+          <!-- Sem garantia cadastrada, a matriz saía vazia e a aba parecia igual à de fora
+               de garantia; este aviso explica para que serve e onde cadastrar. -->
+          <div class="nf-rel-vazio" id="manutGarVazio" style="display:none"></div>
           <div class="manut-filter-bar" id="filtersManutGar"></div>
           <div class="kpi-row" id="kpiManutGar"></div>
           <div class="table-container">
@@ -811,12 +814,15 @@
           </div>
         </div>
 
+        <!-- Detalhamento e Consulta de Pneu são das visões de caminhão (Fora/Em Garantia);
+             ficam escondidos na aba Peças e Serviços, onde não têm a ver. -->
+        <div id="manutSecoesCaminhao">
         <div style="margin-top:16px">
           <div class="filters" id="filtersManutDet"></div>
           <div class="table-container" id="tblManutDet"></div>
         </div>
 
-        <div class="table-container" style="margin-top:16px">
+        <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
           <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
           <div style="padding:16px">
             <div class="pneu-search-bar">
@@ -825,6 +831,7 @@
             </div>
             <div id="pneuBuscaResultado"></div>
           </div>
+        </div>
         </div>
       </div>
 
