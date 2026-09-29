@@ -99,7 +99,10 @@ function loadFromSheets(callback) {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
       KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
       NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id,
-      NF_PRINCIPAL_ID:x.nf_principal_id
+      NF_PRINCIPAL_ID:x.nf_principal_id,
+      // false = lançamento histórico (anterior a 01/07/2026, migration 0028): conta no custo
+      // e no histórico, mas não serve de base para calcular a próxima manutenção.
+      BASE_ALERTA:x.base_alerta!==false
     };});
 
     // notas fiscais importadas (NF-e/NFS-e) e seus itens — ver js/nf-parse.js
@@ -209,9 +212,17 @@ function loadFromSheets(callback) {
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
     BASE.localCarga = LOCAIS_DATA.filter(function(l){ return l.TIPO==='carga'; }).map(function(l){ return l.NOME; });
     BASE.localDescarga = LOCAIS_DATA.filter(function(l){ return l.TIPO==='descarga'; }).map(function(l){ return l.NOME; });
-    BASE.placas = CAMINHOES_DATA.map(function(c){ return c.PLACA; });
+    // ordem alfabética na origem: a lista vem do banco na ordem de cadastro, e procurar
+    // placa numa lista desordenada é ruim em toda tela que usa (importador de nota,
+    // formulário de manutenção, alertas...)
+    BASE.placas = CAMINHOES_DATA.map(function(c){ return c.PLACA; })
+      .sort(function(a,b){ return String(a).localeCompare(String(b),'pt-BR'); });
     BASE.localAbast = LOCAIS_DATA.filter(function(l){ return l.TIPO==='abastecimento'; }).map(function(l){ return l.NOME; });
     BASE.classeDesp = classesR.map(function(c){ return c.nome; });
+    // Classes marcadas como manutenção (migration 0027): o lançamento continua um só, em
+    // cadastro — isto só decide em qual aba ele aparece (Manutenção em vez de Financeiro).
+    BASE.classeDespManut = {};
+    classesR.forEach(function(c){ if(c.manutencao) BASE.classeDespManut[c.nome] = 1; });
     BASE.tipoManut = DB.manutProgramada.map(function(m){ return m.TIPO_MANUTENCAO; });
     BASE.clientesM3 = ['ADM PF', 'ADM LEM'];
     LOCAIS_DATA.forEach(function(loc) {

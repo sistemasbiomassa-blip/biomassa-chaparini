@@ -6,6 +6,11 @@
 // Só existe item para o que entrou por XML — lançamento digitado à mão tem só o total.
 // ============================================================
 var nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''};
+// Dentro da aba Custos este quadro é o DETALHE do que está acima, não um relatório
+// paralelo: herda período e veículo do filtro do topo, esconde os seletores que
+// passariam a brigar com ele, e fica só com caminhão (nota de máquina é da aba
+// Maquinário). Fora da aba Custos nada disso vale e o relatório segue completo.
+var nfRelEmbutido=false;
 
 // Mesmo reconhecimento do importador (js/nf-parse.js NF_REGRAS_TIPO), para "filtro de ar"
 // não pegar o filtro de cabine nem "óleo motor" pegar óleo de câmbio. Freio aqui é GASTO
@@ -63,6 +68,14 @@ function _nfRelFiltrar(linhas){
 
 // soResultado: redesenha só o resultado, sem refazer a barra de filtros (usado pela busca,
 // para o campo de texto não perder o foco a cada letra digitada)
+function nfRelSincronizar(f){
+  nfRelEmbutido=true;
+  nfRel.origem='caminhao';          // máquina e insumo pertencem à aba Maquinário
+  nfRel.alvo=f.placa||'';
+  nfRel.dtIni=f.dtIni||'';
+  nfRel.dtFim=f.dtFim||'';
+}
+
 function buildNfRelatorio(soResultado){
   var cont=document.getElementById('nfRelConteudo'); if(!cont) return;
   var todas=_nfRelLinhas();
@@ -86,13 +99,17 @@ function buildNfRelatorio(soResultado){
   // quantidade somada por unidade, sem converter (balde de 20 L não vira litro sozinho)
   var qtdTxt=Object.keys(un).sort(function(a,b){ return a==='L'?-1:(b==='L'?1:a.localeCompare(b)); })
     .map(function(u){ return fmt(un[u],(un[u]%1)?1:0)+' '+u; }).join(' · ')||'—';
-  var h='<div class="kpi-row" id="kpiNfRel">'+
+  var h=nfRelEmbutido?'':'<div class="kpi-row" id="kpiNfRel">'+
     '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">'+fmtR(Math.round(tot*100)/100)+'</div><div class="kpi-label">Total</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🔩</div><div class="kpi-value">'+fmtR(Math.round(pc*100)/100)+'</div><div class="kpi-label">Peças'+(tot?' · '+Math.round(pc/tot*100)+'%':'')+'</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🧰</div><div class="kpi-value">'+fmtR(Math.round(sv*100)/100)+'</div><div class="kpi-label">Mão de obra'+(tot?' · '+Math.round(sv/tot*100)+'%':'')+'</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value" title="'+_nfEsc(qtdTxt)+'">'+_nfEsc(qtdTxt)+'</div><div class="kpi-label">Quantidade (peças)</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">📄</div><div class="kpi-value">'+Object.keys(notas).length+'</div><div class="kpi-label">Notas</div></div>'+
     '</div>';
+  // no modo embutido o resumo vira uma linha só, sem competir com os indicadores do topo
+  if(nfRelEmbutido) h='<div class="nf-rel-resumo">'+L.length+' itens em '+Object.keys(notas).length+
+    ' nota(s) · <strong>'+fmtR(Math.round(tot*100)/100)+'</strong> — peças '+fmtR(Math.round(pc*100)/100)+
+    ' · mão de obra '+fmtR(Math.round(sv*100)/100)+'</div>';
 
   // ---- ranking por placa/máquina ----
   var rk={};
@@ -170,11 +187,11 @@ function _nfRelFiltros(todas){
   });
   h+='</div><div class="nf-rel-linha">'+
     '<input type="text" class="filter-select" id="nfRelBusca" placeholder="🔎 Buscar na descrição (ex.: correia, graxa)" value="'+_nfEsc(nfRel.busca)+'" oninput="_nfRelBuscar(this.value)">'+
-    '<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>'+
-    '<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
-      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>'+
+    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>')+
+    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
+      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>')+
     '<select class="filter-select" onchange="_nfRelSet(\'tipo\',this.value)"><option value="">Peças e serviços</option><option value="PECA"'+sel(nfRel.tipo,'PECA')+'>Só peças</option><option value="SERVICO"'+sel(nfRel.tipo,'SERVICO')+'>Só mão de obra</option></select>'+
-    '<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>'+
+    (nfRelEmbutido?'':'<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>')+
     '<button class="manut-filter-reset" onclick="_nfRelLimpar()">↺ Limpar</button></div>'+
     '<div class="nf-rel-nota">ℹ️ Só entra o que foi importado por nota fiscal (XML). Manutenção digitada à mão não tem as peças, só o total. '+
     'Busca por texto pega peça e serviço: "filtro de ar" também acha a mão de obra "substituir filtro de ar" — use "Só peças" para separar.</div>';

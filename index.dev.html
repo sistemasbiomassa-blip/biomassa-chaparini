@@ -621,7 +621,7 @@
                 <div class="form-group"><label>Placa *</label><select id="fmPlaca" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Data da Manutenção *</label><input type="date" id="fmData"></div>
-                <div class="form-group"><label>KM na Manutenção *</label><input type="text" inputmode="decimal" id="fmKM" placeholder="ex: 230.565,60"></div>
+                <div class="form-group"><label id="fmKMLabel">KM na Manutenção *</label><input type="text" inputmode="decimal" id="fmKM" placeholder="ex: 230.565,60"></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista</label><select id="fmMotorista"></select></div>
@@ -767,44 +767,114 @@
       <div class="page" id="pageFinanceiro">
         <div class="page-header"><h1 class="page-title">💰 Financeiro</h1></div>
         <div class="filters" id="filtersFin"></div>
+        <div class="fin-manut-nota" id="finManutNota" style="display:none"></div>
         <div class="kpi-row" id="kpiFin"></div>
         <div class="charts-grid" id="chartsFin"></div>
         <div class="table-container" id="tblFin"></div>
       </div>
 
       <!-- MANUTENCAO PAGE -->
+      <!-- Três abas, uma pergunta cada: Painel = o que fazer agora, Custos = quanto gastei,
+           Histórico = o que já foi feito. Antes eram 4 abas mais dois blocos soltos no fim
+           da página, com três barras de filtro e duas tabelas de detalhamento parecidas. -->
       <div class="page" id="pageManutencao">
         <div class="page-header"><h1 class="page-title">🔧 Manutenção</h1></div>
 
         <div class="manut-view-tabs">
-          <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
-          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
-          <button class="manut-view-tab" id="manutTabBtnPecas" onclick="showManutView('pecas')">🔩 Peças e Serviços</button>
+          <button class="manut-view-tab active" id="manutTabBtnPainel" onclick="showManutView('painel')">📍 Painel<small>o que fazer agora</small></button>
+          <button class="manut-view-tab" id="manutTabBtnCustos" onclick="showManutView('custos')">💰 Custos<small>quanto gastei</small></button>
+          <button class="manut-view-tab" id="manutTabBtnHistorico" onclick="showManutView('historico')">📋 Histórico<small>o que já foi feito</small></button>
+          <!-- Só aparece quando houver garantia cadastrada, ou para ADMIN, que é quem
+               cadastra. Sem isso era uma aba permanentemente vazia. -->
+          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')" style="display:none">🛡️ Em Garantia</button>
         </div>
 
-        <div id="manutViewFora">
+        <!-- ============ PAINEL ============ -->
+        <div id="manutViewPainel">
           <div class="manut-filter-bar" id="filtersManut"></div>
           <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
           <div class="kpi-row" id="kpiManut"></div>
-          <div class="manut-panel" id="manutMatrizPanel" style="margin-bottom:14px">
-            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+
+          <div class="manut-panel" id="manutAcaoPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">O que precisa de ação</div><div class="manut-ph-badge" id="manutAcaoBadge"></div></div>
+            <div id="manutAcaoList"></div>
           </div>
+
+          <div class="manut-panel" id="manutFrotaPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">Situação por caminhão</div><div class="manut-ph-badge" id="manutFrotaBadge"></div></div>
+            <div id="manutFrotaList"></div>
+          </div>
+
+          <!-- Implantação: os caminhões ainda sem histórico. Rebaixado de propósito —
+               em vermelho viravam uma parede que se aprende a ignorar; escondidos, o
+               painel mentiria por omissão. Aqui é um contador que só diminui. -->
+          <div class="manut-panel" id="manutImplPanel" style="margin-bottom:14px;display:none">
+            <div class="manut-ph"><div class="manut-ph-title">Implantação do controle</div><div class="manut-ph-badge" id="manutImplBadge"></div></div>
+            <div id="manutImplResumo"></div>
+            <details id="manutImplDet"><summary class="manut-impl-sum">ver quais caminhões</summary><div id="manutImplList"></div></details>
+          </div>
+
+          <details class="manut-panel manut-matriz-det" id="manutMatrizPanel" style="margin-bottom:14px">
+            <summary class="manut-matriz-sum">Matriz completa por caminhão <span class="manut-ph-badge" id="manutBadgeTotal"></span></summary>
+            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+          </details>
+
           <div class="manut-panel" id="manutKmPanel">
             <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Manutenção</div><div class="manut-km-sel" id="manutKmBadge"></div></div>
             <div id="manutKmList"></div>
           </div>
         </div>
 
-        <!-- Peças e serviços das notas fiscais importadas (js/nf-relatorio.js) -->
-        <div id="manutViewPecas" style="display:none">
-          <div class="nf-rel-filtros" id="nfRelFiltros"></div>
-          <div id="nfRelConteudo"></div>
+        <!-- ============ CUSTOS ============ -->
+        <!-- Todo o gasto de manutenção num lugar só: despesa de viagem + lançamento
+             (js/manut-custos.js), e as peças e serviços das notas (js/nf-relatorio.js),
+             que antes eram uma aba separada falando do mesmo dinheiro. -->
+        <div id="manutViewCustos" style="display:none">
+          <div class="manut-filter-bar" id="filtersManutCusto"></div>
+          <div class="kpi-row" id="kpiManutCusto"></div>
+          <div class="mc-grid">
+            <div class="manut-panel">
+              <div class="manut-ph"><div class="manut-ph-title">Por categoria</div></div>
+              <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Categoria</th><th>Lanç.</th><th>Valor</th><th>% do total</th><th></th></tr></thead><tbody id="mcCategoriaBody"></tbody></table></div>
+            </div>
+            <div class="manut-panel">
+              <div class="manut-ph"><div class="manut-ph-title">Por veículo</div></div>
+              <div class="table-scroll mc-scroll"><table class="mc-tbl"><thead><tr><th>Placa</th><th>Lanç.</th><th>Valor</th><th></th></tr></thead><tbody id="mcVeiculoBody"></tbody></table></div>
+            </div>
+          </div>
+          <div class="table-container" id="mcTabelaBox" style="margin-top:14px">
+            <div class="table-header"><h3>Todos os gastos</h3><span class="chart-badge" id="mcDetalheTotal"></span></div>
+            <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Data</th><th>Placa</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
+          </div>
+          <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
+               por dentro. Fechado por padrão para não parecer um segundo relatório. -->
+          <details class="manut-panel manut-matriz-det" style="margin-top:14px">
+            <summary class="manut-matriz-sum">🔩 Abrir as notas por dentro <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
+            <div class="nf-rel-filtros" id="nfRelFiltros"></div>
+            <div id="nfRelConteudo"></div>
+          </details>
         </div>
 
+        <!-- ============ HISTÓRICO ============ -->
+        <!-- O Detalhamento e a Consulta de Pneu ficavam pendurados no fim da página, fora
+             de qualquer aba. Aqui viram a aba que responde "o que já foi feito". -->
+        <div id="manutViewHistorico" style="display:none">
+          <div class="filters" id="filtersManutDet"></div>
+          <div class="table-container" id="tblManutDet"></div>
+          <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
+            <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
+            <div style="padding:16px">
+              <div class="pneu-search-bar">
+                <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">
+                <button onclick="buscarPneu()">Buscar</button>
+              </div>
+              <div id="pneuBuscaResultado"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ EM GARANTIA ============ -->
         <div id="manutViewGarantia" style="display:none">
-          <!-- Sem garantia cadastrada, a matriz saía vazia e a aba parecia igual à de fora
-               de garantia; este aviso explica para que serve e onde cadastrar. -->
           <div class="nf-rel-vazio" id="manutGarVazio" style="display:none"></div>
           <div class="manut-filter-bar" id="filtersManutGar"></div>
           <div class="kpi-row" id="kpiManutGar"></div>
@@ -812,26 +882,6 @@
             <div class="table-header"><h3>Matriz — Revisões em Garantia</h3><span class="chart-badge" id="manutGarBadgeTotal"></span></div>
             <div class="table-scroll"><table><thead><tr><th>Placa</th><th>Garantia até</th><th>Tipo</th><th>Intervalo</th><th>KM Atual</th><th>Próxima Troca</th><th>Faltam</th><th>Status</th></tr></thead><tbody id="manutGarTableBody"></tbody></table></div>
           </div>
-        </div>
-
-        <!-- Detalhamento e Consulta de Pneu são das visões de caminhão (Fora/Em Garantia);
-             ficam escondidos na aba Peças e Serviços, onde não têm a ver. -->
-        <div id="manutSecoesCaminhao">
-        <div style="margin-top:16px">
-          <div class="filters" id="filtersManutDet"></div>
-          <div class="table-container" id="tblManutDet"></div>
-        </div>
-
-        <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
-          <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
-          <div style="padding:16px">
-            <div class="pneu-search-bar">
-              <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">
-              <button onclick="buscarPneu()">Buscar</button>
-            </div>
-            <div id="pneuBuscaResultado"></div>
-          </div>
-        </div>
         </div>
       </div>
 
@@ -1210,6 +1260,7 @@
 <script src="js/producao.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/manutencao.js"></script>
+<script src="js/manut-custos.js"></script>
 <script src="js/consumo.js"></script>
 <script src="js/relatorio.js"></script>
 <script src="js/tempo-espera.js"></script>

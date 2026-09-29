@@ -7,7 +7,8 @@ function buildFinanceiro(){
     if(r.MOTORISTA&&!motSet[r.MOTORISTA]){motSet[r.MOTORISTA]=1;uMot.push(r.MOTORISTA)}
     if(r.PLACA&&!plaSet[r.PLACA]){plaSet[r.PLACA]=1;uPla.push(r.PLACA)}
     if(r['LOCAL ABASTECIMENTO']&&!abSet[r['LOCAL ABASTECIMENTO']]){abSet[r['LOCAL ABASTECIMENTO']]=1;uAb.push(r['LOCAL ABASTECIMENTO'])}
-    if(r['CLASSE DESPESA']&&!deSet[r['CLASSE DESPESA']]){deSet[r['CLASSE DESPESA']]=1;uDe.push(r['CLASSE DESPESA'])}
+    // só as classes que continuam no Financeiro — manutenção tem filtro próprio na aba dela
+    if(r['CLASSE DESPESA']&&!deSet[r['CLASSE DESPESA']]&&!classeEhManutencao(r['CLASSE DESPESA'])){deSet[r['CLASSE DESPESA']]=1;uDe.push(r['CLASSE DESPESA'])}
     var my=getMonthYear(r.DATA);if(my&&!monSet[my]){monSet[my]=1;uMon.push(my)}
   });
   uMot.sort();uPla.sort();uAb.sort();uDe.sort();uMon.sort();
@@ -58,10 +59,25 @@ function buildFinanceiro(){
   });
 
   finFilteredData=data;
+
+  // O gasto de manutenção fica na aba Manutenção (classes marcadas em classes_despesa).
+  // Sem este aviso, quem acabou de lançar uma despesa de oficina acha que ela sumiu.
+  var nManut=0,vManut=0;
+  data.forEach(function(r){ var v=despesaManutencao(r); if(v>0){ nManut++; vManut+=v; } });
+  var notaEl=document.getElementById('finManutNota');
+  if(notaEl){
+    if(nManut>0){
+      notaEl.innerHTML='<span class="fin-manut-ico">🔧</span><span><strong>'+nManut+' lançamento'+(nManut>1?'s':'')+' de manutenção</strong> no período, somando R$'+numBR(vManut,2)+
+        ' — não entra'+(nManut>1?'m':'')+' nos números abaixo.</span>'+
+        '<button class="fin-manut-btn" onclick="navigateTo(&#39;manutencao&#39;)">Ver na aba Manutenção →</button>';
+      notaEl.style.display='';
+    } else notaEl.style.display='none';
+  }
+
   var tComb=0,tLit=0,tArla=0,tDesp=0,tTON=0,tM3=0,nEntregas=0;
   var placaEntregas={}; // placa -> {ton:qtd, m3:qtd}, pra classificar cada placa pelo tipo predominante
   data.forEach(function(r){
-    tComb+=num(r['VALOR TOTAL']);tLit+=num(r['QTDADE LITROS']);tArla+=num(r['ARLA VALOR']);tDesp+=num(r['VALOR DESPESA']);
+    tComb+=num(r['VALOR TOTAL']);tLit+=num(r['QTDADE LITROS']);tArla+=num(r['ARLA VALOR']);tDesp+=despesaFinanceira(r);
     if(r.ENTREGA&&r.QUANTIDADE){
       nEntregas++;
       var isM3=BASE.clientesM3.includes(r['LOCAL DESCARGA']);
@@ -87,7 +103,7 @@ function buildFinanceiro(){
   var custoTONGrupo=0,custoM3Grupo=0,qtdTONGrupo=0,qtdM3Grupo=0;
   data.forEach(function(r){
     if(!r.PLACA) return;
-    var custoLinha=num(r['VALOR TOTAL'])+num(r['ARLA VALOR'])+num(r['VALOR DESPESA']);
+    var custoLinha=num(r['VALOR TOTAL'])+num(r['ARLA VALOR'])+despesaFinanceira(r);
     if(placasTON[r.PLACA]) custoTONGrupo+=custoLinha;
     else if(placasM3[r.PLACA]) custoM3Grupo+=custoLinha;
   });
@@ -117,7 +133,7 @@ function buildFinanceiro(){
   var trendMonthF=fMes||null;
   var trendComb=calcMonthTrend(DB.cadastro,'VALOR TOTAL',function(r){return num(r['VALOR TOTAL'])>0},trendMonthF);
   var trendLit=calcMonthTrend(DB.cadastro,'QTDADE LITROS',function(r){return num(r['QTDADE LITROS'])>0},trendMonthF);
-  var trendDesp=calcMonthTrend(DB.cadastro,'VALOR DESPESA',function(r){return num(r['VALOR DESPESA'])>0},trendMonthF);
+  var trendDesp=calcMonthTrend(DB.cadastro,'VALOR DESPESA',function(r){return despesaFinanceira(r)>0},trendMonthF);
 
   document.getElementById('kpiFin').innerHTML=
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">⛽</div>'+trendBadge(trendComb.current,trendComb.previous)+'</div><div class="kpi-value">R$'+numBR(tComb,2)+'</div><div class="kpi-label">Total Combustível</div></div>'+
@@ -141,7 +157,7 @@ function buildFinanceiro(){
   var ctxFM=document.getElementById('cFinMensal').getContext('2d');
   chartInstances['cFinMensal']=new Chart(ctxFM,{type:'bar',data:{labels:mfL.map(getMonthLabel),datasets:[{label:'Combustível',data:mfL.map(function(m){return mf[m].c}),backgroundColor:makeGrad(ctxFM,'rgba(59,130,246,0.8)','rgba(59,130,246,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.5},{label:'ARLA',data:mfL.map(function(m){return mf[m].a}),backgroundColor:makeGrad(ctxFM,'rgba(168,85,247,0.8)','rgba(168,85,247,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}}}}});
 
-  var dc={};data.forEach(function(r){if(r['CLASSE DESPESA']&&r['VALOR DESPESA'])dc[r['CLASSE DESPESA']]=(dc[r['CLASSE DESPESA']]||0)+num(r['VALOR DESPESA'])});
+  var dc={};data.forEach(function(r){if(r['CLASSE DESPESA']&&despesaFinanceira(r)>0)dc[r['CLASSE DESPESA']]=(dc[r['CLASSE DESPESA']]||0)+despesaFinanceira(r)});
   var dce=Object.entries(dc).sort(function(a,b){return b[1]-a[1]});
   destroyChart('cFinDesp');
   var despLabels=dce.map(function(d){return d[0]});
@@ -157,13 +173,13 @@ function buildFinanceiro(){
   var ctxFP=document.getElementById('cFinPosto').getContext('2d');
   chartInstances['cFinPosto']=new Chart(ctxFP,{type:'bar',data:{labels:pve.map(function(p){return p[0]}),datasets:[{data:pve.map(function(p){return p[1]}),backgroundColor:makeGrad(ctxFP,'rgba(0,229,255,0.85)','rgba(0,229,255,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,font:{size:10}},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}}}}});
 
-  var md2={};data.forEach(function(r){if(r.MOTORISTA&&r['VALOR DESPESA'])md2[r.MOTORISTA]=(md2[r.MOTORISTA]||0)+num(r['VALOR DESPESA'])});
+  var md2={};data.forEach(function(r){if(r.MOTORISTA&&despesaFinanceira(r)>0)md2[r.MOTORISTA]=(md2[r.MOTORISTA]||0)+despesaFinanceira(r)});
   var mde=Object.entries(md2).sort(function(a,b){return b[1]-a[1]});
   destroyChart('cFinMotDesp');
   var ctxFD=document.getElementById('cFinMotDesp').getContext('2d');
   chartInstances['cFinMotDesp']=new Chart(ctxFD,{type:'bar',data:{labels:mde.map(function(m){return m[0]}),datasets:[{data:mde.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxFD,'rgba(239,68,68,0.85)','rgba(239,68,68,0.2)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
-  var finRows=data.filter(function(r){return r['VALOR TOTAL']||r['VALOR DESPESA']||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
+  var finRows=data.filter(function(r){return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
   var canEditFin=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var tH='<div class="table-header"><h3>Detalhamento Financeiro</h3><span class="chart-badge">'+finRows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th>Litros</th><th>Vlr Unit.</th><th>Vlr Total</th><th>ARLA</th><th>Classe</th><th>Vlr Desp.</th>'+(canEditFin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   finRows.forEach(function(r){
@@ -172,7 +188,7 @@ function buildFinanceiro(){
       var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
-    tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(r['CLASSE DESPESA']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(r['VALOR DESPESA']?'R$'+numBR(r['VALOR DESPESA'],2):'-')+'</td>'+actCell+'</tr>';
+    tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(despesaFinanceira(r)>0?(r['CLASSE DESPESA']||'-'):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(despesaFinanceira(r)>0?'R$'+numBR(despesaFinanceira(r),2):'-')+'</td>'+actCell+'</tr>';
   });
   tH+='</tbody></table></div>';
   document.getElementById('tblFin').innerHTML=tH;

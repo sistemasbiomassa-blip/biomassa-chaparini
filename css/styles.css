@@ -203,6 +203,43 @@ tbody tr:hover{background:var(--surface2)}
 .manut-alert-txt strong{color:var(--red)}
 .manut-alert-txt em{color:var(--accent);font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:12px}
 
+/* ---------- Manutenção > Custos (js/manut-custos.js) ---------- */
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media (max-width:900px){.mc-grid{grid-template-columns:1fr}}
+.mc-scroll{max-height:330px;overflow-y:auto}
+.mc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mc-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);
+  font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.mc-tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.mc-tbl tr:last-child td{border-bottom:0}
+.mc-num{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mc-val{color:#ef4444}
+.mc-bar-bg{width:100%;min-width:60px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.mc-bar{height:100%;background:var(--accent);border-radius:3px}
+.mc-vazio{text-align:center;padding:18px;color:var(--text2);font-size:12px}
+.mc-vazio-cel{color:var(--text2)}
+.mc-tv{font-size:9.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-left:5px}
+/* Selo de origem: separa o que gera alerta do que é só gasto */
+.mc-org{display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;white-space:nowrap;cursor:help}
+.mc-org-d{background:rgba(210,153,34,0.12);color:var(--yellow);border:1px solid rgba(210,153,34,0.25)}
+.mc-org-l{background:rgba(63,185,80,0.12);color:var(--green);border:1px solid rgba(63,185,80,0.25)}
+.mc-date{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:2px 8px;font-size:11px;color:var(--text2)}
+.mc-date input{background:transparent;border:none;color:var(--text);font-size:11px;font-family:inherit;outline:none}
+
+/* Aviso no Financeiro: a despesa de manutenção é mostrada na aba Manutenção, não aqui.
+   Tom neutro de propósito — é informação de "onde achar", não alerta de problema. */
+.fin-manut-nota{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;
+  font-size:12px;color:var(--text2);line-height:1.5}
+.fin-manut-ico{font-size:15px;flex-shrink:0}
+.fin-manut-nota strong{color:var(--text)}
+.fin-manut-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--accent);
+  border-radius:6px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+  font-family:inherit}
+.fin-manut-btn:hover{border-color:var(--accent);background:var(--surface)}
+
 .manut-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;animation:fadeIn .3s ease}
 .manut-ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .manut-ph-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;color:var(--text)}
@@ -224,6 +261,60 @@ tbody tr:hover{background:var(--surface2)}
 .manut-chip.y{background:rgba(210,153,34,0.1);color:var(--yellow);border:1px solid rgba(210,153,34,0.28)}
 .manut-chip.r{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.28)}
 .manut-chip.x{background:rgba(139,148,158,0.12);color:var(--text2);border:1px solid rgba(139,148,158,0.2)}
+/* Vencido (v) é vermelho e Urgente (r) laranja: já passou do ponto x vence em breve são
+   ações diferentes, e antes os dois dividiam o mesmo vermelho. */
+.manut-chip.v{background:rgba(248,81,73,0.16);color:var(--red);border:1px solid rgba(248,81,73,0.4)}
+.manut-chip.r{background:rgba(219,109,40,0.12);color:var(--orange);border:1px solid rgba(219,109,40,0.3)}
+
+/* ---------- Painel: lista de ação ---------- */
+.manut-acao{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.manut-acao:last-child{border-bottom:0}
+.manut-acao:hover{background:var(--surface2)}
+.manut-acao-st{width:86px;flex:none}
+.manut-acao-main{flex:1;min-width:190px}
+.manut-acao-tipo{font-size:13px;font-weight:600}
+.manut-acao-sub{font-size:11.5px;color:var(--text2);margin-top:2px}
+.manut-acao-num{text-align:right;min-width:132px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.manut-acao-num b{display:block;font-size:13px;font-weight:500}
+.manut-acao-quando{font-size:11px;color:var(--text2);margin-top:2px;font-family:'Barlow',sans-serif}
+.manut-vazio-ok{padding:22px;text-align:center;color:var(--text2);font-size:12.5px}
+
+/* ---------- Painel: situação por caminhão ---------- */
+.manut-frota-linha{display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.manut-frota-linha:last-child{border-bottom:0}
+.manut-frota-linha:hover{background:var(--surface2)}
+.manut-frota-linha .manut-chip{width:78px;justify-content:center;flex:none}
+.manut-frota-km{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);white-space:nowrap}
+.manut-frota-det{font-size:11.5px;color:var(--text2);margin-left:auto;text-align:right}
+
+/* ---------- Painel: implantação ---------- */
+.manut-impl-barra{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:14px 18px 0}
+.manut-impl-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease}
+.manut-impl-txt{padding:10px 18px 14px;font-size:12px;color:var(--text2);line-height:1.55}
+.manut-impl-sum{cursor:pointer;padding:9px 18px;font-size:11.5px;color:var(--accent);list-style:none;border-top:1px solid var(--border)}
+.manut-impl-sum::-webkit-details-marker{display:none}
+.manut-impl-sum::before{content:'▸ ';font-size:10px}
+details[open]>.manut-impl-sum::before{content:'▾ '}
+.manut-impl-linha{display:flex;align-items:center;gap:12px;padding:7px 18px;border-top:1px solid var(--border)}
+.manut-impl-linha .manut-frota-km{margin-left:auto}
+
+/* ---------- Painel: matriz agora é colapsável ---------- */
+.manut-matriz-det{padding:0}
+.manut-matriz-sum{cursor:pointer;padding:16px 18px;font-family:'Barlow Condensed',sans-serif;font-size:16px;
+  font-weight:600;letter-spacing:.04em;list-style:none;display:flex;align-items:center;gap:9px}
+.manut-matriz-sum::-webkit-details-marker{display:none}
+.manut-matriz-sum::before{content:'▸';color:var(--accent);font-size:12px}
+details[open]>.manut-matriz-sum::before{content:'▾'}
+.manut-matriz-sum .manut-ph-badge{margin-left:auto}
+.manut-matriz-det .manut-matrix-wrap{padding:0 18px 18px}
+
+/* Resumo de uma linha das peças quando o quadro está embutido em Custos — os indicadores
+   próprios dele fariam dois "Total" diferentes na mesma tela. */
+.nf-rel-resumo{padding:11px 18px;font-size:12.5px;color:var(--text2);border-bottom:1px solid var(--border)}
+.nf-rel-resumo strong{color:var(--text);font-family:JetBrains Mono,monospace;font-size:13px}
+
+/* Subtítulo das abas: cada uma responde a uma pergunta */
+.manut-view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
 
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}

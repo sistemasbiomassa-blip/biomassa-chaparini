@@ -256,6 +256,28 @@ function parseKM(v){
   return parseFloat(s);
 }
 
+// ---------- Despesa de manutenção x despesa operacional ----------
+// O gasto de manutenção sempre foi lançado como despesa de viagem, e por isso só aparecia
+// no Financeiro. Desde 2026-09-28 ele é exibido na aba Manutenção, para não ficar metade
+// em cada tela. Quem manda é a coluna classes_despesa.manutencao (migration 0027) — nada é
+// copiado nem movido: o lançamento continua um só, em cadastro.
+function classeEhManutencao(classe){
+  if(!classe) return false;
+  // Sem o "|| {}", um config.js velho em cache (sem classeDespManut) derruba o Financeiro
+  // inteiro com TypeError — a tela fica em branco em vez de só ignorar a marcação.
+  var marcadas=(typeof BASE!=='undefined' && BASE.classeDespManut) || {};
+  return !!marcadas[String(classe).trim()];
+}
+// Uma linha de cadastro conta como gasto de manutenção quando tem valor de despesa E a
+// classe está marcada. Linha sem classe fica no Financeiro (é o padrão de quem não marcou).
+function linhaEhDespesaManut(r){
+  return !!(r && num(r['VALOR DESPESA'])>0 && classeEhManutencao(r['CLASSE DESPESA']));
+}
+// O quanto da despesa da linha pertence a cada aba. Sempre usar estas duas no lugar de
+// num(r['VALOR DESPESA']) — somar o campo cru faz a manutenção aparecer nas duas telas.
+function despesaFinanceira(r){ return linhaEhDespesaManut(r) ? 0 : num(r && r['VALOR DESPESA']); }
+function despesaManutencao(r){ return linhaEhDespesaManut(r) ? num(r['VALOR DESPESA']) : 0; }
+
 // Km atual (mais alto já registrado) de uma placa, a partir de DB.cadastro.
 function kmAtualPorPlaca(placa){
   if(!placa) return null;

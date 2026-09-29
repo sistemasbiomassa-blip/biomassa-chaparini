@@ -47,17 +47,16 @@ function _camNfeImportavel(g){ return !g.erro; }
 function _camNfeFaltando(g){
   if(g.anexarA) return '';
   if(!g.placa) return 'placa';
-  if(!(g.km>0)) return 'KM';
   if(!g.tipos.length) return 'tipo';
+  // KM só é exigido quando algum tipo marcado gera alerta de KM — é ele que usa o número.
+  // Conserto avulso ("Outros") normalmente não traz KM na nota.
+  if(manutKmObrigatorio(g.tipos) && !(g.km>0)) return 'KM';
   return '';
 }
 // Tipo com intervalo de KM cadastrado é o que entra na matriz e gera alerta (ver
 // js/manutencao.js: progs filtra por INTERVALO_KM). "Outros" e "Troca de Óleo e Filtro"
 // não têm intervalo: servem para registrar o serviço sem mexer em alerta nenhum.
-function _camNfeTemAlerta(tipo){
-  var p=(DB.manutProgramada||[]).filter(function(x){ return x.TIPO_MANUTENCAO===tipo; })[0];
-  return !!(p && num(p.INTERVALO_KM)>0);
-}
+function _camNfeTemAlerta(tipo){ return manutTipoTemAlertaKm(tipo); }
 // KM lido da nota é conferido contra a última manutenção da placa: menor que ela quase
 // sempre é erro de digitação da oficina ou nota de outro caminhão.
 function _camNfeUltimoKm(placa){
@@ -65,6 +64,8 @@ function _camNfeUltimoKm(placa){
   DB.manutRealizada.forEach(function(r){ if(r.PLACA===placa && num(r.KM_NA_MANUTENCAO)>mx) mx=num(r.KM_NA_MANUTENCAO); });
   return mx;
 }
+
+function _camNfeRotuloKm(g){ return manutKmObrigatorio(g.tipos)?'KM *':'KM (opcional nos tipos marcados)'; }
 
 function _camNfeRender(){
   var G=_camNfe.grupos, tipos=nfTiposImportaveis();
@@ -112,7 +113,7 @@ function _camNfeRender(){
     h+='<div class="nf-card">'+cab+valores+
       '<div class="nf-card-campos">'+
         '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
-        '<div><label>KM *</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
+        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
       '</div>'+
       '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro. Não se encaixa em nenhum (troca de um tubo, um conserto avulso)? Marque <strong>Outros</strong>.</span></label><div>'+chk+'</div></div>'+
       '</div>';
@@ -152,6 +153,9 @@ function _camNfeTipo(i,el){
   var ordem=nfTiposImportaveis();
   g.tipos.sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
   el.parentNode.classList.toggle('on',el.checked);
+  // o KM deixa de ser obrigatório se sobrar só tipo sem alerta — o rótulo acompanha
+  var lab=document.getElementById('camNfeKmLab'+i);
+  if(lab) lab.textContent=_camNfeRotuloKm(g);
   _camNfeResumo();
 }
 function _camNfeRemover(i){ _camNfe.grupos.splice(i,1); _camNfeRender(); }
@@ -163,7 +167,7 @@ function _camNfePayload(g){
   var detalhe=(g.os?'OS '+g.os+' · ':'')+(g.pecas?'peças '+fmtR(g.pecas):'')+(g.pecas&&g.servicos?' + ':'')+(g.servicos?'serviço '+fmtR(g.servicos):'');
   return {destino:'caminhao', documentos:docs, lancamentos:g.tipos.map(function(t,k){
     return {
-      placa:g.placa, tipo_manutencao:t, data_manutencao:g.data, km:g.km,
+      placa:g.placa, tipo_manutencao:t, data_manutencao:g.data, km:(g.km>0?g.km:''),
       valor:k===0?g.total:'',
       local_servico:g.emitNome||'', nota_fiscal:notas,
       observacao:k===0

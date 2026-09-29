@@ -1,6 +1,6 @@
 // ==================== DATA (carregado do Google Sheets) ====================
 var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [], contratos: [], nfDocumentos: [], nfItens: [] };
-var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
+var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], classeDespManut: {}, tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
 var CAMINHOES_DATA = [];

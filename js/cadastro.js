@@ -205,7 +205,10 @@ function salvarManutRealizada(){
   var t=document.getElementById('fmTipo').value;
   var d=document.getElementById('fmData').value;
   var k=document.getElementById('fmKM').value;
-  if(!p||!t||!d||!k){showToast('Todos os campos com * são obrigatórios!',true);return;}
+  // KM só é obrigatório nos tipos que geram alerta de KM (ver manutTipoTemAlertaKm):
+  // em conserto avulso ("Outros") a nota costuma não trazer KM.
+  var kmObrig=(typeof manutKmObrigatorio==='function')?manutKmObrigatorio([t]):true;
+  if(!p||!t||!d||(kmObrig&&!k)){showToast('Preencha os campos obrigatórios (*)'+(kmObrig?', inclusive o KM':''),true);return;}
   var valor=num(document.getElementById('fmValor').value);
   var localServico=n(document.getElementById('fmLocalServico').value);
   var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
@@ -218,7 +221,7 @@ function salvarManutRealizada(){
     return;
   }
   var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':(k?num(k):null),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
     if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
     var novoId=res&&res[0]&&res[0].id;
     function finalizar(){
@@ -248,7 +251,15 @@ function limparFormManutReal(){
 
 // Mostra/esconde o diagrama de eixos conforme o tipo de manutenção selecionado
 // (CONTROLA_PNEUS) e o Tipo de Veículo cadastrado na placa escolhida.
+// Rótulo do KM acompanha o tipo escolhido: com "*" só quando ele é usado no alerta
+function _atualizarRotuloKmForm(){
+  var tipoEl=document.getElementById('fmTipo'), lab=document.getElementById('fmKMLabel');
+  if(!tipoEl||!lab||typeof manutTipoTemAlertaKm!=='function') return;
+  var obrig=!tipoEl.value||manutTipoTemAlertaKm(tipoEl.value);
+  lab.textContent=obrig?'KM na Manutenção *':'KM na Manutenção (opcional neste tipo)';
+}
 function _atualizarDiagramaPneuForm(){
+  _atualizarRotuloKmForm();
   var placaEl=document.getElementById('fmPlaca'), tipoEl=document.getElementById('fmTipo');
   var wrap=document.getElementById('fmPneuWrap'), aviso=document.getElementById('fmPneuAviso');
   if(!placaEl||!tipoEl||!wrap||!aviso) return;

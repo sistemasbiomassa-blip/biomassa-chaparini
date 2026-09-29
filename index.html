@@ -217,6 +217,43 @@ tbody tr:hover{background:var(--surface2)}
 .manut-alert-txt strong{color:var(--red)}
 .manut-alert-txt em{color:var(--accent);font-style:normal;font-family:'Barlow Condensed',sans-serif;font-size:12px}
 
+/* ---------- Manutenção > Custos (js/manut-custos.js) ---------- */
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media (max-width:900px){.mc-grid{grid-template-columns:1fr}}
+.mc-scroll{max-height:330px;overflow-y:auto}
+.mc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mc-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);
+  font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.mc-tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.mc-tbl tr:last-child td{border-bottom:0}
+.mc-num{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mc-val{color:#ef4444}
+.mc-bar-bg{width:100%;min-width:60px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.mc-bar{height:100%;background:var(--accent);border-radius:3px}
+.mc-vazio{text-align:center;padding:18px;color:var(--text2);font-size:12px}
+.mc-vazio-cel{color:var(--text2)}
+.mc-tv{font-size:9.5px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-left:5px}
+/* Selo de origem: separa o que gera alerta do que é só gasto */
+.mc-org{display:inline-block;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;white-space:nowrap;cursor:help}
+.mc-org-d{background:rgba(210,153,34,0.12);color:var(--yellow);border:1px solid rgba(210,153,34,0.25)}
+.mc-org-l{background:rgba(63,185,80,0.12);color:var(--green);border:1px solid rgba(63,185,80,0.25)}
+.mc-date{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:2px 8px;font-size:11px;color:var(--text2)}
+.mc-date input{background:transparent;border:none;color:var(--text);font-size:11px;font-family:inherit;outline:none}
+
+/* Aviso no Financeiro: a despesa de manutenção é mostrada na aba Manutenção, não aqui.
+   Tom neutro de propósito — é informação de "onde achar", não alerta de problema. */
+.fin-manut-nota{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;
+  font-size:12px;color:var(--text2);line-height:1.5}
+.fin-manut-ico{font-size:15px;flex-shrink:0}
+.fin-manut-nota strong{color:var(--text)}
+.fin-manut-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--accent);
+  border-radius:6px;padding:5px 11px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;
+  font-family:inherit}
+.fin-manut-btn:hover{border-color:var(--accent);background:var(--surface)}
+
 .manut-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;animation:fadeIn .3s ease}
 .manut-ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .manut-ph-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;color:var(--text)}
@@ -238,6 +275,60 @@ tbody tr:hover{background:var(--surface2)}
 .manut-chip.y{background:rgba(210,153,34,0.1);color:var(--yellow);border:1px solid rgba(210,153,34,0.28)}
 .manut-chip.r{background:rgba(248,81,73,0.1);color:var(--red);border:1px solid rgba(248,81,73,0.28)}
 .manut-chip.x{background:rgba(139,148,158,0.12);color:var(--text2);border:1px solid rgba(139,148,158,0.2)}
+/* Vencido (v) é vermelho e Urgente (r) laranja: já passou do ponto x vence em breve são
+   ações diferentes, e antes os dois dividiam o mesmo vermelho. */
+.manut-chip.v{background:rgba(248,81,73,0.16);color:var(--red);border:1px solid rgba(248,81,73,0.4)}
+.manut-chip.r{background:rgba(219,109,40,0.12);color:var(--orange);border:1px solid rgba(219,109,40,0.3)}
+
+/* ---------- Painel: lista de ação ---------- */
+.manut-acao{display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.manut-acao:last-child{border-bottom:0}
+.manut-acao:hover{background:var(--surface2)}
+.manut-acao-st{width:86px;flex:none}
+.manut-acao-main{flex:1;min-width:190px}
+.manut-acao-tipo{font-size:13px;font-weight:600}
+.manut-acao-sub{font-size:11.5px;color:var(--text2);margin-top:2px}
+.manut-acao-num{text-align:right;min-width:132px;font-family:'JetBrains Mono',monospace;font-size:11.5px}
+.manut-acao-num b{display:block;font-size:13px;font-weight:500}
+.manut-acao-quando{font-size:11px;color:var(--text2);margin-top:2px;font-family:'Barlow',sans-serif}
+.manut-vazio-ok{padding:22px;text-align:center;color:var(--text2);font-size:12.5px}
+
+/* ---------- Painel: situação por caminhão ---------- */
+.manut-frota-linha{display:flex;align-items:center;gap:12px;padding:9px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.manut-frota-linha:last-child{border-bottom:0}
+.manut-frota-linha:hover{background:var(--surface2)}
+.manut-frota-linha .manut-chip{width:78px;justify-content:center;flex:none}
+.manut-frota-km{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);white-space:nowrap}
+.manut-frota-det{font-size:11.5px;color:var(--text2);margin-left:auto;text-align:right}
+
+/* ---------- Painel: implantação ---------- */
+.manut-impl-barra{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:14px 18px 0}
+.manut-impl-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease}
+.manut-impl-txt{padding:10px 18px 14px;font-size:12px;color:var(--text2);line-height:1.55}
+.manut-impl-sum{cursor:pointer;padding:9px 18px;font-size:11.5px;color:var(--accent);list-style:none;border-top:1px solid var(--border)}
+.manut-impl-sum::-webkit-details-marker{display:none}
+.manut-impl-sum::before{content:'▸ ';font-size:10px}
+details[open]>.manut-impl-sum::before{content:'▾ '}
+.manut-impl-linha{display:flex;align-items:center;gap:12px;padding:7px 18px;border-top:1px solid var(--border)}
+.manut-impl-linha .manut-frota-km{margin-left:auto}
+
+/* ---------- Painel: matriz agora é colapsável ---------- */
+.manut-matriz-det{padding:0}
+.manut-matriz-sum{cursor:pointer;padding:16px 18px;font-family:'Barlow Condensed',sans-serif;font-size:16px;
+  font-weight:600;letter-spacing:.04em;list-style:none;display:flex;align-items:center;gap:9px}
+.manut-matriz-sum::-webkit-details-marker{display:none}
+.manut-matriz-sum::before{content:'▸';color:var(--accent);font-size:12px}
+details[open]>.manut-matriz-sum::before{content:'▾'}
+.manut-matriz-sum .manut-ph-badge{margin-left:auto}
+.manut-matriz-det .manut-matrix-wrap{padding:0 18px 18px}
+
+/* Resumo de uma linha das peças quando o quadro está embutido em Custos — os indicadores
+   próprios dele fariam dois "Total" diferentes na mesma tela. */
+.nf-rel-resumo{padding:11px 18px;font-size:12.5px;color:var(--text2);border-bottom:1px solid var(--border)}
+.nf-rel-resumo strong{color:var(--text);font-family:JetBrains Mono,monospace;font-size:13px}
+
+/* Subtítulo das abas: cada uma responde a uma pergunta */
+.manut-view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
 
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}
@@ -1072,7 +1163,7 @@ tbody tr:hover{background:var(--surface2)}
                 <div class="form-group"><label>Placa *</label><select id="fmPlaca" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Tipo de Manutenção *</label><select id="fmTipo" onchange="_atualizarDiagramaPneuForm()"></select></div>
                 <div class="form-group"><label>Data da Manutenção *</label><input type="date" id="fmData"></div>
-                <div class="form-group"><label>KM na Manutenção *</label><input type="text" inputmode="decimal" id="fmKM" placeholder="ex: 230.565,60"></div>
+                <div class="form-group"><label id="fmKMLabel">KM na Manutenção *</label><input type="text" inputmode="decimal" id="fmKM" placeholder="ex: 230.565,60"></div>
               </div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista</label><select id="fmMotorista"></select></div>
@@ -1218,44 +1309,114 @@ tbody tr:hover{background:var(--surface2)}
       <div class="page" id="pageFinanceiro">
         <div class="page-header"><h1 class="page-title">💰 Financeiro</h1></div>
         <div class="filters" id="filtersFin"></div>
+        <div class="fin-manut-nota" id="finManutNota" style="display:none"></div>
         <div class="kpi-row" id="kpiFin"></div>
         <div class="charts-grid" id="chartsFin"></div>
         <div class="table-container" id="tblFin"></div>
       </div>
 
       <!-- MANUTENCAO PAGE -->
+      <!-- Três abas, uma pergunta cada: Painel = o que fazer agora, Custos = quanto gastei,
+           Histórico = o que já foi feito. Antes eram 4 abas mais dois blocos soltos no fim
+           da página, com três barras de filtro e duas tabelas de detalhamento parecidas. -->
       <div class="page" id="pageManutencao">
         <div class="page-header"><h1 class="page-title">🔧 Manutenção</h1></div>
 
         <div class="manut-view-tabs">
-          <button class="manut-view-tab active" id="manutTabBtnFora" onclick="showManutView('fora')">⚙️ Fora de Garantia</button>
-          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')">🛡️ Em Garantia</button>
-          <button class="manut-view-tab" id="manutTabBtnPecas" onclick="showManutView('pecas')">🔩 Peças e Serviços</button>
+          <button class="manut-view-tab active" id="manutTabBtnPainel" onclick="showManutView('painel')">📍 Painel<small>o que fazer agora</small></button>
+          <button class="manut-view-tab" id="manutTabBtnCustos" onclick="showManutView('custos')">💰 Custos<small>quanto gastei</small></button>
+          <button class="manut-view-tab" id="manutTabBtnHistorico" onclick="showManutView('historico')">📋 Histórico<small>o que já foi feito</small></button>
+          <!-- Só aparece quando houver garantia cadastrada, ou para ADMIN, que é quem
+               cadastra. Sem isso era uma aba permanentemente vazia. -->
+          <button class="manut-view-tab" id="manutTabBtnGarantia" onclick="showManutView('garantia')" style="display:none">🛡️ Em Garantia</button>
         </div>
 
-        <div id="manutViewFora">
+        <!-- ============ PAINEL ============ -->
+        <div id="manutViewPainel">
           <div class="manut-filter-bar" id="filtersManut"></div>
           <div class="manut-alert" id="manutAlertBar" style="display:none"></div>
           <div class="kpi-row" id="kpiManut"></div>
-          <div class="manut-panel" id="manutMatrizPanel" style="margin-bottom:14px">
-            <div class="manut-ph"><div class="manut-ph-title">Matriz de Manutenção por Caminhão</div><div class="manut-ph-badge" id="manutBadgeTotal"></div></div>
-            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+
+          <div class="manut-panel" id="manutAcaoPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">O que precisa de ação</div><div class="manut-ph-badge" id="manutAcaoBadge"></div></div>
+            <div id="manutAcaoList"></div>
           </div>
+
+          <div class="manut-panel" id="manutFrotaPanel" style="margin-bottom:14px">
+            <div class="manut-ph"><div class="manut-ph-title">Situação por caminhão</div><div class="manut-ph-badge" id="manutFrotaBadge"></div></div>
+            <div id="manutFrotaList"></div>
+          </div>
+
+          <!-- Implantação: os caminhões ainda sem histórico. Rebaixado de propósito —
+               em vermelho viravam uma parede que se aprende a ignorar; escondidos, o
+               painel mentiria por omissão. Aqui é um contador que só diminui. -->
+          <div class="manut-panel" id="manutImplPanel" style="margin-bottom:14px;display:none">
+            <div class="manut-ph"><div class="manut-ph-title">Implantação do controle</div><div class="manut-ph-badge" id="manutImplBadge"></div></div>
+            <div id="manutImplResumo"></div>
+            <details id="manutImplDet"><summary class="manut-impl-sum">ver quais caminhões</summary><div id="manutImplList"></div></details>
+          </div>
+
+          <details class="manut-panel manut-matriz-det" id="manutMatrizPanel" style="margin-bottom:14px">
+            <summary class="manut-matriz-sum">Matriz completa por caminhão <span class="manut-ph-badge" id="manutBadgeTotal"></span></summary>
+            <div class="manut-matrix-wrap"><table class="manut-matrix" id="manutMatrizTable"><thead id="manutMatrizHead"></thead><tbody id="manutMatrizBody"></tbody></table></div>
+          </details>
+
           <div class="manut-panel" id="manutKmPanel">
             <div class="manut-ph"><div class="manut-ph-title">KM &amp; Próxima Manutenção</div><div class="manut-km-sel" id="manutKmBadge"></div></div>
             <div id="manutKmList"></div>
           </div>
         </div>
 
-        <!-- Peças e serviços das notas fiscais importadas (js/nf-relatorio.js) -->
-        <div id="manutViewPecas" style="display:none">
-          <div class="nf-rel-filtros" id="nfRelFiltros"></div>
-          <div id="nfRelConteudo"></div>
+        <!-- ============ CUSTOS ============ -->
+        <!-- Todo o gasto de manutenção num lugar só: despesa de viagem + lançamento
+             (js/manut-custos.js), e as peças e serviços das notas (js/nf-relatorio.js),
+             que antes eram uma aba separada falando do mesmo dinheiro. -->
+        <div id="manutViewCustos" style="display:none">
+          <div class="manut-filter-bar" id="filtersManutCusto"></div>
+          <div class="kpi-row" id="kpiManutCusto"></div>
+          <div class="mc-grid">
+            <div class="manut-panel">
+              <div class="manut-ph"><div class="manut-ph-title">Por categoria</div></div>
+              <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Categoria</th><th>Lanç.</th><th>Valor</th><th>% do total</th><th></th></tr></thead><tbody id="mcCategoriaBody"></tbody></table></div>
+            </div>
+            <div class="manut-panel">
+              <div class="manut-ph"><div class="manut-ph-title">Por veículo</div></div>
+              <div class="table-scroll mc-scroll"><table class="mc-tbl"><thead><tr><th>Placa</th><th>Lanç.</th><th>Valor</th><th></th></tr></thead><tbody id="mcVeiculoBody"></tbody></table></div>
+            </div>
+          </div>
+          <div class="table-container" id="mcTabelaBox" style="margin-top:14px">
+            <div class="table-header"><h3>Todos os gastos</h3><span class="chart-badge" id="mcDetalheTotal"></span></div>
+            <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Data</th><th>Placa</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
+          </div>
+          <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
+               por dentro. Fechado por padrão para não parecer um segundo relatório. -->
+          <details class="manut-panel manut-matriz-det" style="margin-top:14px">
+            <summary class="manut-matriz-sum">🔩 Abrir as notas por dentro <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
+            <div class="nf-rel-filtros" id="nfRelFiltros"></div>
+            <div id="nfRelConteudo"></div>
+          </details>
         </div>
 
+        <!-- ============ HISTÓRICO ============ -->
+        <!-- O Detalhamento e a Consulta de Pneu ficavam pendurados no fim da página, fora
+             de qualquer aba. Aqui viram a aba que responde "o que já foi feito". -->
+        <div id="manutViewHistorico" style="display:none">
+          <div class="filters" id="filtersManutDet"></div>
+          <div class="table-container" id="tblManutDet"></div>
+          <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
+            <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
+            <div style="padding:16px">
+              <div class="pneu-search-bar">
+                <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">
+                <button onclick="buscarPneu()">Buscar</button>
+              </div>
+              <div id="pneuBuscaResultado"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============ EM GARANTIA ============ -->
         <div id="manutViewGarantia" style="display:none">
-          <!-- Sem garantia cadastrada, a matriz saía vazia e a aba parecia igual à de fora
-               de garantia; este aviso explica para que serve e onde cadastrar. -->
           <div class="nf-rel-vazio" id="manutGarVazio" style="display:none"></div>
           <div class="manut-filter-bar" id="filtersManutGar"></div>
           <div class="kpi-row" id="kpiManutGar"></div>
@@ -1263,26 +1424,6 @@ tbody tr:hover{background:var(--surface2)}
             <div class="table-header"><h3>Matriz — Revisões em Garantia</h3><span class="chart-badge" id="manutGarBadgeTotal"></span></div>
             <div class="table-scroll"><table><thead><tr><th>Placa</th><th>Garantia até</th><th>Tipo</th><th>Intervalo</th><th>KM Atual</th><th>Próxima Troca</th><th>Faltam</th><th>Status</th></tr></thead><tbody id="manutGarTableBody"></tbody></table></div>
           </div>
-        </div>
-
-        <!-- Detalhamento e Consulta de Pneu são das visões de caminhão (Fora/Em Garantia);
-             ficam escondidos na aba Peças e Serviços, onde não têm a ver. -->
-        <div id="manutSecoesCaminhao">
-        <div style="margin-top:16px">
-          <div class="filters" id="filtersManutDet"></div>
-          <div class="table-container" id="tblManutDet"></div>
-        </div>
-
-        <div class="table-container" id="manutConsultaPneu" style="margin-top:16px">
-          <div class="table-header"><h3>🛞 Consulta de Pneu</h3><button class="btn btn-secondary btn-sm" onclick="imprimirFolhaPneus()">🖨️ Imprimir folhas de pneus</button></div>
-          <div style="padding:16px">
-            <div class="pneu-search-bar">
-              <input type="text" id="pneuBuscaInput" placeholder="Digite o número do pneu..." onkeydown="if(event.key==='Enter')buscarPneu()">
-              <button onclick="buscarPneu()">Buscar</button>
-            </div>
-            <div id="pneuBuscaResultado"></div>
-          </div>
-        </div>
         </div>
       </div>
 
@@ -1642,7 +1783,7 @@ tbody tr:hover{background:var(--surface2)}
 <script>
 // ==================== DATA (carregado do Google Sheets) ====================
 var DB = { cadastro: [], manutRealizada: [], manutProgramada: [], garantiaCaminhoes: [], manutProgramadaGarantia: [], manutPneusItens: [], maquinas: [], maqLocalizacao: [], maqAbastecimento: [], maqManutencao: [], tanques: [], tanqueEntradas: [], frequencia: [], alertas: [], contratos: [], nfDocumentos: [], nfItens: [] };
-var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], tipoManut: [], clientesM3: [] };
+var BASE = { motoristas: [], localCarga: [], localDescarga: [], placas: [], localAbast: [], classeDesp: [], classeDespManut: {}, tipoManut: [], clientesM3: [] };
 var LOCAIS_DATA = [];
 var MOTORISTAS_DATA = [];
 var CAMINHOES_DATA = [];
@@ -1762,7 +1903,10 @@ function loadFromSheets(callback) {
       ID:x.id, PLACA:x.placa, TIPO_MANUTENCAO:x.tipo_manutencao, DATA_MANUTENCAO:x.data_manutencao,
       KM_NA_MANUTENCAO:x.km, 'OBSERVAÇÃO':x.observacao, VALOR:x.valor, LOCAL_SERVICO:x.local_servico,
       NOTA_FISCAL:x.nota_fiscal, MOTORISTA:x.motorista, USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id,
-      NF_PRINCIPAL_ID:x.nf_principal_id
+      NF_PRINCIPAL_ID:x.nf_principal_id,
+      // false = lançamento histórico (anterior a 01/07/2026, migration 0028): conta no custo
+      // e no histórico, mas não serve de base para calcular a próxima manutenção.
+      BASE_ALERTA:x.base_alerta!==false
     };});
 
     // notas fiscais importadas (NF-e/NFS-e) e seus itens — ver js/nf-parse.js
@@ -1872,9 +2016,17 @@ function loadFromSheets(callback) {
     BASE.motoristas = MOTORISTAS_DATA.map(function(m){ return m.NOME; });
     BASE.localCarga = LOCAIS_DATA.filter(function(l){ return l.TIPO==='carga'; }).map(function(l){ return l.NOME; });
     BASE.localDescarga = LOCAIS_DATA.filter(function(l){ return l.TIPO==='descarga'; }).map(function(l){ return l.NOME; });
-    BASE.placas = CAMINHOES_DATA.map(function(c){ return c.PLACA; });
+    // ordem alfabética na origem: a lista vem do banco na ordem de cadastro, e procurar
+    // placa numa lista desordenada é ruim em toda tela que usa (importador de nota,
+    // formulário de manutenção, alertas...)
+    BASE.placas = CAMINHOES_DATA.map(function(c){ return c.PLACA; })
+      .sort(function(a,b){ return String(a).localeCompare(String(b),'pt-BR'); });
     BASE.localAbast = LOCAIS_DATA.filter(function(l){ return l.TIPO==='abastecimento'; }).map(function(l){ return l.NOME; });
     BASE.classeDesp = classesR.map(function(c){ return c.nome; });
+    // Classes marcadas como manutenção (migration 0027): o lançamento continua um só, em
+    // cadastro — isto só decide em qual aba ele aparece (Manutenção em vez de Financeiro).
+    BASE.classeDespManut = {};
+    classesR.forEach(function(c){ if(c.manutencao) BASE.classeDespManut[c.nome] = 1; });
     BASE.tipoManut = DB.manutProgramada.map(function(m){ return m.TIPO_MANUTENCAO; });
     BASE.clientesM3 = ['ADM PF', 'ADM LEM'];
     LOCAIS_DATA.forEach(function(loc) {
@@ -2645,6 +2797,28 @@ function parseKM(v){
   s=s.replace(',','.');
   return parseFloat(s);
 }
+
+// ---------- Despesa de manutenção x despesa operacional ----------
+// O gasto de manutenção sempre foi lançado como despesa de viagem, e por isso só aparecia
+// no Financeiro. Desde 2026-09-28 ele é exibido na aba Manutenção, para não ficar metade
+// em cada tela. Quem manda é a coluna classes_despesa.manutencao (migration 0027) — nada é
+// copiado nem movido: o lançamento continua um só, em cadastro.
+function classeEhManutencao(classe){
+  if(!classe) return false;
+  // Sem o "|| {}", um config.js velho em cache (sem classeDespManut) derruba o Financeiro
+  // inteiro com TypeError — a tela fica em branco em vez de só ignorar a marcação.
+  var marcadas=(typeof BASE!=='undefined' && BASE.classeDespManut) || {};
+  return !!marcadas[String(classe).trim()];
+}
+// Uma linha de cadastro conta como gasto de manutenção quando tem valor de despesa E a
+// classe está marcada. Linha sem classe fica no Financeiro (é o padrão de quem não marcou).
+function linhaEhDespesaManut(r){
+  return !!(r && num(r['VALOR DESPESA'])>0 && classeEhManutencao(r['CLASSE DESPESA']));
+}
+// O quanto da despesa da linha pertence a cada aba. Sempre usar estas duas no lugar de
+// num(r['VALOR DESPESA']) — somar o campo cru faz a manutenção aparecer nas duas telas.
+function despesaFinanceira(r){ return linhaEhDespesaManut(r) ? 0 : num(r && r['VALOR DESPESA']); }
+function despesaManutencao(r){ return linhaEhDespesaManut(r) ? num(r['VALOR DESPESA']) : 0; }
 
 // Km atual (mais alto já registrado) de uma placa, a partir de DB.cadastro.
 function kmAtualPorPlaca(placa){
@@ -4564,17 +4738,16 @@ function _camNfeImportavel(g){ return !g.erro; }
 function _camNfeFaltando(g){
   if(g.anexarA) return '';
   if(!g.placa) return 'placa';
-  if(!(g.km>0)) return 'KM';
   if(!g.tipos.length) return 'tipo';
+  // KM só é exigido quando algum tipo marcado gera alerta de KM — é ele que usa o número.
+  // Conserto avulso ("Outros") normalmente não traz KM na nota.
+  if(manutKmObrigatorio(g.tipos) && !(g.km>0)) return 'KM';
   return '';
 }
 // Tipo com intervalo de KM cadastrado é o que entra na matriz e gera alerta (ver
 // js/manutencao.js: progs filtra por INTERVALO_KM). "Outros" e "Troca de Óleo e Filtro"
 // não têm intervalo: servem para registrar o serviço sem mexer em alerta nenhum.
-function _camNfeTemAlerta(tipo){
-  var p=(DB.manutProgramada||[]).filter(function(x){ return x.TIPO_MANUTENCAO===tipo; })[0];
-  return !!(p && num(p.INTERVALO_KM)>0);
-}
+function _camNfeTemAlerta(tipo){ return manutTipoTemAlertaKm(tipo); }
 // KM lido da nota é conferido contra a última manutenção da placa: menor que ela quase
 // sempre é erro de digitação da oficina ou nota de outro caminhão.
 function _camNfeUltimoKm(placa){
@@ -4582,6 +4755,8 @@ function _camNfeUltimoKm(placa){
   DB.manutRealizada.forEach(function(r){ if(r.PLACA===placa && num(r.KM_NA_MANUTENCAO)>mx) mx=num(r.KM_NA_MANUTENCAO); });
   return mx;
 }
+
+function _camNfeRotuloKm(g){ return manutKmObrigatorio(g.tipos)?'KM *':'KM (opcional nos tipos marcados)'; }
 
 function _camNfeRender(){
   var G=_camNfe.grupos, tipos=nfTiposImportaveis();
@@ -4629,7 +4804,7 @@ function _camNfeRender(){
     h+='<div class="nf-card">'+cab+valores+
       '<div class="nf-card-campos">'+
         '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
-        '<div><label>KM *</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
+        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
       '</div>'+
       '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro. Não se encaixa em nenhum (troca de um tubo, um conserto avulso)? Marque <strong>Outros</strong>.</span></label><div>'+chk+'</div></div>'+
       '</div>';
@@ -4669,6 +4844,9 @@ function _camNfeTipo(i,el){
   var ordem=nfTiposImportaveis();
   g.tipos.sort(function(a,b){ return ordem.indexOf(a)-ordem.indexOf(b); });
   el.parentNode.classList.toggle('on',el.checked);
+  // o KM deixa de ser obrigatório se sobrar só tipo sem alerta — o rótulo acompanha
+  var lab=document.getElementById('camNfeKmLab'+i);
+  if(lab) lab.textContent=_camNfeRotuloKm(g);
   _camNfeResumo();
 }
 function _camNfeRemover(i){ _camNfe.grupos.splice(i,1); _camNfeRender(); }
@@ -4680,7 +4858,7 @@ function _camNfePayload(g){
   var detalhe=(g.os?'OS '+g.os+' · ':'')+(g.pecas?'peças '+fmtR(g.pecas):'')+(g.pecas&&g.servicos?' + ':'')+(g.servicos?'serviço '+fmtR(g.servicos):'');
   return {destino:'caminhao', documentos:docs, lancamentos:g.tipos.map(function(t,k){
     return {
-      placa:g.placa, tipo_manutencao:t, data_manutencao:g.data, km:g.km,
+      placa:g.placa, tipo_manutencao:t, data_manutencao:g.data, km:(g.km>0?g.km:''),
       valor:k===0?g.total:'',
       local_servico:g.emitNome||'', nota_fiscal:notas,
       observacao:k===0
@@ -4720,6 +4898,11 @@ function camNfeImportar(){
 // Só existe item para o que entrou por XML — lançamento digitado à mão tem só o total.
 // ============================================================
 var nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''};
+// Dentro da aba Custos este quadro é o DETALHE do que está acima, não um relatório
+// paralelo: herda período e veículo do filtro do topo, esconde os seletores que
+// passariam a brigar com ele, e fica só com caminhão (nota de máquina é da aba
+// Maquinário). Fora da aba Custos nada disso vale e o relatório segue completo.
+var nfRelEmbutido=false;
 
 // Mesmo reconhecimento do importador (js/nf-parse.js NF_REGRAS_TIPO), para "filtro de ar"
 // não pegar o filtro de cabine nem "óleo motor" pegar óleo de câmbio. Freio aqui é GASTO
@@ -4777,6 +4960,14 @@ function _nfRelFiltrar(linhas){
 
 // soResultado: redesenha só o resultado, sem refazer a barra de filtros (usado pela busca,
 // para o campo de texto não perder o foco a cada letra digitada)
+function nfRelSincronizar(f){
+  nfRelEmbutido=true;
+  nfRel.origem='caminhao';          // máquina e insumo pertencem à aba Maquinário
+  nfRel.alvo=f.placa||'';
+  nfRel.dtIni=f.dtIni||'';
+  nfRel.dtFim=f.dtFim||'';
+}
+
 function buildNfRelatorio(soResultado){
   var cont=document.getElementById('nfRelConteudo'); if(!cont) return;
   var todas=_nfRelLinhas();
@@ -4800,13 +4991,17 @@ function buildNfRelatorio(soResultado){
   // quantidade somada por unidade, sem converter (balde de 20 L não vira litro sozinho)
   var qtdTxt=Object.keys(un).sort(function(a,b){ return a==='L'?-1:(b==='L'?1:a.localeCompare(b)); })
     .map(function(u){ return fmt(un[u],(un[u]%1)?1:0)+' '+u; }).join(' · ')||'—';
-  var h='<div class="kpi-row" id="kpiNfRel">'+
+  var h=nfRelEmbutido?'':'<div class="kpi-row" id="kpiNfRel">'+
     '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">'+fmtR(Math.round(tot*100)/100)+'</div><div class="kpi-label">Total</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🔩</div><div class="kpi-value">'+fmtR(Math.round(pc*100)/100)+'</div><div class="kpi-label">Peças'+(tot?' · '+Math.round(pc/tot*100)+'%':'')+'</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🧰</div><div class="kpi-value">'+fmtR(Math.round(sv*100)/100)+'</div><div class="kpi-label">Mão de obra'+(tot?' · '+Math.round(sv/tot*100)+'%':'')+'</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">📦</div><div class="kpi-value" title="'+_nfEsc(qtdTxt)+'">'+_nfEsc(qtdTxt)+'</div><div class="kpi-label">Quantidade (peças)</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">📄</div><div class="kpi-value">'+Object.keys(notas).length+'</div><div class="kpi-label">Notas</div></div>'+
     '</div>';
+  // no modo embutido o resumo vira uma linha só, sem competir com os indicadores do topo
+  if(nfRelEmbutido) h='<div class="nf-rel-resumo">'+L.length+' itens em '+Object.keys(notas).length+
+    ' nota(s) · <strong>'+fmtR(Math.round(tot*100)/100)+'</strong> — peças '+fmtR(Math.round(pc*100)/100)+
+    ' · mão de obra '+fmtR(Math.round(sv*100)/100)+'</div>';
 
   // ---- ranking por placa/máquina ----
   var rk={};
@@ -4884,11 +5079,11 @@ function _nfRelFiltros(todas){
   });
   h+='</div><div class="nf-rel-linha">'+
     '<input type="text" class="filter-select" id="nfRelBusca" placeholder="🔎 Buscar na descrição (ex.: correia, graxa)" value="'+_nfEsc(nfRel.busca)+'" oninput="_nfRelBuscar(this.value)">'+
-    '<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>'+
-    '<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
-      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>'+
+    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>')+
+    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
+      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>')+
     '<select class="filter-select" onchange="_nfRelSet(\'tipo\',this.value)"><option value="">Peças e serviços</option><option value="PECA"'+sel(nfRel.tipo,'PECA')+'>Só peças</option><option value="SERVICO"'+sel(nfRel.tipo,'SERVICO')+'>Só mão de obra</option></select>'+
-    '<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>'+
+    (nfRelEmbutido?'':'<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>')+
     '<button class="manut-filter-reset" onclick="_nfRelLimpar()">↺ Limpar</button></div>'+
     '<div class="nf-rel-nota">ℹ️ Só entra o que foi importado por nota fiscal (XML). Manutenção digitada à mão não tem as peças, só o total. '+
     'Busca por texto pega peça e serviço: "filtro de ar" também acha a mão de obra "substituir filtro de ar" — use "Só peças" para separar.</div>';
@@ -5300,7 +5495,10 @@ function salvarManutRealizada(){
   var t=document.getElementById('fmTipo').value;
   var d=document.getElementById('fmData').value;
   var k=document.getElementById('fmKM').value;
-  if(!p||!t||!d||!k){showToast('Todos os campos com * são obrigatórios!',true);return;}
+  // KM só é obrigatório nos tipos que geram alerta de KM (ver manutTipoTemAlertaKm):
+  // em conserto avulso ("Outros") a nota costuma não trazer KM.
+  var kmObrig=(typeof manutKmObrigatorio==='function')?manutKmObrigatorio([t]):true;
+  if(!p||!t||!d||(kmObrig&&!k)){showToast('Preencha os campos obrigatórios (*)'+(kmObrig?', inclusive o KM':''),true);return;}
   var valor=num(document.getElementById('fmValor').value);
   var localServico=n(document.getElementById('fmLocalServico').value);
   var notaFiscal=n(document.getElementById('fmNotaFiscal').value);
@@ -5313,7 +5511,7 @@ function salvarManutRealizada(){
     return;
   }
   var itensPneu=mostraDiagrama?coletarItensPneu('fmPneuDiagram'):[];
-  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':num(k),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
+  saveToSheets('addManutRealizada', {'PLACA':p,'TIPO_MANUTENCAO':t,'DATA MANUTENÇÃO':d,'KM':(k?num(k):null),'OBSERVAÇÃO':obs,VALOR:valor||null,LOCAL_SERVICO:localServico||null,NOTA_FISCAL:notaFiscal||null,MOTORISTA:motorista||null,'USUARIO':currentUserData?currentUserData.nome:currentUser,'DATA_REGISTRO':new Date().toLocaleString('pt-BR')}, function(ok,res) {
     if(!ok){ showToast('❌ Erro ao salvar: '+((res&&res.error)||'desconhecido'),true); return; }
     var novoId=res&&res[0]&&res[0].id;
     function finalizar(){
@@ -5343,7 +5541,15 @@ function limparFormManutReal(){
 
 // Mostra/esconde o diagrama de eixos conforme o tipo de manutenção selecionado
 // (CONTROLA_PNEUS) e o Tipo de Veículo cadastrado na placa escolhida.
+// Rótulo do KM acompanha o tipo escolhido: com "*" só quando ele é usado no alerta
+function _atualizarRotuloKmForm(){
+  var tipoEl=document.getElementById('fmTipo'), lab=document.getElementById('fmKMLabel');
+  if(!tipoEl||!lab||typeof manutTipoTemAlertaKm!=='function') return;
+  var obrig=!tipoEl.value||manutTipoTemAlertaKm(tipoEl.value);
+  lab.textContent=obrig?'KM na Manutenção *':'KM na Manutenção (opcional neste tipo)';
+}
 function _atualizarDiagramaPneuForm(){
+  _atualizarRotuloKmForm();
   var placaEl=document.getElementById('fmPlaca'), tipoEl=document.getElementById('fmTipo');
   var wrap=document.getElementById('fmPneuWrap'), aviso=document.getElementById('fmPneuAviso');
   if(!placaEl||!tipoEl||!wrap||!aviso) return;
@@ -6701,7 +6907,8 @@ function buildFinanceiro(){
     if(r.MOTORISTA&&!motSet[r.MOTORISTA]){motSet[r.MOTORISTA]=1;uMot.push(r.MOTORISTA)}
     if(r.PLACA&&!plaSet[r.PLACA]){plaSet[r.PLACA]=1;uPla.push(r.PLACA)}
     if(r['LOCAL ABASTECIMENTO']&&!abSet[r['LOCAL ABASTECIMENTO']]){abSet[r['LOCAL ABASTECIMENTO']]=1;uAb.push(r['LOCAL ABASTECIMENTO'])}
-    if(r['CLASSE DESPESA']&&!deSet[r['CLASSE DESPESA']]){deSet[r['CLASSE DESPESA']]=1;uDe.push(r['CLASSE DESPESA'])}
+    // só as classes que continuam no Financeiro — manutenção tem filtro próprio na aba dela
+    if(r['CLASSE DESPESA']&&!deSet[r['CLASSE DESPESA']]&&!classeEhManutencao(r['CLASSE DESPESA'])){deSet[r['CLASSE DESPESA']]=1;uDe.push(r['CLASSE DESPESA'])}
     var my=getMonthYear(r.DATA);if(my&&!monSet[my]){monSet[my]=1;uMon.push(my)}
   });
   uMot.sort();uPla.sort();uAb.sort();uDe.sort();uMon.sort();
@@ -6752,10 +6959,25 @@ function buildFinanceiro(){
   });
 
   finFilteredData=data;
+
+  // O gasto de manutenção fica na aba Manutenção (classes marcadas em classes_despesa).
+  // Sem este aviso, quem acabou de lançar uma despesa de oficina acha que ela sumiu.
+  var nManut=0,vManut=0;
+  data.forEach(function(r){ var v=despesaManutencao(r); if(v>0){ nManut++; vManut+=v; } });
+  var notaEl=document.getElementById('finManutNota');
+  if(notaEl){
+    if(nManut>0){
+      notaEl.innerHTML='<span class="fin-manut-ico">🔧</span><span><strong>'+nManut+' lançamento'+(nManut>1?'s':'')+' de manutenção</strong> no período, somando R$'+numBR(vManut,2)+
+        ' — não entra'+(nManut>1?'m':'')+' nos números abaixo.</span>'+
+        '<button class="fin-manut-btn" onclick="navigateTo(&#39;manutencao&#39;)">Ver na aba Manutenção →</button>';
+      notaEl.style.display='';
+    } else notaEl.style.display='none';
+  }
+
   var tComb=0,tLit=0,tArla=0,tDesp=0,tTON=0,tM3=0,nEntregas=0;
   var placaEntregas={}; // placa -> {ton:qtd, m3:qtd}, pra classificar cada placa pelo tipo predominante
   data.forEach(function(r){
-    tComb+=num(r['VALOR TOTAL']);tLit+=num(r['QTDADE LITROS']);tArla+=num(r['ARLA VALOR']);tDesp+=num(r['VALOR DESPESA']);
+    tComb+=num(r['VALOR TOTAL']);tLit+=num(r['QTDADE LITROS']);tArla+=num(r['ARLA VALOR']);tDesp+=despesaFinanceira(r);
     if(r.ENTREGA&&r.QUANTIDADE){
       nEntregas++;
       var isM3=BASE.clientesM3.includes(r['LOCAL DESCARGA']);
@@ -6781,7 +7003,7 @@ function buildFinanceiro(){
   var custoTONGrupo=0,custoM3Grupo=0,qtdTONGrupo=0,qtdM3Grupo=0;
   data.forEach(function(r){
     if(!r.PLACA) return;
-    var custoLinha=num(r['VALOR TOTAL'])+num(r['ARLA VALOR'])+num(r['VALOR DESPESA']);
+    var custoLinha=num(r['VALOR TOTAL'])+num(r['ARLA VALOR'])+despesaFinanceira(r);
     if(placasTON[r.PLACA]) custoTONGrupo+=custoLinha;
     else if(placasM3[r.PLACA]) custoM3Grupo+=custoLinha;
   });
@@ -6811,7 +7033,7 @@ function buildFinanceiro(){
   var trendMonthF=fMes||null;
   var trendComb=calcMonthTrend(DB.cadastro,'VALOR TOTAL',function(r){return num(r['VALOR TOTAL'])>0},trendMonthF);
   var trendLit=calcMonthTrend(DB.cadastro,'QTDADE LITROS',function(r){return num(r['QTDADE LITROS'])>0},trendMonthF);
-  var trendDesp=calcMonthTrend(DB.cadastro,'VALOR DESPESA',function(r){return num(r['VALOR DESPESA'])>0},trendMonthF);
+  var trendDesp=calcMonthTrend(DB.cadastro,'VALOR DESPESA',function(r){return despesaFinanceira(r)>0},trendMonthF);
 
   document.getElementById('kpiFin').innerHTML=
     '<div class="kpi-card"><div class="kpi-top"><div class="kpi-icon">⛽</div>'+trendBadge(trendComb.current,trendComb.previous)+'</div><div class="kpi-value">R$'+numBR(tComb,2)+'</div><div class="kpi-label">Total Combustível</div></div>'+
@@ -6835,7 +7057,7 @@ function buildFinanceiro(){
   var ctxFM=document.getElementById('cFinMensal').getContext('2d');
   chartInstances['cFinMensal']=new Chart(ctxFM,{type:'bar',data:{labels:mfL.map(getMonthLabel),datasets:[{label:'Combustível',data:mfL.map(function(m){return mf[m].c}),backgroundColor:makeGrad(ctxFM,'rgba(59,130,246,0.8)','rgba(59,130,246,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.5},{label:'ARLA',data:mfL.map(function(m){return mf[m].a}),backgroundColor:makeGrad(ctxFM,'rgba(168,85,247,0.8)','rgba(168,85,247,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}}},scales:{x:{ticks:{color:colors.text},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}}}}});
 
-  var dc={};data.forEach(function(r){if(r['CLASSE DESPESA']&&r['VALOR DESPESA'])dc[r['CLASSE DESPESA']]=(dc[r['CLASSE DESPESA']]||0)+num(r['VALOR DESPESA'])});
+  var dc={};data.forEach(function(r){if(r['CLASSE DESPESA']&&despesaFinanceira(r)>0)dc[r['CLASSE DESPESA']]=(dc[r['CLASSE DESPESA']]||0)+despesaFinanceira(r)});
   var dce=Object.entries(dc).sort(function(a,b){return b[1]-a[1]});
   destroyChart('cFinDesp');
   var despLabels=dce.map(function(d){return d[0]});
@@ -6851,13 +7073,13 @@ function buildFinanceiro(){
   var ctxFP=document.getElementById('cFinPosto').getContext('2d');
   chartInstances['cFinPosto']=new Chart(ctxFP,{type:'bar',data:{labels:pve.map(function(p){return p[0]}),datasets:[{data:pve.map(function(p){return p[1]}),backgroundColor:makeGrad(ctxFP,'rgba(0,229,255,0.85)','rgba(0,229,255,0.1)'),borderRadius:8,borderSkipped:false,barPercentage:0.6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,font:{size:10}},grid:{display:false}},y:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}}}}});
 
-  var md2={};data.forEach(function(r){if(r.MOTORISTA&&r['VALOR DESPESA'])md2[r.MOTORISTA]=(md2[r.MOTORISTA]||0)+num(r['VALOR DESPESA'])});
+  var md2={};data.forEach(function(r){if(r.MOTORISTA&&despesaFinanceira(r)>0)md2[r.MOTORISTA]=(md2[r.MOTORISTA]||0)+despesaFinanceira(r)});
   var mde=Object.entries(md2).sort(function(a,b){return b[1]-a[1]});
   destroyChart('cFinMotDesp');
   var ctxFD=document.getElementById('cFinMotDesp').getContext('2d');
   chartInstances['cFinMotDesp']=new Chart(ctxFD,{type:'bar',data:{labels:mde.map(function(m){return m[0]}),datasets:[{data:mde.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxFD,'rgba(239,68,68,0.85)','rgba(239,68,68,0.2)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
-  var finRows=data.filter(function(r){return r['VALOR TOTAL']||r['VALOR DESPESA']||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
+  var finRows=data.filter(function(r){return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
   var canEditFin=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var tH='<div class="table-header"><h3>Detalhamento Financeiro</h3><span class="chart-badge">'+finRows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th>Litros</th><th>Vlr Unit.</th><th>Vlr Total</th><th>ARLA</th><th>Classe</th><th>Vlr Desp.</th>'+(canEditFin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   finRows.forEach(function(r){
@@ -6866,7 +7088,7 @@ function buildFinanceiro(){
       var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
-    tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(r['CLASSE DESPESA']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(r['VALOR DESPESA']?'R$'+numBR(r['VALOR DESPESA'],2):'-')+'</td>'+actCell+'</tr>';
+    tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(despesaFinanceira(r)>0?(r['CLASSE DESPESA']||'-'):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(despesaFinanceira(r)>0?'R$'+numBR(despesaFinanceira(r),2):'-')+'</td>'+actCell+'</tr>';
   });
   tH+='</tbody></table></div>';
   document.getElementById('tblFin').innerHTML=tH;
@@ -6877,7 +7099,7 @@ function buildFinanceiro(){
 // ==================== MANUTENCAO ====================
 var manutFiltro={placa:'',tipo:'',status:[],motorista:'',mesCons:'',dtIni:'',dtFim:''};
 var manutMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motorista
-var manutViewAtual='fora'; // 'fora', 'garantia' ou 'pecas'
+var manutViewAtual='painel'; // 'painel', 'custos', 'historico' ou 'garantia'
 var manutKmTipo=''; // tipo mostrado no painel KM & Próxima Troca ('' = troca de óleo)
 
 // Dispatcher: constrói as duas visões (Fora de Garantia / Em Garantia) e o
@@ -6888,27 +7110,59 @@ function buildManutencao(){
   buildManutencaoGarantia();
   buildManutDetalhamento();
   if(typeof buildNfRelatorio==='function') buildNfRelatorio();
+  if(typeof buildManutCustos==='function') buildManutCustos();
 }
 
 function showManutView(view){
   manutViewAtual=view;
-  document.getElementById('manutViewFora').style.display=view==='fora'?'':'none';
-  document.getElementById('manutViewGarantia').style.display=view==='garantia'?'':'none';
-  document.getElementById('manutViewPecas').style.display=view==='pecas'?'':'none';
-  document.getElementById('manutTabBtnFora').classList.toggle('active',view==='fora');
-  document.getElementById('manutTabBtnGarantia').classList.toggle('active',view==='garantia');
-  document.getElementById('manutTabBtnPecas').classList.toggle('active',view==='pecas');
-  var secoes=document.getElementById('manutSecoesCaminhao');
-  if(secoes) secoes.style.display=view==='pecas'?'none':'';
+  ['painel','custos','historico','garantia'].forEach(function(v){
+    var painel=document.getElementById('manutView'+v.charAt(0).toUpperCase()+v.slice(1));
+    if(painel) painel.style.display=(v===view?'':'none');
+    var btn=document.getElementById('manutTabBtn'+v.charAt(0).toUpperCase()+v.slice(1));
+    if(btn) btn.classList.toggle('active',v===view);
+  });
   // A consulta de pneu busca em TODOS os pneus lançados (js/pneus.js), sem olhar aba nem
   // garantia — então fica só na visão principal, em vez de repetida em cada aba.
   var pneu=document.getElementById('manutConsultaPneu');
-  if(pneu) pneu.style.display=view==='fora'?'':'none';
-  if(view!=='pecas') buildManutDetalhamento();   // o Detalhamento muda conforme a visão
-  if(view==='pecas') buildNfRelatorio();
+  if(pneu) pneu.style.display='';
+  if(view==='custos'){ buildManutCustos(); if(typeof buildNfRelatorio==='function') buildNfRelatorio(); }
+  else if(view==='historico') buildManutDetalhamento();
 }
 
-// ---------- Helpers compartilhados entre Fora de Garantia e Em Garantia ----------
+// ---------- Helpers compartilhados entre Painel e Em Garantia ----------
+// Ritmo de cada placa (km/dia) nos últimos 180 dias, a partir do odômetro dos
+// abastecimentos. É o que traduz "faltam 8.000 km" em "vence em ~28 dias", que é o
+// número que serve para agendar oficina.
+function _manutKmPorDia(){
+  var por={};
+  DB.cadastro.forEach(function(r){
+    if(!r.PLACA||!r.KM||!r.DATA) return;
+    var km=parseKM(r.KM); if(isNaN(km)||km<=0) return;
+    var p=String(r.PLACA).replace(/\s+/g,''), d=String(r.DATA).slice(0,10);
+    if(!por[p]) por[p]={kmMin:km,kmMax:km,dtMin:d,dtMax:d,n:0};
+    var o=por[p]; o.n++;
+    if(km<o.kmMin)o.kmMin=km; if(km>o.kmMax)o.kmMax=km;
+    if(d<o.dtMin)o.dtMin=d; if(d>o.dtMax)o.dtMax=d;
+  });
+  var out={};
+  Object.keys(por).forEach(function(p){
+    var o=por[p];
+    if(o.n<4) return;
+    var dias=(new Date(o.dtMax)-new Date(o.dtMin))/86400000;
+    if(dias>0) out[p]=(o.kmMax-o.kmMin)/dias;
+  });
+  return out;
+}
+// "faltam 8.000 km" -> "em ~28 dias". Sem ritmo conhecido, devolve vazio.
+function _manutPrevisao(kmRest,kmDia){
+  if(kmRest==null||!kmDia||kmDia<=0) return '';
+  var dias=Math.round(kmRest/kmDia);
+  if(dias<0) return 'passou há ~'+Math.abs(dias)+' dia'+(Math.abs(dias)===1?'':'s');
+  if(dias===0) return 'hoje';
+  return 'em ~'+dias+' dia'+(dias===1?'':'s');
+}
+
+// ---------- Helpers de status ----------
 function _manutCalcKmByPlaca(){
   var kmByPlaca={};
   DB.cadastro.forEach(function(r){
@@ -6923,20 +7177,45 @@ function _manutCalcKmByPlaca(){
 function _manutCalcLastManut(){
   var lastManut={};
   DB.manutRealizada.forEach(function(r){
+    // Lançamento SEM KM não serve de âncora: a próxima manutenção é calculada a partir do
+    // KM da última (KM da última + intervalo). Sem este filtro, um conserto avulso sem KM
+    // viraria a "última" do tipo e o caminhão apareceria vencido sem ser.
+    if(r.KM_NA_MANUTENCAO===null||r.KM_NA_MANUTENCAO===undefined||r.KM_NA_MANUTENCAO==='') return;
+    // Lançamento HISTÓRICO (anterior ao corte de 01/07/2026, migration 0028) também não
+    // serve de âncora: são registros de 2024/2025 em caminhões que rodaram 250 mil km
+    // desde então, certamente revisados sem ninguém registrar. Usá-los faz a tela dizer
+    // "vencido há 172.000 km", afirmando algo que não sabemos. Sem eles o item volta a ser
+    // "sem registro", que é a verdade. Continuam inteiros no custo e no histórico.
+    if(r.BASE_ALERTA===false) return;
     var key=r.PLACA+'|'+r.TIPO_MANUTENCAO;
     if(!lastManut[key]||(r.DATA_MANUTENCAO>lastManut[key].DATA_MANUTENCAO)) lastManut[key]=r;
   });
   return lastManut;
 }
+// KM só é usado para calcular quando vence a próxima manutenção — ou seja, só faz falta
+// nos tipos que têm intervalo de KM cadastrado. Em "Outros" e "Troca de Óleo e Filtro"
+// (sem intervalo) ele é opcional; obrigar levava a inventar número numa nota de conserto
+// avulso, e número inventado vira base de cálculo errada depois.
+function manutTipoTemAlertaKm(tipo){
+  var p=(DB.manutProgramada||[]).filter(function(x){ return x.TIPO_MANUTENCAO===tipo; })[0];
+  return !!(p && num(p.INTERVALO_KM)>0);
+}
+function manutKmObrigatorio(tipos){
+  return (tipos||[]).some(manutTipoTemAlertaKm);
+}
 // Status de um item (placa+tipo) dado o programa (intervalo/alertas), o último
 // registro de manutenção e o km atual da placa.
+// Cinco estados, não três. "Vencido" (v) é separado de "Urgente" (r) porque são ações
+// diferentes: um já passou do ponto, o outro dá tempo de agendar. Antes os dois eram o
+// mesmo vermelho e não dava para priorizar.
 function _manutStatusItem(prog,last,kmAtual){
   var status,kmRest,proxM;
   if(!last){status='x';kmRest=null;proxM=null;}
   else{
     proxM=num(last.KM_NA_MANUTENCAO)+num(prog.INTERVALO_KM);
     kmRest=proxM-kmAtual;
-    if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
+    if(kmRest<0) status='v';
+    else if(kmRest<=num(prog.ALERTA_URGENTE)) status='r';
     else if(kmRest<=num(prog['ALERTA ATENCAO'])) status='y';
     else status='g';
   }
@@ -6956,14 +7235,14 @@ function buildManutencaoFora(){
   var alertsData=[];
   allPlacas.forEach(function(placa){
     var kmAtual=kmByPlaca[placa];
-    var items=[];var worst='g';var hasOnlyX=true;
+    var items=[];var worst='g';var hasOnlyX=true;var pior=9;
     progs.forEach(function(prog){
       var key=placa+'|'+prog.TIPO_MANUTENCAO;
       var last=lastManut[key];
       var st=_manutStatusItem(prog,last,kmAtual);
       if(last) hasOnlyX=false;
-      if(st.status==='r'){worst='r';}
-      else if(st.status==='y'&&worst!=='r'){worst='y';}
+      var ord={v:0,r:1,y:2,g:3,x:4}[st.status];
+      if(ord<pior&&st.status!=='x'){pior=ord;worst=st.status;}
       items.push({tipo:prog.TIPO_MANUTENCAO,status:st.status,kmRest:st.kmRest,proxM:st.proxM,intervalo:num(prog.INTERVALO_KM)});
     });
     if(hasOnlyX&&worst==='g') worst='x';
@@ -7000,11 +7279,13 @@ function buildManutencaoFora(){
   todosTipos.forEach(function(t){fbH+='<option value="'+t+'"'+(savedTipo===t?' selected':'')+'>'+t+'</option>'});
   fbH+='</select>';
   fbH+='<div class="filter-sep" style="width:1px;height:24px;background:var(--border);margin:0 6px"></div>';
+  var vencTag=manutFiltro.status.indexOf('v')>=0;
   var urgTag=manutFiltro.status.indexOf('r')>=0;
   var attTag=manutFiltro.status.indexOf('y')>=0;
   var okTag=manutFiltro.status.indexOf('g')>=0;
   var xTag=manutFiltro.status.indexOf('x')>=0;
-  fbH+='<div class="manut-filter-tag'+(urgTag?' active red':'')+'" onclick="toggleManutTag(&#39;r&#39;,this)"><span class="manut-tag-dot" style="background:var(--red)"></span>Urgente</div>';
+  fbH+='<div class="manut-filter-tag'+(vencTag?' active red':'')+'" onclick="toggleManutTag(&#39;v&#39;,this)"><span class="manut-tag-dot" style="background:var(--red)"></span>Vencido</div>';
+  fbH+='<div class="manut-filter-tag'+(urgTag?' active red':'')+'" onclick="toggleManutTag(&#39;r&#39;,this)"><span class="manut-tag-dot" style="background:var(--orange)"></span>Urgente</div>';
   fbH+='<div class="manut-filter-tag'+(attTag?' active':'')+'" onclick="toggleManutTag(&#39;y&#39;,this)"><span class="manut-tag-dot" style="background:var(--yellow)"></span>Atenção</div>';
   fbH+='<div class="manut-filter-tag'+(okTag?' active green':'')+'" onclick="toggleManutTag(&#39;g&#39;,this)"><span class="manut-tag-dot" style="background:var(--green)"></span>OK</div>';
   fbH+='<div class="manut-filter-tag'+(xTag?' active':'')+'" onclick="toggleManutTag(&#39;x&#39;,this)"><span class="manut-tag-dot" style="background:var(--text2)"></span>Sem registro</div>';
@@ -7022,12 +7303,13 @@ function buildManutencaoFora(){
   if(manutFiltro.status.length>0) filtered=filtered.filter(function(a){return manutFiltro.status.indexOf(a.worst)>=0});
 
   // Count totals from filtered
-  var urgCnt=0,attCnt=0,okCnt=0,semRegCnt=0,totalItens=0,urgPlacasSet={};
+  var vencCnt=0,urgCnt=0,attCnt=0,okCnt=0,semRegCnt=0,totalItens=0,urgPlacasSet={};
   filtered.forEach(function(a){
     totalItens+=a.items.length;
-    if(a.items.some(function(i){return i.status==='r';})) urgPlacasSet[a.placa]=1;
+    if(a.items.some(function(i){return i.status==='r'||i.status==='v';})) urgPlacasSet[a.placa]=1;
     a.items.forEach(function(i){
-      if(i.status==='r') urgCnt++;
+      if(i.status==='v') vencCnt++;
+      else if(i.status==='r') urgCnt++;
       else if(i.status==='x') semRegCnt++;
       else if(i.status==='y') attCnt++;
       else okCnt++;
@@ -7062,12 +7344,13 @@ function buildManutencaoFora(){
   var urgentItems=[];
   filtered.forEach(function(a){
     a.items.forEach(function(i){
-      if(i.status==='r') urgentItems.push({placa:a.placa,tipo:i.tipo,km:i.kmRest});
+      if(i.status==='v'||i.status==='r') urgentItems.push({placa:a.placa,tipo:i.tipo,km:i.kmRest,st:i.status});
     });
   });
   var alertBar=document.getElementById('manutAlertBar');
   if(urgentItems.length>0){
-    var alertTxt='<strong>'+urgentItems.length+' manutenção(ões) com KM vencido</strong> — ';
+    var nV=urgentItems.filter(function(u){return u.st==='v'}).length;
+    var alertTxt='<strong>'+urgentItems.length+' manutenção(ões) '+(nV===urgentItems.length?'vencida(s)':(nV?nV+' vencida(s) e '+(urgentItems.length-nV)+' a vencer':'a vencer'))+'</strong> — ';
     alertTxt+=urgentItems.slice(0,3).map(function(u){return '<em>'+u.placa+'</em> '+u.tipo+' ('+Number(u.km).toLocaleString('pt-BR')+' km)'}).join(' · ');
     if(urgentItems.length>3) alertTxt+=' · <em>+'+(urgentItems.length-3)+' mais</em>';
     alertBar.innerHTML='<div class="manut-alert-ico">⚠️</div><div class="manut-alert-txt">'+alertTxt+'</div>';
@@ -7080,7 +7363,8 @@ function buildManutencaoFora(){
 
   // KPIs
   document.getElementById('kpiManut').innerHTML=
-    '<div class="kpi-card red" title="Cada item é uma combinação caminhão + tipo de manutenção"><div class="kpi-icon">🔴</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Itens urgentes'+(urgPlacas?' · '+urgPlacas+' caminhõe'+(urgPlacas>1?'s':'')+'':'')+'</div></div>'+
+    '<div class="kpi-card red" title="Já passou do ponto de troca"><div class="kpi-icon">🔴</div><div class="kpi-value">'+vencCnt+'</div><div class="kpi-label">Vencidos'+(urgPlacas?' · '+urgPlacas+' '+(urgPlacas>1?'caminhões':'caminhão'):'')+'</div></div>'+
+    '<div class="kpi-card red" title="Vence em breve — dá tempo de agendar"><div class="kpi-icon">🟠</div><div class="kpi-value">'+urgCnt+'</div><div class="kpi-label">Urgentes</div></div>'+
     '<div class="kpi-card yellow" title="Cada item é uma combinação caminhão + tipo de manutenção"><div class="kpi-icon">🟡</div><div class="kpi-value">'+attCnt+'</div><div class="kpi-label">Itens em atenção</div></div>'+
     '<div class="kpi-card" title="Combinações caminhão + tipo que nunca tiveram manutenção lançada — sem isso o sistema não sabe calcular a próxima"><div class="kpi-icon">⚪</div><div class="kpi-value">'+semRegCnt+'</div><div class="kpi-label">Itens sem registro'+(totalItens?' de '+totalItens:'')+'</div></div>'+
     '<div class="kpi-card green"><div class="kpi-icon">🚛</div><div class="kpi-value">'+filtered.length+'</div><div class="kpi-label">Caminhões</div></div>';
@@ -7094,11 +7378,11 @@ function buildManutencaoFora(){
   thead+='</tr>';
   document.getElementById('manutMatrizHead').innerHTML=thead;
 
-  var chipLabel={g:'OK',y:'Atenção',r:'Urgente',x:'Sem reg.'};
+  var chipLabel={g:'OK',y:'Atenção',v:'Vencido',r:'Urgente',x:'Sem reg.'};
   // Ordem: urgente > atenção > ok > sem registro (placa em ordem alfabética dentro do grupo).
   // Só alfabética, com 31 caminhões e a maioria "sem registro", deixava o urgente perdido
   // no meio da lista — quem abre a tela quer ver primeiro o que precisa de ação.
-  var ordStatus={r:0,y:1,g:2,x:3};
+  var ordStatus={v:0,r:1,y:2,g:3,x:4};
   var ordenados=filtered.slice().sort(function(a,b){
     return (ordStatus[a.worst]-ordStatus[b.worst]) || a.placa.localeCompare(b.placa,'pt-BR');
   });
@@ -7141,7 +7425,7 @@ function buildManutencaoFora(){
       var ra=a.items[iSel].kmRest, rb=b.items[iSel].kmRest;
       return (ra!=null?ra:semReg)-(rb!=null?rb:semReg);
     });
-    var corTxt={g:'var(--green)',y:'var(--yellow)',r:'var(--red)',x:'var(--text2)'};
+    var corTxt={g:'var(--green)',y:'var(--yellow)',v:'var(--red)',r:'var(--orange)',x:'var(--text2)'};
     kmListH='<div class="manut-km-scroll"><table class="manut-km-tbl"><thead><tr><th>Placa</th><th>KM atual</th><th>Próxima em</th><th>Faltam</th><th></th></tr></thead><tbody>';
     sorted.forEach(function(a){
       var it=a.items[iSel];
@@ -7166,6 +7450,90 @@ function buildManutencaoFora(){
   selH+='</select><span class="manut-km-sel-n">'+filtered.length+' caminhões</span>';
   document.getElementById('manutKmBadge').innerHTML=selH;
   document.getElementById('manutKmList').innerHTML=kmListH;
+
+  // ---------- O QUE PRECISA DE AÇÃO ----------
+  // Primeira coisa da tela, ordenada por urgência. Antes o que aparecia primeiro era a
+  // matriz, com a maioria das células cinza — quem abre a aba quer saber o que fazer hoje.
+  var kmDia=_manutKmPorDia();
+  var acoes=[];
+  filtered.forEach(function(a){
+    a.items.forEach(function(i){
+      if(i.status==='v'||i.status==='r'||i.status==='y') acoes.push({placa:a.placa,kmAtual:a.kmAtual,it:i});
+    });
+  });
+  acoes.sort(function(x,y){ return (ordStatus[x.it.status]-ordStatus[y.it.status]) || (x.it.kmRest-y.it.kmRest); });
+  var acaoH='';
+  if(!acoes.length){
+    acaoH='<div class="manut-vazio-ok">✅ Nenhuma manutenção vencida ou próxima de vencer nesta seleção.</div>';
+  } else {
+    acoes.forEach(function(x){
+      var prev=_manutPrevisao(x.it.kmRest,kmDia[x.placa]);
+      var num2=x.it.kmRest<0
+        ? '<b style="color:var(--red)">'+Math.round(-x.it.kmRest).toLocaleString('pt-BR')+' km atrás</b>'
+        : '<b>faltam '+Math.round(x.it.kmRest).toLocaleString('pt-BR')+' km</b>';
+      acaoH+='<div class="manut-acao">'+
+        '<div class="manut-acao-st"><span class="manut-chip '+x.it.status+'"><span class="manut-chip-dot"></span>'+chipLabel[x.it.status]+'</span></div>'+
+        '<div class="manut-acao-main"><div class="manut-acao-tipo"><span class="manut-placa-tag">'+x.placa+'</span> &nbsp;'+x.it.tipo+'</div>'+
+        '<div class="manut-acao-sub">KM atual '+Math.round(x.kmAtual).toLocaleString('pt-BR')+
+        (x.it.proxM!=null?' · próxima em '+Math.round(x.it.proxM).toLocaleString('pt-BR')+' km':'')+'</div></div>'+
+        '<div class="manut-acao-num">'+num2+'<div class="manut-acao-quando">'+prev+'</div></div></div>';
+    });
+  }
+  document.getElementById('manutAcaoList').innerHTML=acaoH;
+  document.getElementById('manutAcaoBadge').textContent=acoes.length+' iten'+(acoes.length===1?'':'s');
+
+  // ---------- SITUAÇÃO POR CAMINHÃO ----------
+  // A pergunta do gestor é "quais caminhões", não "quantos itens": um caminhão com 2 itens
+  // vencidos é UM caminhão parado. Só entram os que já têm histórico; os sem registro
+  // nenhum ficam no bloco de implantação, abaixo.
+  var comHist=filtered.filter(function(a){ return a.worst!=='x'; });
+  var frotaH='';
+  comHist.slice().sort(function(a,b){
+    return (ordStatus[a.worst]-ordStatus[b.worst]) || a.placa.localeCompare(b.placa,'pt-BR');
+  }).forEach(function(a){
+    var c={v:0,r:0,y:0,g:0,x:0};
+    a.items.forEach(function(i){ c[i.status]++; });
+    var det=[];
+    if(c.v) det.push('<span style="color:var(--red)">'+c.v+' vencido'+(c.v>1?'s':'')+'</span>');
+    if(c.r) det.push('<span style="color:var(--orange)">'+c.r+' urgente'+(c.r>1?'s':'')+'</span>');
+    if(c.y) det.push('<span style="color:var(--yellow)">'+c.y+' em atenção</span>');
+    if(c.g) det.push('<span style="color:var(--green)">'+c.g+' em dia</span>');
+    if(c.x) det.push('<span style="color:var(--text2)">'+c.x+' sem registro</span>');
+    frotaH+='<div class="manut-frota-linha">'+
+      '<span class="manut-chip '+a.worst+'"><span class="manut-chip-dot"></span>'+chipLabel[a.worst]+'</span>'+
+      '<span class="manut-placa-tag">'+a.placa+'</span>'+
+      '<span class="manut-frota-km">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</span>'+
+      '<span class="manut-frota-det">'+det.join(' · ')+'</span></div>';
+  });
+  document.getElementById('manutFrotaList').innerHTML=frotaH||'<div class="manut-vazio-ok">Nenhum caminhão com histórico nesta seleção.</div>';
+  document.getElementById('manutFrotaBadge').textContent=comHist.length+' caminhõe'+(comHist.length===1?'':'s')+' no controle';
+
+  // ---------- IMPLANTAÇÃO DO CONTROLE ----------
+  // Caminhão sem nenhum histórico não está "em falta", está fora do controle ainda — e
+  // isso é um estado diferente, que merece cor diferente. Em vermelho vira uma parede que
+  // se aprende a ignorar; escondido, o painel mentiria por omissão. Aqui é um contador que
+  // só diminui: cada revisão registrada tira um da lista, e a seção some quando zerar.
+  var semHist=filtered.filter(function(a){ return a.worst==='x'; });
+  var implPanel=document.getElementById('manutImplPanel');
+  if(implPanel){
+    if(!semHist.length){ implPanel.style.display='none'; }
+    else{
+      implPanel.style.display='';
+      var totalP=filtered.length, dentro=totalP-semHist.length;
+      var pct=totalP?Math.round(dentro/totalP*100):0;
+      document.getElementById('manutImplResumo').innerHTML=
+        '<div class="manut-impl-barra"><div class="manut-impl-fill" style="width:'+pct+'%"></div></div>'+
+        '<div class="manut-impl-txt"><strong>'+dentro+' de '+totalP+' caminhões</strong> já no controle ('+pct+'%). '+
+        'Os outros '+semHist.length+' entram na <strong>próxima revisão registrada</strong> — não há histórico para lançar.</div>';
+      var implH='';
+      semHist.slice().sort(function(a,b){ return b.kmAtual-a.kmAtual; }).forEach(function(a){
+        implH+='<div class="manut-impl-linha"><span class="manut-placa-tag">'+a.placa+'</span>'+
+          '<span class="manut-frota-km">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</span></div>';
+      });
+      document.getElementById('manutImplList').innerHTML=implH;
+      document.getElementById('manutImplBadge').textContent=semHist.length+' aguardando';
+    }
+  }
 
   // CONSUMO MÉDIO movido para a aba Consumo (buildConsumo)
   // "Histórico Recente" (6 últimas) removido: o Detalhamento de Manutenção logo abaixo
@@ -7199,11 +7567,21 @@ function buildManutencaoGarantia(){
   var lastManut=_manutCalcLastManut();
   var garantiasAtivas=DB.garantiaCaminhoes.filter(garantiaEstaAtiva);
 
-  // Sem garantia cadastrada a aba ficava só com tabela vazia, idêntica à de fora de
-  // garantia. Explica para que serve e onde cadastrar (só ADMIN cadastra).
+  // A ABA só existe quando há garantia cadastrada — ou para ADMIN, que é quem cadastra e
+  // precisa de um caminho para chegar lá. Assim ninguém vê uma aba permanentemente vazia,
+  // e a funcionalidade não fica invisível: no dia em que a primeira garantia for cadastrada
+  // a aba aparece sozinha, sem mexer em código.
+  var admin=currentUserData&&currentUserData.perfil==='ADMIN';
+  var btnGar=document.getElementById('manutTabBtnGarantia');
+  if(btnGar) btnGar.style.display=(garantiasAtivas.length||admin)?'':'none';
+  // se a aba sumiu debaixo do usuário (ex: garantia venceu), volta para o Painel
+  if(!garantiasAtivas.length&&!admin&&manutViewAtual==='garantia') showManutView('painel');
+
+  // Sem garantia cadastrada a aba fica só com a tabela vazia, idêntica à do Painel.
+  // Este aviso explica para que serve e onde cadastrar.
   var vazio=document.getElementById('manutGarVazio');
   if(vazio){
-    var temCadastro=DB.garantiaCaminhoes.length>0, admin=currentUserData&&currentUserData.perfil==='ADMIN';
+    var temCadastro=DB.garantiaCaminhoes.length>0;
     if(!garantiasAtivas.length){
       vazio.innerHTML=temCadastro
         ? '<strong>Nenhuma garantia vigente.</strong><br>As '+DB.garantiaCaminhoes.length+' garantia(s) cadastrada(s) já venceram — por data ou por KM. Esses caminhões passam a aparecer em <em>Fora de Garantia</em>.'
@@ -7270,7 +7648,7 @@ function buildManutencaoGarantia(){
     '<div class="kpi-card green"><div class="kpi-icon">🟢</div><div class="kpi-value">'+okCnt+'</div><div class="kpi-label">OK</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🛡️</div><div class="kpi-value">'+garantiasAtivas.length+'</div><div class="kpi-label">Caminhões em Garantia</div></div>';
 
-  var chipLabel={g:'OK',y:'Atenção',r:'Urgente',x:'Sem reg.'};
+  var chipLabel={g:'OK',y:'Atenção',v:'Vencido',r:'Urgente',x:'Sem reg.'};
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   rows.sort(function(a,b){ return (a.placa+a.tipo).localeCompare(b.placa+b.tipo); });
   var tbody='';
@@ -7397,7 +7775,7 @@ function _mrBuildForm(row){
     '<div class="form-group"><label>Placa *</label><select id="mr_placa" onchange="_atualizarDiagramaPneuEdit(false)">'+po+'</select></div>'+
     '<div class="form-group"><label>Tipo *</label><select id="mr_tipo" onchange="_atualizarDiagramaPneuEdit(false)">'+to+'</select></div>'+
     '<div class="form-group"><label>Data *</label><input id="mr_data" type="date" value="'+(row.DATA_MANUTENCAO?String(row.DATA_MANUTENCAO).slice(0,10):'')+'"></div>'+
-    '<div class="form-group"><label>KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
+    '<div class="form-group"><label id="mr_kmLabel">KM *</label><input id="mr_km" type="number" value="'+(row.KM_NA_MANUTENCAO!=null?num(row.KM_NA_MANUTENCAO):'')+'"></div>'+
     '<div class="form-group"><label>Motorista</label><select id="mr_motorista">'+mo+'</select></div>'+
     '<div class="form-group"><label>Valor (R$)</label><input id="mr_valor" type="number" step="0.01" value="'+(row.VALOR!=null&&row.VALOR!==''?num(row.VALOR):'')+'"></div>'+
     '<div class="form-group"><label>Local do Serviço</label><input id="mr_local" type="text" value="'+(row.LOCAL_SERVICO?String(row.LOCAL_SERVICO).replace(/"/g,'&quot;'):'')+'"></div>'+
@@ -7410,6 +7788,11 @@ function _mrBuildForm(row){
     '<div class="form-group" style="grid-column:1/-1"><label>Observação</label><textarea id="mr_obs" rows="2">'+(row['OBSERVAÇÃO']?String(row['OBSERVAÇÃO']).replace(/</g,'&lt;'):'')+'</textarea></div>';
 }
 function _atualizarDiagramaPneuEdit(carregarExistentes){
+  var tipoLab=document.getElementById('mr_kmLabel'), tipoSel=document.getElementById('mr_tipo');
+  if(tipoLab&&tipoSel){
+    var obrig=!tipoSel.value||manutTipoTemAlertaKm(tipoSel.value);
+    tipoLab.textContent=obrig?'KM *':'KM (opcional neste tipo)';
+  }
   var placaEl=document.getElementById('mr_placa'), tipoEl=document.getElementById('mr_tipo');
   var wrap=document.getElementById('mrPneuWrap'), aviso=document.getElementById('mrPneuAviso');
   if(!placaEl||!tipoEl||!wrap||!aviso) return;
@@ -7446,9 +7829,10 @@ function salvarManutRealEdit(){
   var tipo=document.getElementById('mr_tipo').value;
   var data=document.getElementById('mr_data').value;
   var km=document.getElementById('mr_km').value;
-  if(!placa||!tipo||!data||!km){showToast('Placa, Tipo, Data e KM são obrigatórios',true);return;}
+  var kmObrig=manutKmObrigatorio([tipo]);
+  if(!placa||!tipo||!data||(kmObrig&&!km)){showToast(kmObrig?'Placa, Tipo, Data e KM são obrigatórios':'Placa, Tipo e Data são obrigatórios',true);return;}
   var row={
-    placa:placa, tipo_manutencao:tipo, data_manutencao:data, km:num(km),
+    placa:placa, tipo_manutencao:tipo, data_manutencao:data, km:(km?num(km):null),
     valor:document.getElementById('mr_valor').value?num(document.getElementById('mr_valor').value):null,
     local_servico:document.getElementById('mr_local').value.trim()||null,
     nota_fiscal:document.getElementById('mr_nota').value.trim()||null,
@@ -7502,6 +7886,169 @@ function confirmManutRealDelete(){
   });
 }
 
+</script>
+<script>
+// ============================================================
+// ===== MANUTENÇÃO > CUSTOS ==================================
+// Junta numa tela só TODO o gasto de manutenção da frota, que até 2026-09-28 vivia
+// partido em dois lugares: R$ 26 mil lançados na aba Manutenção e R$ 192 mil lançados
+// como despesa de viagem, que só apareciam no Financeiro.
+//
+// As duas origens continuam gravadas onde sempre estiveram — nada é copiado. Aqui elas
+// só são lidas juntas:
+//   • despesa  → linha de cadastro com classe marcada em classes_despesa.manutencao
+//   • lançamento → registro de manut_realizada (tem tipo, KM, nota, pneus)
+// Por isso a coluna "Origem": o que veio da despesa não tem tipo de manutenção nem KM,
+// e não gera alerta — é gasto, não é controle de periodicidade.
+// ============================================================
+var mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''};
+
+function _mcLinhas(){
+  var out=[];
+  // 1) despesas de viagem marcadas como manutenção
+  DB.cadastro.forEach(function(r){
+    var v=despesaManutencao(r);
+    if(v<=0) return;
+    out.push({
+      origem:'despesa', data:String(r.DATA||'').slice(0,10), placa:r.PLACA||'',
+      categoria:r['CLASSE DESPESA']||'(sem classe)', descricao:r['DESCR. DESPESA']||'',
+      local:r['LOCAL DESPESA']||'', valor:v, id:r.ID
+    });
+  });
+  // 2) lançamentos da própria aba Manutenção
+  DB.manutRealizada.forEach(function(r){
+    var v=num(r.VALOR);
+    if(v<=0) return;
+    out.push({
+      origem:'lancamento', data:String(r.DATA_MANUTENCAO||'').slice(0,10), placa:r.PLACA||'',
+      categoria:r.TIPO_MANUTENCAO||'(sem tipo)', descricao:r['OBSERVAÇÃO']||'',
+      local:r.LOCAL_SERVICO||'', valor:v, id:r.ID, km:r.KM_NA_MANUTENCAO
+    });
+  });
+  return out.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
+}
+
+function _mcFiltrar(linhas){
+  return linhas.filter(function(l){
+    if(mcFiltro.placa && l.placa!==mcFiltro.placa) return false;
+    if(mcFiltro.origem && l.origem!==mcFiltro.origem) return false;
+    if(mcFiltro.classe && l.categoria!==mcFiltro.classe) return false;
+    if((mcFiltro.dtIni||mcFiltro.dtFim) && !dateInRange(l.data,mcFiltro.dtIni,mcFiltro.dtFim)) return false;
+    return true;
+  });
+}
+
+function _mcSet(campo,valor){ mcFiltro[campo]=valor; buildManutCustos(); }
+function resetMcFiltros(){ mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''}; buildManutCustos(); }
+
+function buildManutCustos(){
+  var wrap=document.getElementById('manutViewCustos');
+  if(!wrap) return;
+  var todas=_mcLinhas();
+  var linhas=_mcFiltrar(todas);
+
+  // ---------- barra de filtros ----------
+  var placas={},cats={};
+  todas.forEach(function(l){ if(l.placa) placas[l.placa]=1; cats[l.categoria]=1; });
+  var fb=document.getElementById('filtersManutCusto');
+  if(fb){
+    var h='<span class="filter-label">Filtros</span>';
+    h+='<div class="mc-date"><span>📅 De</span><input type="date" id="mcDtIni" value="'+mcFiltro.dtIni+'" onchange="_mcSet(\'dtIni\',this.value)">'+
+       '<span>até</span><input type="date" id="mcDtFim" value="'+mcFiltro.dtFim+'" onchange="_mcSet(\'dtFim\',this.value)"></div>';
+    h+='<select class="filter-select" onchange="_mcSet(\'placa\',this.value)"><option value="">🚛 Todas as placas</option>';
+    Object.keys(placas).sort().forEach(function(p){ h+='<option'+(mcFiltro.placa===p?' selected':'')+'>'+p+'</option>'; });
+    h+='</select>';
+    h+='<select class="filter-select" onchange="_mcSet(\'classe\',this.value)"><option value="">🏷️ Todas as categorias</option>';
+    Object.keys(cats).sort().forEach(function(c){ h+='<option'+(mcFiltro.classe===c?' selected':'')+'>'+_mcEsc(c)+'</option>'; });
+    h+='</select>';
+    h+='<select class="filter-select" onchange="_mcSet(\'origem\',this.value)"><option value="">Todas as origens</option>'+
+       '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
+       '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
+    h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
+    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),true)">📄 Exportar PDF</button>';
+    fb.innerHTML=h;
+  }
+
+  // ---------- KPIs ----------
+  var total=0,vDesp=0,vLanc=0,nDesp=0,nLanc=0,placasSet={};
+  linhas.forEach(function(l){
+    total+=l.valor;
+    if(l.placa) placasSet[l.placa]=1;
+    if(l.origem==='despesa'){ vDesp+=l.valor; nDesp++; } else { vLanc+=l.valor; nLanc++; }
+  });
+  var nPlacas=Object.keys(placasSet).length;
+  document.getElementById('kpiManutCusto').innerHTML=
+    '<div class="kpi-card red"><div class="kpi-icon">💰</div><div class="kpi-value">R$'+numBR(total,2)+'</div><div class="kpi-label">Custo total de manutenção</div></div>'+
+    '<div class="kpi-card" title="Lançado como despesa na viagem — sem tipo de manutenção e sem KM, não gera alerta"><div class="kpi-icon">🧾</div><div class="kpi-value">R$'+numBR(vDesp,2)+'</div><div class="kpi-label">Despesa de viagem · '+nDesp+' lanç.</div></div>'+
+    '<div class="kpi-card" title="Lançado direto na aba Manutenção, com tipo e KM"><div class="kpi-icon">🔧</div><div class="kpi-value">R$'+numBR(vLanc,2)+'</div><div class="kpi-label">Lançado na manutenção · '+nLanc+' lanç.</div></div>'+
+    '<div class="kpi-card green"><div class="kpi-icon">🚛</div><div class="kpi-value">'+nPlacas+'</div><div class="kpi-label">Veículos com gasto</div></div>';
+
+  // ---------- por categoria ----------
+  var porCat={};
+  linhas.forEach(function(l){ if(!porCat[l.categoria]) porCat[l.categoria]={v:0,n:0}; porCat[l.categoria].v+=l.valor; porCat[l.categoria].n++; });
+  var cats2=Object.keys(porCat).sort(function(a,b){ return porCat[b].v-porCat[a].v; });
+  var maxCat=cats2.length?porCat[cats2[0]].v:0;
+  var ch='';
+  cats2.forEach(function(c){
+    var d=porCat[c], pct=maxCat>0?Math.round(d.v/maxCat*100):0;
+    var pctTot=total>0?(d.v/total*100):0;
+    ch+='<tr><td>'+_mcEsc(c)+'</td>'+
+        '<td class="mc-num">'+d.n+'</td>'+
+        '<td class="mc-num">R$'+numBR(d.v,2)+'</td>'+
+        '<td class="mc-num">'+numBR(pctTot,1)+'%</td>'+
+        '<td><div class="mc-bar-bg"><div class="mc-bar" style="width:'+pct+'%"></div></div></td></tr>';
+  });
+  document.getElementById('mcCategoriaBody').innerHTML=ch||'<tr><td colspan="5" class="mc-vazio">Nenhum gasto no período.</td></tr>';
+
+  // ---------- por veículo ----------
+  var porPla={};
+  linhas.forEach(function(l){ var k=l.placa||'(sem placa)'; if(!porPla[k]) porPla[k]={v:0,n:0}; porPla[k].v+=l.valor; porPla[k].n++; });
+  var plas=Object.keys(porPla).sort(function(a,b){ return porPla[b].v-porPla[a].v; });
+  var maxPla=plas.length?porPla[plas[0]].v:0;
+  var ph='';
+  plas.forEach(function(p){
+    var d=porPla[p], pct=maxPla>0?Math.round(d.v/maxPla*100):0;
+    var cam=(typeof CAMINHOES_DATA!=='undefined')?CAMINHOES_DATA.filter(function(c){return c.PLACA===p})[0]:null;
+    var tv=cam&&cam.TIPO_VEICULO?(String(cam.TIPO_VEICULO).indexOf('carreta')===0?'carreta':'cavalo'):'';
+    ph+='<tr><td><span class="manut-placa-tag">'+_mcEsc(p)+'</span>'+(tv?' <span class="mc-tv">'+tv+'</span>':'')+'</td>'+
+        '<td class="mc-num">'+d.n+'</td>'+
+        '<td class="mc-num">R$'+numBR(d.v,2)+'</td>'+
+        '<td><div class="mc-bar-bg"><div class="mc-bar" style="width:'+pct+'%"></div></div></td></tr>';
+  });
+  document.getElementById('mcVeiculoBody').innerHTML=ph||'<tr><td colspan="4" class="mc-vazio">Nenhum gasto no período.</td></tr>';
+
+  // ---------- detalhe ----------
+  var th='';
+  linhas.forEach(function(l){
+    var selo=l.origem==='despesa'
+      ? '<span class="mc-org mc-org-d" title="Lançada como despesa na viagem. Não tem tipo de manutenção nem KM, então não entra na matriz e não gera alerta.">despesa</span>'
+      : '<span class="mc-org mc-org-l" title="Lançada direto na aba Manutenção, com tipo e KM.">manutenção</span>';
+    th+='<tr><td class="mc-num">'+formatDateBR(l.data)+'</td>'+
+        '<td>'+(l.placa?'<span class="manut-placa-tag">'+_mcEsc(l.placa)+'</span>':'<span class="mc-vazio-cel">—</span>')+'</td>'+
+        '<td>'+selo+'</td>'+
+        '<td>'+_mcEsc(l.categoria)+'</td>'+
+        '<td>'+(l.descricao?_mcEsc(l.descricao):'<span class="mc-vazio-cel">—</span>')+'</td>'+
+        '<td>'+(l.local?_mcEsc(l.local):'<span class="mc-vazio-cel">—</span>')+'</td>'+
+        '<td class="mc-num mc-val">R$'+numBR(l.valor,2)+'</td></tr>';
+  });
+  document.getElementById('mcDetalheBody').innerHTML=th||'<tr><td colspan="7" class="mc-vazio">Nenhum gasto no período.</td></tr>';
+
+  // O quadro de peças e serviços é o detalhe DESTA mesma seleção: herda o filtro e é
+  // redesenhado junto. Sem isso, duas tabelas vizinhas mostravam recortes diferentes.
+  if(typeof nfRelSincronizar==='function'){ nfRelSincronizar(mcFiltro); buildNfRelatorio(); }
+  document.getElementById('mcDetalheTotal').textContent=linhas.length+' lançamentos · R$'+numBR(total,2);
+}
+
+function _mcResumoFiltros(){
+  var f=[];
+  if(mcFiltro.dtIni||mcFiltro.dtFim) f.push('Período: '+(mcFiltro.dtIni?formatDateBR(mcFiltro.dtIni):'início')+' até '+(mcFiltro.dtFim?formatDateBR(mcFiltro.dtFim):'hoje'));
+  if(mcFiltro.placa) f.push('Placa: '+mcFiltro.placa);
+  if(mcFiltro.classe) f.push('Categoria: '+mcFiltro.classe);
+  if(mcFiltro.origem) f.push('Origem: '+(mcFiltro.origem==='despesa'?'despesa de viagem':'lançado na manutenção'));
+  return f.join(' · ')||'nenhum (todos os registros)';
+}
+
+function _mcEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>
 <script>
 // ==================== CONSUMO ====================
@@ -9521,7 +10068,11 @@ function salvarCaminhao(){
     TIPO_VEICULO:document.getElementById('fcmTipoVeiculo').value||null
   };
   CAMINHOES_DATA.push(rec);
-  if(!BASE.placas.includes(placa)){BASE.placas.push(placa);populateSelects();}
+  if(!BASE.placas.includes(placa)){
+    BASE.placas.push(placa);
+    BASE.placas.sort(function(a,b){ return String(a).localeCompare(String(b),'pt-BR'); }); // mantém a ordem ao cadastrar
+    populateSelects();
+  }
   saveToSheets('addCaminhao', rec, function(ok){
     if(ok) showToast('✅ Caminhão cadastrado! '+placa);
     else showToast('⚠️ Salvo local, falha na planilha',true);

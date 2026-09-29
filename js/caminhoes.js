@@ -27,7 +27,11 @@ function salvarCaminhao(){
     TIPO_VEICULO:document.getElementById('fcmTipoVeiculo').value||null
   };
   CAMINHOES_DATA.push(rec);
-  if(!BASE.placas.includes(placa)){BASE.placas.push(placa);populateSelects();}
+  if(!BASE.placas.includes(placa)){
+    BASE.placas.push(placa);
+    BASE.placas.sort(function(a,b){ return String(a).localeCompare(String(b),'pt-BR'); }); // mantém a ordem ao cadastrar
+    populateSelects();
+  }
   saveToSheets('addCaminhao', rec, function(ok){
     if(ok) showToast('✅ Caminhão cadastrado! '+placa);
     else showToast('⚠️ Salvo local, falha na planilha',true);
