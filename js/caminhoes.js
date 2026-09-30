@@ -5,6 +5,10 @@ function findCaminhaoById(id){ id=String(id); for(var i=0;i<CAMINHOES_DATA.lengt
 
 function renderCaminhoesTable(){
   var isAdmin=currentUserData&&currentUserData.perfil==='ADMIN';
+  // O DIRETOR enxerga esta aba só pra consultar a frota — esconde o formulário
+  // de cadastro, que o RLS recusaria de qualquer forma (escrita aqui é só ADMIN).
+  var fcCard=document.getElementById('fcmFormCard');
+  if(fcCard) fcCard.style.display=isAdmin?'':'none';
   var h='<table><thead><tr><th>Placa</th><th>Marca</th><th>Modelo</th><th>Ano</th><th>Tipo de Veículo</th>'+(isAdmin?'<th style="text-align:center">Ações</th>':'')+'</tr></thead><tbody>';
   var lista=CAMINHOES_DATA.slice().sort(function(a,b){return String(a.PLACA||'').localeCompare(String(b.PLACA||''),'pt-BR',{sensitivity:'base'})});
   lista.forEach(function(r){

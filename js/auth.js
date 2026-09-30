@@ -102,10 +102,16 @@ function enterApp(){
   var cruz=document.getElementById('freqCruzamentoBloco');
   if(cruz) cruz.style.display=isRh?'none':'';
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
-  ['tabLocaisBtn','tabMotoristasBtn','tabCaminhoesBtn','tabGarantiaBtn'].forEach(function(id){
+  // Sub-abas de domínio do Cadastro: a gestão delas é só de ADMIN. Exceção:
+  // Caminhões, que o DIRETOR abre em modo leitura pra consultar a frota (o RLS
+  // já libera o SELECT de caminhoes; o formulário de cadastro e a coluna Ações
+  // ficam escondidos pra ele, e um insert dele seria recusado no banco).
+  ['tabLocaisBtn','tabMotoristasBtn','tabGarantiaBtn'].forEach(function(id){
     var el=document.getElementById(id);
     if(el) el.style.display=isAdmin?'':'none';
   });
+  var cmTabBtn=document.getElementById('tabCaminhoesBtn');
+  if(cmTabBtn) cmTabBtn.style.display=(isAdmin||isDiretor)?'':'none';
   // User badge
   var roleClass=isAdmin?'role-admin':(isDiretor?'role-diretor':(isRh?'role-rh':'role-analista'));
   var roleLabel=isAdmin?'Admin':(isDiretor?'Diretor':(isRh?'RH':'Analista'));
