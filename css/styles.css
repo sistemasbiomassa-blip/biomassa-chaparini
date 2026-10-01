@@ -463,6 +463,21 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-tipo .nf-tipo-na{font-style:normal;font-size:10px;color:var(--text2)}
 .nf-lido{display:block;font-size:11px;color:var(--green);margin-top:4px}
 .nf-alerta{display:block;font-size:11px;color:var(--yellow);margin-top:4px}
+/* Lista de itens na tela de conferência da importação (js/nf-ui.js nfItensHtml) */
+.nf-itens{margin-top:6px;font-size:11.5px}
+.nf-itens summary{cursor:pointer;color:var(--text2);list-style:none;padding:3px 0}
+.nf-itens summary::-webkit-details-marker{display:none}
+.nf-itens summary:before{content:"B8 ";color:var(--accent)}
+.nf-itens[open] summary:before{content:"BE "}
+.nf-itens summary strong{color:var(--text)}
+.nf-itens summary span{color:var(--text2)}
+.nf-itens-box{max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:5px;background:var(--surface2)}
+.nf-itens-box table{width:100%;border-collapse:collapse;font-size:11.5px}
+.nf-itens-box td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.nf-itens-box tr:last-child td{border-bottom:none}
+.nf-itens-box td:first-child{width:18px}
+.nf-itens-box td:nth-child(3),.nf-itens-box td:nth-child(4){white-space:nowrap;text-align:right}
+
 /* selo clicavel nas tabelas + janela de detalhe */
 .nf-selo{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;white-space:nowrap;cursor:pointer;background:rgba(0,180,216,.1);color:var(--accent);border:1px solid rgba(0,180,216,.3)}
 .nf-selo:hover{background:rgba(0,180,216,.2)}

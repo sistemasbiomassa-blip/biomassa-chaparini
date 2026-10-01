@@ -237,14 +237,26 @@ function nfMontarLista(docs,destino){
 // correspondente no catálogo (que tem "Filro de Óleo", com erro de digitação — por isso
 // FILT?RO). Freio só com troca de peça de verdade: "tambor de freio para determinar o
 // diagnóstico" foi só verificação (confirmado pelo usuário) e não pode zerar o alerta.
+// "tipo" é uma LISTA de padrões em ordem de preferência: o catálogo mudou (os quatro
+// tipos de óleo/filtros viraram "Revisão de óleo e filtros") e vai mudar de novo. O
+// padrão específico vem primeiro; o combinado, depois. Assim óleo + filtros marcam a
+// revisão de uma vez, e se um dia os tipos voltarem a ser separados cada um acha o seu.
+var NF_RE_REVISAO=/REVIS\w*\s+DE\s+OLEO|OLEO\s+E\s+FILTRO/;
 var NF_REGRAS_TIPO=[
-  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:/OLEO\s+(DO\s+|DE\s+)?MOTOR/},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:/FILT?RO\s+DE\s+OLEO/},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:/FILTRO\s+DE\s+AR\b/},
-  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:/FILTRO\s+DE\s+COMBUST/},
-  {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:/FREIO/},
-  {item:/CORREIA\s+DENTADA/, tipo:/CORREIA\s+DENTADA/},
-  {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:/ALINHAMENTO/}
+  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:[/OLEO\s+(DO\s+|DE\s+)?MOTOR/, NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:[/FILT?RO\s+DE\s+OLEO/, NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:[/FILTRO\s+DE\s+AR\b/, NF_RE_REVISAO]},
+  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:[/FILTRO\s+DE\s+COMBUST/, NF_RE_REVISAO]},
+  // "pacote de filtros" / "kit revisão": a oficina descreve a revisão inteira numa linha
+  {item:/PACOTE\s+DE\s+FILTROS|KIT\s+(DE\s+)?REVIS|ELEMENTO\s+FILTRANTE/, tipo:[NF_RE_REVISAO]},
+  // freio só com troca de peça; "tambor de freio para determinar o diagnóstico" foi só
+  // verificação (confirmado pelo usuário) e não pode zerar o alerta
+  {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|TAMBOR\s+(DE\s+)?FREIO|DISCO\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:[/FREIO/]},
+  {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:[/ALINHAMENTO|BALANCEAMENTO/]},
+  // peça do sistema de Arla; comprar o fluido não é manutenção do sistema
+  {item:/(FILTRO|BOMBA|SENSOR|MODULO|CATALISADOR)[^;]{0,25}(ARLA|ADBLUE|AD\s?BLUE|UREIA)|(ARLA|ADBLUE)[^;]{0,25}(FILTRO|BOMBA|SENSOR)/, tipo:[/ARLA|ADBLUE/]},
+  {item:/CAMBIO|DIFERENCIAL|TRANSMISSAO|\b(75|80|85)W-?\d{2}\b/, tipo:[/CAMBIO|DIFERENCIAL|TRANSMISSAO/]},
+  {item:/CORREIA\s+DENTADA/, tipo:[/CORREIA\s+DENTADA/]}
 ];
 // Tipos que o importador oferece: os de pneu ficam de fora porque exigem marcar posição
 // e número de cada pneu no diagrama, o que a nota não traz.
@@ -257,8 +269,11 @@ function nfSugerirTipos(itens,tipos){
   NF_REGRAS_TIPO.forEach(function(r){
     var bateu=(itens||[]).some(function(it){ var t=_nfNorm(it.descricao); return r.item.test(t) && !(r.nao && r.nao.test(t)); });
     if(!bateu) return;
-    for(var i=0;i<tipos.length;i++){
-      if(r.tipo.test(_nfNorm(tipos[i]))){ if(sugeridos.indexOf(tipos[i])<0) sugeridos.push(tipos[i]); break; }
+    // tenta os padrões na ordem de preferência: o específico primeiro, o combinado depois
+    for(var p=0;p<r.tipo.length;p++){
+      var achou=null;
+      for(var i=0;i<tipos.length && !achou;i++){ if(r.tipo[p].test(_nfNorm(tipos[i]))) achou=tipos[i]; }
+      if(achou){ if(sugeridos.indexOf(achou)<0) sugeridos.push(achou); break; }
     }
   });
   // na ordem do catálogo, que é a ordem em que viram lançamentos (o 1º é o principal)

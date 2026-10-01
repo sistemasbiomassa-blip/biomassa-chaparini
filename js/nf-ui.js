@@ -73,6 +73,32 @@ function nfAvisoExclusao(destino,id){
   return '<div class="nf-aviso-exc">⚠️ Também serão apagados:<br>• '+linhas.join('<br>• ')+'</div>';
 }
 
+// Lista de itens na tela de CONFERÊNCIA (antes de importar). É lendo "elemento do filtro
+// de ar" ou "tambor de freio" que se decide o tipo da manutenção e o destino — só o
+// resumo ("17 peças · 7 serviços") não diz o que a nota tem dentro.
+// Aberta por padrão em nota curta; em nota longa vem fechada, mas o título já mostra as
+// primeiras descrições para não precisar abrir uma por uma num lote grande.
+function nfItensHtml(g){
+  var its=(g&&g.itens)||[];
+  if(!its.length) return '';
+  var pc=its.filter(function(i){return i.tipo!=='SERVICO';}).length, sv=its.length-pc;
+  var resumo=[];
+  if(pc) resumo.push(pc+(pc===1?' peça':' peças'));
+  if(sv) resumo.push(sv+(sv===1?' serviço':' serviços'));
+  var amostra=its.slice(0,2).map(function(i){ return String(i.descricao||'').slice(0,38); }).join(' · ');
+  if(its.length>2) amostra+=' · +'+(its.length-2);
+  var linhas=its.map(function(i){
+    var q=num(i.quantidade), serv=i.tipo==='SERVICO';
+    return '<tr><td>'+(serv?'🧾':'📦')+'</td>'+
+      '<td>'+_nfEsc(i.descricao)+'</td>'+
+      '<td class="maq-mono">'+(q?fmt(q,(q%1)?2:0)+(i.unidade?' '+_nfEsc(i.unidade):''):'—')+'</td>'+
+      '<td class="maq-mono">'+fmtR(num(i.valor))+'</td></tr>';
+  }).join('');
+  return '<details class="nf-itens"'+(its.length<=10?' open':'')+'>'+
+    '<summary><strong>'+resumo.join(' · ')+'</strong> <span>'+_nfEsc(amostra)+'</span></summary>'+
+    '<div class="nf-itens-box"><table>'+linhas+'</table></div></details>';
+}
+
 // ---------- caixa de avisos dos importadores ----------
 var _NF_MOTIVOS={
   'Já lançada':{cor:'var(--yellow)',ic:'⚠️',msg:'já tinha sido importada antes e foi ignorada'},

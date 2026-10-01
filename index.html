@@ -477,6 +477,21 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-tipo .nf-tipo-na{font-style:normal;font-size:10px;color:var(--text2)}
 .nf-lido{display:block;font-size:11px;color:var(--green);margin-top:4px}
 .nf-alerta{display:block;font-size:11px;color:var(--yellow);margin-top:4px}
+/* Lista de itens na tela de conferência da importação (js/nf-ui.js nfItensHtml) */
+.nf-itens{margin-top:6px;font-size:11.5px}
+.nf-itens summary{cursor:pointer;color:var(--text2);list-style:none;padding:3px 0}
+.nf-itens summary::-webkit-details-marker{display:none}
+.nf-itens summary:before{content:"B8 ";color:var(--accent)}
+.nf-itens[open] summary:before{content:"BE "}
+.nf-itens summary strong{color:var(--text)}
+.nf-itens summary span{color:var(--text2)}
+.nf-itens-box{max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:5px;background:var(--surface2)}
+.nf-itens-box table{width:100%;border-collapse:collapse;font-size:11.5px}
+.nf-itens-box td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.nf-itens-box tr:last-child td{border-bottom:none}
+.nf-itens-box td:first-child{width:18px}
+.nf-itens-box td:nth-child(3),.nf-itens-box td:nth-child(4){white-space:nowrap;text-align:right}
+
 /* selo clicavel nas tabelas + janela de detalhe */
 .nf-selo{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;white-space:nowrap;cursor:pointer;background:rgba(0,180,216,.1);color:var(--accent);border:1px solid rgba(0,180,216,.3)}
 .nf-selo:hover{background:rgba(0,180,216,.2)}
@@ -4338,14 +4353,26 @@ function nfMontarLista(docs,destino){
 // correspondente no catálogo (que tem "Filro de Óleo", com erro de digitação — por isso
 // FILT?RO). Freio só com troca de peça de verdade: "tambor de freio para determinar o
 // diagnóstico" foi só verificação (confirmado pelo usuário) e não pode zerar o alerta.
+// "tipo" é uma LISTA de padrões em ordem de preferência: o catálogo mudou (os quatro
+// tipos de óleo/filtros viraram "Revisão de óleo e filtros") e vai mudar de novo. O
+// padrão específico vem primeiro; o combinado, depois. Assim óleo + filtros marcam a
+// revisão de uma vez, e se um dia os tipos voltarem a ser separados cada um acha o seu.
+var NF_RE_REVISAO=/REVIS\w*\s+DE\s+OLEO|OLEO\s+E\s+FILTRO/;
 var NF_REGRAS_TIPO=[
-  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:/OLEO\s+(DO\s+|DE\s+)?MOTOR/},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:/FILT?RO\s+DE\s+OLEO/},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:/FILTRO\s+DE\s+AR\b/},
-  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:/FILTRO\s+DE\s+COMBUST/},
-  {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:/FREIO/},
-  {item:/CORREIA\s+DENTADA/, tipo:/CORREIA\s+DENTADA/},
-  {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:/ALINHAMENTO/}
+  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:[/OLEO\s+(DO\s+|DE\s+)?MOTOR/, NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:[/FILT?RO\s+DE\s+OLEO/, NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:[/FILTRO\s+DE\s+AR\b/, NF_RE_REVISAO]},
+  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:[/FILTRO\s+DE\s+COMBUST/, NF_RE_REVISAO]},
+  // "pacote de filtros" / "kit revisão": a oficina descreve a revisão inteira numa linha
+  {item:/PACOTE\s+DE\s+FILTROS|KIT\s+(DE\s+)?REVIS|ELEMENTO\s+FILTRANTE/, tipo:[NF_RE_REVISAO]},
+  // freio só com troca de peça; "tambor de freio para determinar o diagnóstico" foi só
+  // verificação (confirmado pelo usuário) e não pode zerar o alerta
+  {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|TAMBOR\s+(DE\s+)?FREIO|DISCO\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:[/FREIO/]},
+  {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:[/ALINHAMENTO|BALANCEAMENTO/]},
+  // peça do sistema de Arla; comprar o fluido não é manutenção do sistema
+  {item:/(FILTRO|BOMBA|SENSOR|MODULO|CATALISADOR)[^;]{0,25}(ARLA|ADBLUE|AD\s?BLUE|UREIA)|(ARLA|ADBLUE)[^;]{0,25}(FILTRO|BOMBA|SENSOR)/, tipo:[/ARLA|ADBLUE/]},
+  {item:/CAMBIO|DIFERENCIAL|TRANSMISSAO|\b(75|80|85)W-?\d{2}\b/, tipo:[/CAMBIO|DIFERENCIAL|TRANSMISSAO/]},
+  {item:/CORREIA\s+DENTADA/, tipo:[/CORREIA\s+DENTADA/]}
 ];
 // Tipos que o importador oferece: os de pneu ficam de fora porque exigem marcar posição
 // e número de cada pneu no diagrama, o que a nota não traz.
@@ -4358,8 +4385,11 @@ function nfSugerirTipos(itens,tipos){
   NF_REGRAS_TIPO.forEach(function(r){
     var bateu=(itens||[]).some(function(it){ var t=_nfNorm(it.descricao); return r.item.test(t) && !(r.nao && r.nao.test(t)); });
     if(!bateu) return;
-    for(var i=0;i<tipos.length;i++){
-      if(r.tipo.test(_nfNorm(tipos[i]))){ if(sugeridos.indexOf(tipos[i])<0) sugeridos.push(tipos[i]); break; }
+    // tenta os padrões na ordem de preferência: o específico primeiro, o combinado depois
+    for(var p=0;p<r.tipo.length;p++){
+      var achou=null;
+      for(var i=0;i<tipos.length && !achou;i++){ if(r.tipo[p].test(_nfNorm(tipos[i]))) achou=tipos[i]; }
+      if(achou){ if(sugeridos.indexOf(achou)<0) sugeridos.push(achou); break; }
     }
   });
   // na ordem do catálogo, que é a ordem em que viram lançamentos (o 1º é o principal)
@@ -4474,6 +4504,32 @@ function nfAvisoExclusao(destino,id){
   if(docs.length) linhas.push('a(s) nota(s) '+_nfEsc(docs.map(function(d){ return (d.MODELO==='NFSE'?'NFS-e ':'NF-e ')+d.NUMERO; }).join(' e '))+' com todos os itens — poderão ser importadas de novo');
   if(!linhas.length) return '';
   return '<div class="nf-aviso-exc">⚠️ Também serão apagados:<br>• '+linhas.join('<br>• ')+'</div>';
+}
+
+// Lista de itens na tela de CONFERÊNCIA (antes de importar). É lendo "elemento do filtro
+// de ar" ou "tambor de freio" que se decide o tipo da manutenção e o destino — só o
+// resumo ("17 peças · 7 serviços") não diz o que a nota tem dentro.
+// Aberta por padrão em nota curta; em nota longa vem fechada, mas o título já mostra as
+// primeiras descrições para não precisar abrir uma por uma num lote grande.
+function nfItensHtml(g){
+  var its=(g&&g.itens)||[];
+  if(!its.length) return '';
+  var pc=its.filter(function(i){return i.tipo!=='SERVICO';}).length, sv=its.length-pc;
+  var resumo=[];
+  if(pc) resumo.push(pc+(pc===1?' peça':' peças'));
+  if(sv) resumo.push(sv+(sv===1?' serviço':' serviços'));
+  var amostra=its.slice(0,2).map(function(i){ return String(i.descricao||'').slice(0,38); }).join(' · ');
+  if(its.length>2) amostra+=' · +'+(its.length-2);
+  var linhas=its.map(function(i){
+    var q=num(i.quantidade), serv=i.tipo==='SERVICO';
+    return '<tr><td>'+(serv?'🧾':'📦')+'</td>'+
+      '<td>'+_nfEsc(i.descricao)+'</td>'+
+      '<td class="maq-mono">'+(q?fmt(q,(q%1)?2:0)+(i.unidade?' '+_nfEsc(i.unidade):''):'—')+'</td>'+
+      '<td class="maq-mono">'+fmtR(num(i.valor))+'</td></tr>';
+  }).join('');
+  return '<details class="nf-itens"'+(its.length<=10?' open':'')+'>'+
+    '<summary><strong>'+resumo.join(' · ')+'</strong> <span>'+_nfEsc(amostra)+'</span></summary>'+
+    '<div class="nf-itens-box"><table>'+linhas+'</table></div></details>';
 }
 
 // ---------- caixa de avisos dos importadores ----------
@@ -4623,7 +4679,7 @@ function _maqNfeRender(){
       '<td class="maq-mono" style="font-size:11.5px">'+_nfEsc(nfRotuloNotas(g))+(g.os?'<div style="color:var(--text2)">OS '+_nfEsc(g.os)+'</div>':'')+'</td>'+
       '<td class="maq-mono">'+_nfEsc(formatDateBR(g.data))+'</td>'+
       '<td style="max-width:150px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
-      '<td style="max-width:200px;font-size:11px">'+_nfEsc(nfResumoItens(g))+'</td>'+
+      '<td style="max-width:260px;font-size:11px">'+nfItensHtml(g)+'</td>'+
       '<td class="maq-mono">'+(g.pecas?fmtR(g.pecas):'—')+'</td>'+
       '<td class="maq-mono">'+(g.servicos?fmtR(g.servicos):'—')+'</td>'+
       destino+
@@ -4777,7 +4833,7 @@ function _camNfeRender(){
       (g.pecas?'<span>📄 Peças <strong>'+fmtR(g.pecas)+'</strong></span>':'')+
       (g.servicos?'<span>🧾 Serviço <strong>'+fmtR(g.servicos)+'</strong></span>':'')+
       '<span>Total <strong>'+fmtR(g.total)+'</strong></span>'+
-      '<span style="color:var(--text2)">'+_nfEsc(nfResumoItens(g))+'</span></div>';
+      '</div>'+nfItensHtml(g);   // descrição item a item: é por ela que se escolhe o tipo
 
     if(g.anexarA){
       h+='<div class="nf-card">'+cab+valores+

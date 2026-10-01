@@ -80,7 +80,7 @@ function _camNfeRender(){
       (g.pecas?'<span>📄 Peças <strong>'+fmtR(g.pecas)+'</strong></span>':'')+
       (g.servicos?'<span>🧾 Serviço <strong>'+fmtR(g.servicos)+'</strong></span>':'')+
       '<span>Total <strong>'+fmtR(g.total)+'</strong></span>'+
-      '<span style="color:var(--text2)">'+_nfEsc(nfResumoItens(g))+'</span></div>';
+      '</div>'+nfItensHtml(g);   // descrição item a item: é por ela que se escolhe o tipo
 
     if(g.anexarA){
       h+='<div class="nf-card">'+cab+valores+
