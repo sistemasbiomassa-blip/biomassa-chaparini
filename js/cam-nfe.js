@@ -98,6 +98,10 @@ function _camNfeRender(){
     if(g.kmNota && g.km===g.kmNota) avKm='<span class="nf-lido">✓ lido da nota</span>';
     var ult=g.placa?_camNfeUltimoKm(g.placa):0;
     if(g.km>0 && ult && g.km<ult) avKm+=' <span class="nf-alerta">menor que a última manutenção desta placa ('+fmt(ult,0)+' km)</span>';
+    // KM muito fora do que a placa roda: quase sempre é dígito a mais na digitação
+    var kmHoje=(typeof kmAtualPorPlaca==='function'&&g.placa)?kmAtualPorPlaca(g.placa):null;
+    if(g.km>0 && kmHoje && (g.km>kmHoje*1.5 || g.km<kmHoje*0.5))
+      avKm+=' <span class="nf-alerta">fora do esperado: esta placa está com ~'+fmt(kmHoje,0)+' km nas viagens</span>';
 
     var chk='';
     tipos.forEach(function(t){
@@ -113,7 +117,7 @@ function _camNfeRender(){
     h+='<div class="nf-card">'+cab+valores+
       '<div class="nf-card-campos">'+
         '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
-        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
+        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="text" inputmode="decimal" placeholder="ex: 373.379" value="'+(g.km?fmt(g.km,(g.km%1)?2:0):'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
       '</div>'+
       '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro. Não se encaixa em nenhum (troca de um tubo, um conserto avulso)? Marque <strong>Outros</strong>.</span></label><div>'+chk+'</div></div>'+
       '</div>';
@@ -142,7 +146,9 @@ function _camNfeResumo(){
 
 function _camNfeSet(i,campo,valor){
   var g=_camNfe.grupos[i]; if(!g) return;
-  g[campo]=(campo==='km')?(parseInt(valor,10)||0):valor;
+  // num() entende o formato brasileiro (373.379,00). Antes o campo era type=number e
+  // o navegador tirava vírgula e ponto, gravando 100x o valor (37.337.900 km).
+  g[campo]=(campo==='km')?num(valor):valor;
   _camNfeRender();
 }
 function _camNfeTipo(i,el){

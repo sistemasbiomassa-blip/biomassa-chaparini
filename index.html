@@ -4358,19 +4358,30 @@ function nfMontarLista(docs,destino){
 // padrão específico vem primeiro; o combinado, depois. Assim óleo + filtros marcam a
 // revisão de uma vez, e se um dia os tipos voltarem a ser separados cada um acha o seu.
 var NF_RE_REVISAO=/REVIS\w*\s+DE\s+OLEO|OLEO\s+E\s+FILTRO/;
+// Filtro que NÃO é da revisão de óleo/filtros do motor: cabine (pólen/palha), ar
+// condicionado, secador e APU (ar do freio) e o do Arla, que tem tipo próprio.
+var NF_RE_NAO_MOTOR=/POLEM|POLEN|CABIN|PALHA|AR\s+CONDICIONADO|SECADOR|\bAPU\b|COALESC|ARLA|ADBLUE/;
 var NF_REGRAS_TIPO=[
-  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b/, tipo:[/OLEO\s+(DO\s+|DE\s+)?MOTOR/, NF_RE_REVISAO]},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUBRIF/, tipo:[/FILT?RO\s+DE\s+OLEO/, NF_RE_REVISAO]},
-  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, tipo:[/FILTRO\s+DE\s+AR\b/, NF_RE_REVISAO]},
-  {item:/FILTR\w*\s+(DE\s+|DO\s+)?COMBUST|SEPARADOR\s+DE\s+AGUA/, tipo:[/FILTRO\s+DE\s+COMBUST/, NF_RE_REVISAO]},
+  {item:/OLEO\s+(PARA\s+|DE\s+|DO\s+|P\/\s*)?MOTOR|OLEO\s+LUBRIFICANTE\s+(PARA\s+)?MOTOR|\b(5|10|15|20)W-?\d{2}\b|TROCA\s+(DE\s+)?OLEO/,
+   nao:/CAMBIO|DIFERENCIAL|TRANSMISSAO/, tipo:[/OLEO\s+(DO\s+|DE\s+)?MOTOR/, NF_RE_REVISAO]},
+  // Serviço escrito como revisão/lubrificação (NFS-e costuma vir num texto só). Aqui NÃO
+  // vale a exclusão de cabine/secador: a linha descreve a revisão inteira e pode citar
+  // qualquer filtro no meio.
+  {item:/REVIS\w*[^;]{0,60}(FILTRO|LUBRIFIC|OLEO)|(FILTRO|LUBRIFIC|OLEO)[^;]{0,60}REVIS\w*/, tipo:[NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?OLEO|FILTRO\s+LUB/, nao:NF_RE_NAO_MOTOR, tipo:[/FILT?RO\s+DE\s+OLEO/, NF_RE_REVISAO]},
+  {item:/FILTRO\s+(DE\s+|DO\s+)?AR\b/, nao:NF_RE_NAO_MOTOR, tipo:[/FILTRO\s+DE\s+AR\b/, NF_RE_REVISAO]},
+  {item:/FILTR\w*\.?\s+(DE\s+|DO\s+)?COMB|SEPARADOR\s+DE\s+AGUA/, nao:NF_RE_NAO_MOTOR, tipo:[/FILTRO\s+DE\s+COMBUST/, NF_RE_REVISAO]},
   // "pacote de filtros" / "kit revisão": a oficina descreve a revisão inteira numa linha
-  {item:/PACOTE\s+DE\s+FILTROS|KIT\s+(DE\s+)?REVIS|ELEMENTO\s+FILTRANTE/, tipo:[NF_RE_REVISAO]},
+  {item:/PACOTE\s+DE\s+FILTROS|KIT\s+(DE\s+)?REVIS/, tipo:[NF_RE_REVISAO]},
+  // Abreviação de concessionária: "ELEM FILTR", "ELEMENTO FILTRANTE", "CARTUCHO FILT",
+  // "CJ ELEMENTO DO FILTRO". Sem isto, nota inteira ficava sem sugestão nenhuma.
+  {item:/\bELEM\w*\.?\s+(DO\s+)?FILTR|\bCARTUCHO\s+FILT|\bCJ\.?\s+(ELEMENTO|FILTRO)/, nao:NF_RE_NAO_MOTOR, tipo:[NF_RE_REVISAO]},
   // freio só com troca de peça; "tambor de freio para determinar o diagnóstico" foi só
   // verificação (confirmado pelo usuário) e não pode zerar o alerta
   {item:/PASTILHA|LONA\s+(DE\s+)?FREIO|SAPATA\s+(DE\s+)?FREIO|TAMBOR\s+(DE\s+)?FREIO|DISCO\s+(DE\s+)?FREIO|REVIS\w*\s+(DE\s+|DO\s+|DOS\s+)?FREIO/, nao:/DIAGNOST/, tipo:[/FREIO/]},
   {item:/ALINHAMENTO|BALANCEAMENTO/, tipo:[/ALINHAMENTO|BALANCEAMENTO/]},
   // peça do sistema de Arla; comprar o fluido não é manutenção do sistema
-  {item:/(FILTRO|BOMBA|SENSOR|MODULO|CATALISADOR)[^;]{0,25}(ARLA|ADBLUE|AD\s?BLUE|UREIA)|(ARLA|ADBLUE)[^;]{0,25}(FILTRO|BOMBA|SENSOR)/, tipo:[/ARLA|ADBLUE/]},
+  {item:/(FILTR\w*|ELEM\w*|BOMBA|SENSOR|MODULO|CATALISADOR)[^;]{0,25}(ARLA|ADBLUE|AD\s?BLUE|UREIA)|(ARLA|ADBLUE)[^;]{0,25}(FILTR\w*|BOMBA|SENSOR)/, tipo:[/ARLA|ADBLUE/]},
   {item:/CAMBIO|DIFERENCIAL|TRANSMISSAO|\b(75|80|85)W-?\d{2}\b/, tipo:[/CAMBIO|DIFERENCIAL|TRANSMISSAO/]},
   {item:/CORREIA\s+DENTADA/, tipo:[/CORREIA\s+DENTADA/]}
 ];
@@ -4851,6 +4862,10 @@ function _camNfeRender(){
     if(g.kmNota && g.km===g.kmNota) avKm='<span class="nf-lido">✓ lido da nota</span>';
     var ult=g.placa?_camNfeUltimoKm(g.placa):0;
     if(g.km>0 && ult && g.km<ult) avKm+=' <span class="nf-alerta">menor que a última manutenção desta placa ('+fmt(ult,0)+' km)</span>';
+    // KM muito fora do que a placa roda: quase sempre é dígito a mais na digitação
+    var kmHoje=(typeof kmAtualPorPlaca==='function'&&g.placa)?kmAtualPorPlaca(g.placa):null;
+    if(g.km>0 && kmHoje && (g.km>kmHoje*1.5 || g.km<kmHoje*0.5))
+      avKm+=' <span class="nf-alerta">fora do esperado: esta placa está com ~'+fmt(kmHoje,0)+' km nas viagens</span>';
 
     var chk='';
     tipos.forEach(function(t){
@@ -4866,7 +4881,7 @@ function _camNfeRender(){
     h+='<div class="nf-card">'+cab+valores+
       '<div class="nf-card-campos">'+
         '<div><label>Placa *</label><select onchange="_camNfeSet('+i+',&quot;placa&quot;,this.value)">'+opPl+'</select>'+avPlaca+'</div>'+
-        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="number" min="0" step="1" value="'+(g.km||'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
+        '<div><label id="camNfeKmLab'+i+'">'+_camNfeRotuloKm(g)+'</label><input type="text" inputmode="decimal" placeholder="ex: 373.379" value="'+(g.km?fmt(g.km,(g.km%1)?2:0):'')+'" onchange="_camNfeSet('+i+',&quot;km&quot;,this.value)">'+avKm+'</div>'+
       '</div>'+
       '<div class="nf-card-tipos"><label>Tipos de manutenção * <span style="text-transform:none;letter-spacing:0">— cada um zera o alerta de KM dele; o valor fica só no primeiro. Não se encaixa em nenhum (troca de um tubo, um conserto avulso)? Marque <strong>Outros</strong>.</span></label><div>'+chk+'</div></div>'+
       '</div>';
@@ -4895,7 +4910,9 @@ function _camNfeResumo(){
 
 function _camNfeSet(i,campo,valor){
   var g=_camNfe.grupos[i]; if(!g) return;
-  g[campo]=(campo==='km')?(parseInt(valor,10)||0):valor;
+  // num() entende o formato brasileiro (373.379,00). Antes o campo era type=number e
+  // o navegador tirava vírgula e ponto, gravando 100x o valor (37.337.900 km).
+  g[campo]=(campo==='km')?num(valor):valor;
   _camNfeRender();
 }
 function _camNfeTipo(i,el){
