@@ -2962,7 +2962,10 @@ function _pdfPrepararClone(clone){
 // Exporta SÓ uma seção (um quadro/tabela), em vez da página inteira. O botão genérico dos
 // filtros chama exportPagePDF, que clona a página toda — no Detalhamento de Manutenção
 // isso levava junto a matriz, o painel de KM e os cards.
-function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem){
+// kpiId (opcional): id de uma .kpi-row da tela, que vai pro PDF logo abaixo dos filtros.
+// O quadro exportado sozinho perdia os números do topo — justamente o resumo que se lê
+// primeiro no papel (em Custos, o total gasto).
+function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem,kpiId){
   var el=document.getElementById(elId);
   if(!el){ showToast('Nada para exportar',true); return; }
   // abre a janela já no clique (gesto do usuário), senão o navegador bloqueia em silêncio
@@ -2970,6 +2973,13 @@ function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem){
   if(!printWin){ showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true); return; }
   var clone=el.cloneNode(true);
   _pdfPrepararClone(clone);
+  var kpiEl=kpiId?document.getElementById(kpiId):null;
+  var kpiHtml='';
+  if(kpiEl&&kpiEl.children.length){
+    var kpiClone=kpiEl.cloneNode(true);
+    _pdfPrepararClone(kpiClone);
+    kpiHtml='<div class="kpi-row">'+kpiClone.innerHTML+'</div>';
+  }
   var brd='#cccccc', agora=new Date();
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' - Biomassa Chaparini</title>';
   html+='<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">';
@@ -2981,6 +2991,12 @@ function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem){
   html+='.table-header,.manut-ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}';
   html+='.table-header h3,.manut-ph-title{font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:600}';
   html+='.chart-badge,.manut-ph-badge{font-size:9px;color:#555555;border:1px solid '+brd+';border-radius:20px;padding:2px 8px}';
+  html+='.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px}';
+  html+='.kpi-card{background:#f8f9fa;border:1px solid '+brd+';border-radius:8px;padding:8px 10px;text-align:center;page-break-inside:avoid}';
+  html+='.kpi-card::before{display:none}';
+  html+='.kpi-icon{font-size:13px;margin-bottom:2px}';
+  html+='.kpi-value{font-family:"Barlow Condensed",sans-serif;font-size:19px;font-weight:700;color:#111111;line-height:1.1}';
+  html+='.kpi-label{font-size:8px;text-transform:uppercase;color:#444444;margin-top:2px}';
   html+='table{width:100%;border-collapse:collapse;font-size:10px}';
   html+='th{text-align:left;font-size:8.5px;text-transform:uppercase;color:#555555;border-bottom:1px solid '+brd+';padding:5px 6px}';
   html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee}';
@@ -2998,6 +3014,7 @@ function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem){
   html+='<div style="text-align:right"><div style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:600">'+titulo+'</div>';
   html+='<div style="font-size:8px;color:#555555;margin-top:2px">Gerado em '+agora.toLocaleDateString('pt-BR')+' às '+agora.toLocaleTimeString('pt-BR')+'</div></div></div>';
   if(filtrosTxt) html+='<div class="pdf-filtros"><b>Filtros aplicados:</b> '+filtrosTxt+'</div>';
+  html+=kpiHtml;
   html+=clone.innerHTML;
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<'+'/script>';
   html+='</body></html>';
@@ -8058,7 +8075,7 @@ function buildManutCustos(){
        '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
        '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
     h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
-    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),true)">📄 Exportar PDF</button>';
+    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),true,\'kpiManutCusto\')">📄 Exportar PDF</button>';
     fb.innerHTML=h;
   }
 
