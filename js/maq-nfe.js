@@ -54,6 +54,9 @@ function _maqNfeOpcoesTipo(sel,vazio){
 function _maqNfeRender(){
   var G=_maqNfe.grupos;
   document.getElementById('maqNfeStep2').style.display='';
+  // atalho de lote só aparece com 2+ lançamentos; com um só, os campos da linha bastam
+  var bulk=document.getElementById('maqNfeBulk');
+  if(bulk) bulk.style.display=(G.filter(_maqNfeImportavel).length>1)?'':'none';
   document.getElementById('maqNfeBulkMaq').innerHTML=_maqNfeOpcoesMaq('');
   document.getElementById('maqNfeBulkTipo').innerHTML=_maqNfeOpcoesTipo('',true);
   document.getElementById('maqNfeBulkFl').innerHTML=_maqNfeOpcoesFl('');
@@ -62,7 +65,11 @@ function _maqNfeRender(){
   var cont=document.getElementById('maqNfeTable');
   var imp=G.filter(_maqNfeImportavel);
   if(!imp.length){ cont.innerHTML=''; _maqNfeResumo(); return; }
-  var h='<table class="maq-table"><thead><tr><th>Notas</th><th>Data</th><th>Fornecedor</th><th>Itens</th><th>Peças</th><th>Serviço</th><th>Máquina</th><th>Tipo</th><th>Fazenda</th><th></th></tr></thead><tbody>';
+  // Os itens vão numa linha própria abaixo (não numa coluna): com eles na linha, a tabela
+  // ficava mais larga que o modal e a coluna Fazenda saía da tela — e .table-container
+  // tem overflow:hidden, então ela ficava inalcançável.
+  var COLS=9;
+  var h='<div class="table-scroll"><table class="maq-table"><thead><tr><th>Notas</th><th>Data</th><th>Fornecedor</th><th>Peças</th><th>Serviço</th><th>Máquina</th><th>Tipo</th><th>Fazenda</th><th></th></tr></thead><tbody>';
   G.forEach(function(g,i){
     if(g.erro) return;
     var destino;
@@ -77,15 +84,15 @@ function _maqNfeRender(){
     h+='<tr>'+
       '<td class="maq-mono" style="font-size:11.5px">'+_nfEsc(nfRotuloNotas(g))+(g.os?'<div style="color:var(--text2)">OS '+_nfEsc(g.os)+'</div>':'')+'</td>'+
       '<td class="maq-mono">'+_nfEsc(formatDateBR(g.data))+'</td>'+
-      '<td style="max-width:150px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
-      '<td style="max-width:260px;font-size:11px">'+nfItensHtml(g)+'</td>'+
+      '<td style="max-width:170px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
       '<td class="maq-mono">'+(g.pecas?fmtR(g.pecas):'—')+'</td>'+
       '<td class="maq-mono">'+(g.servicos?fmtR(g.servicos):'—')+'</td>'+
       destino+
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
-      '</tr>';
+      '</tr>'+
+      '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+nfItensHtml(g)+'</td></tr>';
   });
-  cont.innerHTML=h+'</tbody></table>';
+  cont.innerHTML=h+'</tbody></table></div>';
   _maqNfeResumo();
 }
 

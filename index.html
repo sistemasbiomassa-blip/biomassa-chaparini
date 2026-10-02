@@ -459,7 +459,12 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-modal input[type=file]::file-selector-button:hover{background:var(--border)}
 .nf-modal .btn-secondary{padding:7px 12px;font-size:12.5px}
 .nf-intro{font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6}
-.nf-bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px}
+.nf-bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px;padding:8px 10px;border:1px dashed var(--border);border-radius:8px}
+.nf-bulk-tit{color:var(--text2);text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;font-weight:600}
+.nf-bulk-item{display:inline-flex;align-items:center;gap:5px}
+/* linha só com a lista de itens, logo abaixo da linha da nota */
+.nf-itens-linha td{padding-top:0 !important;border-bottom:1px solid var(--border)}
+.nf-itens-linha .nf-itens{margin-top:0}
 .nf-avisos{font-size:12.5px;line-height:1.5;padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
 .nf-resumo{font-size:12px;margin-top:10px}
 .nf-rodape{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
@@ -781,14 +786,16 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
     </div>
     <input type="file" id="maqNfeFiles" accept=".xml,text/xml" multiple onchange="maqNfeLerArquivos()">
     <div id="maqNfeStep2" style="display:none;margin-top:14px">
-      <div class="nf-bulk">
-        <span style="color:var(--text2)">Aplicar a todas:</span>
-        <select id="maqNfeBulkMaq"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">máquina</button>
-        <select id="maqNfeBulkTipo"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">tipo</button>
-        <select id="maqNfeBulkFl"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">fazenda</button>
+      <!-- Atalho de lote: preenche a coluna inteira de uma vez. Fica escondido quando há
+           uma nota só, porque aí só confunde com os campos da própria linha. -->
+      <div class="nf-bulk" id="maqNfeBulk" style="display:none">
+        <span class="nf-bulk-tit">Preencher todas as linhas de uma vez</span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkMaq"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">aplicar máquina</button></span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkTipo"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">aplicar tipo</button></span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkFl"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">aplicar fazenda</button></span>
       </div>
       <div id="maqNfeAvisos" class="nf-avisos" style="display:none"></div>
       <div class="table-container" id="maqNfeTable"></div>
@@ -4666,6 +4673,9 @@ function _maqNfeOpcoesTipo(sel,vazio){
 function _maqNfeRender(){
   var G=_maqNfe.grupos;
   document.getElementById('maqNfeStep2').style.display='';
+  // atalho de lote só aparece com 2+ lançamentos; com um só, os campos da linha bastam
+  var bulk=document.getElementById('maqNfeBulk');
+  if(bulk) bulk.style.display=(G.filter(_maqNfeImportavel).length>1)?'':'none';
   document.getElementById('maqNfeBulkMaq').innerHTML=_maqNfeOpcoesMaq('');
   document.getElementById('maqNfeBulkTipo').innerHTML=_maqNfeOpcoesTipo('',true);
   document.getElementById('maqNfeBulkFl').innerHTML=_maqNfeOpcoesFl('');
@@ -4674,7 +4684,11 @@ function _maqNfeRender(){
   var cont=document.getElementById('maqNfeTable');
   var imp=G.filter(_maqNfeImportavel);
   if(!imp.length){ cont.innerHTML=''; _maqNfeResumo(); return; }
-  var h='<table class="maq-table"><thead><tr><th>Notas</th><th>Data</th><th>Fornecedor</th><th>Itens</th><th>Peças</th><th>Serviço</th><th>Máquina</th><th>Tipo</th><th>Fazenda</th><th></th></tr></thead><tbody>';
+  // Os itens vão numa linha própria abaixo (não numa coluna): com eles na linha, a tabela
+  // ficava mais larga que o modal e a coluna Fazenda saía da tela — e .table-container
+  // tem overflow:hidden, então ela ficava inalcançável.
+  var COLS=9;
+  var h='<div class="table-scroll"><table class="maq-table"><thead><tr><th>Notas</th><th>Data</th><th>Fornecedor</th><th>Peças</th><th>Serviço</th><th>Máquina</th><th>Tipo</th><th>Fazenda</th><th></th></tr></thead><tbody>';
   G.forEach(function(g,i){
     if(g.erro) return;
     var destino;
@@ -4689,15 +4703,15 @@ function _maqNfeRender(){
     h+='<tr>'+
       '<td class="maq-mono" style="font-size:11.5px">'+_nfEsc(nfRotuloNotas(g))+(g.os?'<div style="color:var(--text2)">OS '+_nfEsc(g.os)+'</div>':'')+'</td>'+
       '<td class="maq-mono">'+_nfEsc(formatDateBR(g.data))+'</td>'+
-      '<td style="max-width:150px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
-      '<td style="max-width:260px;font-size:11px">'+nfItensHtml(g)+'</td>'+
+      '<td style="max-width:170px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
       '<td class="maq-mono">'+(g.pecas?fmtR(g.pecas):'—')+'</td>'+
       '<td class="maq-mono">'+(g.servicos?fmtR(g.servicos):'—')+'</td>'+
       destino+
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
-      '</tr>';
+      '</tr>'+
+      '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+nfItensHtml(g)+'</td></tr>';
   });
-  cont.innerHTML=h+'</tbody></table>';
+  cont.innerHTML=h+'</tbody></table></div>';
   _maqNfeResumo();
 }
 

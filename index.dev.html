@@ -224,14 +224,16 @@
     </div>
     <input type="file" id="maqNfeFiles" accept=".xml,text/xml" multiple onchange="maqNfeLerArquivos()">
     <div id="maqNfeStep2" style="display:none;margin-top:14px">
-      <div class="nf-bulk">
-        <span style="color:var(--text2)">Aplicar a todas:</span>
-        <select id="maqNfeBulkMaq"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">máquina</button>
-        <select id="maqNfeBulkTipo"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">tipo</button>
-        <select id="maqNfeBulkFl"></select>
-        <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">fazenda</button>
+      <!-- Atalho de lote: preenche a coluna inteira de uma vez. Fica escondido quando há
+           uma nota só, porque aí só confunde com os campos da própria linha. -->
+      <div class="nf-bulk" id="maqNfeBulk" style="display:none">
+        <span class="nf-bulk-tit">Preencher todas as linhas de uma vez</span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkMaq"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('maq')">aplicar máquina</button></span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkTipo"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('tipo')">aplicar tipo</button></span>
+        <span class="nf-bulk-item"><select id="maqNfeBulkFl"></select>
+          <button class="btn-secondary" onclick="maqNfeAplicarTodos('floresta')">aplicar fazenda</button></span>
       </div>
       <div id="maqNfeAvisos" class="nf-avisos" style="display:none"></div>
       <div class="table-container" id="maqNfeTable"></div>
