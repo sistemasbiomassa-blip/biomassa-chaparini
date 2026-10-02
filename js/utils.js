@@ -435,7 +435,9 @@ function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem,kpiId){
   html+='.kpi-label{font-size:8px;text-transform:uppercase;color:#444444;margin-top:2px}';
   html+='table{width:100%;border-collapse:collapse;font-size:10px}';
   html+='th{text-align:left;font-size:8.5px;text-transform:uppercase;color:#555555;border-bottom:1px solid '+brd+';padding:5px 6px}';
-  html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee}';
+  // em retrato a folha é mais estreita: descrição e local/fornecedor são texto livre e
+  // podem vir numa palavra só (código de peça, URL), que sem isso estoura a coluna.
+  html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee;overflow-wrap:anywhere}';
   html+='tr{page-break-inside:avoid}';
   html+='thead{display:table-header-group}';
   html+='.manut-placa-tag,.nf-selo{color:#0066aa;font-weight:600}';

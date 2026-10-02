@@ -2999,7 +2999,9 @@ function exportSecaoPDF(elId,titulo,filtrosTxt,paisagem,kpiId){
   html+='.kpi-label{font-size:8px;text-transform:uppercase;color:#444444;margin-top:2px}';
   html+='table{width:100%;border-collapse:collapse;font-size:10px}';
   html+='th{text-align:left;font-size:8.5px;text-transform:uppercase;color:#555555;border-bottom:1px solid '+brd+';padding:5px 6px}';
-  html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee}';
+  // em retrato a folha é mais estreita: descrição e local/fornecedor são texto livre e
+  // podem vir numa palavra só (código de peça, URL), que sem isso estoura a coluna.
+  html+='td{padding:4px 6px;border-bottom:1px solid #eeeeee;overflow-wrap:anywhere}';
   html+='tr{page-break-inside:avoid}';
   html+='thead{display:table-header-group}';
   html+='.manut-placa-tag,.nf-selo{color:#0066aa;font-weight:600}';
@@ -8075,7 +8077,9 @@ function buildManutCustos(){
        '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
        '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
     h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
-    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),true,\'kpiManutCusto\')">📄 Exportar PDF</button>';
+    // retrato (false): preferência de quem usa o relatório — as 7 colunas caem bem na
+    // largura do A4 em pé, e assim a folha sai no mesmo formato do resto do arquivo.
+    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),false,\'kpiManutCusto\')">📄 Exportar PDF</button>';
     fb.innerHTML=h;
   }
 

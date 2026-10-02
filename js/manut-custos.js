@@ -75,7 +75,9 @@ function buildManutCustos(){
        '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
        '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
     h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
-    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),true,\'kpiManutCusto\')">📄 Exportar PDF</button>';
+    // retrato (false): preferência de quem usa o relatório — as 7 colunas caem bem na
+    // largura do A4 em pé, e assim a folha sai no mesmo formato do resto do arquivo.
+    h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),false,\'kpiManutCusto\')">📄 Exportar PDF</button>';
     fb.innerHTML=h;
   }
 
