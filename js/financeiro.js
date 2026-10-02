@@ -194,3 +194,135 @@ function buildFinanceiro(){
   document.getElementById('tblFin').innerHTML=tH;
 }
 
+// Relatório Analítico Financeiro — mesmo molde do Relatório Analítico de Entregas
+// (js/producao.js): folha em retrato, cabeçalho com logo, uma linha de cards e o
+// detalhamento embaixo. Aqui os cards são os cinco que interessam no fechamento:
+// combustível, preço médio/litro, arla, despesas e custo total.
+//
+// Lê o MESMO recorte que está na tela (finFilteredData, preenchido por buildFinanceiro),
+// em vez de refiltrar DB.cadastro por conta própria — assim o papel nunca discorda do
+// que a pessoa está vendo. Despesa sai por despesaFinanceira(), que tira a manutenção;
+// se houver manutenção no período, o cabeçalho avisa, senão o custo total do relatório
+// parece menor que o gasto real do mês sem explicação nenhuma.
+function exportFinAnaliticoPDF(){
+  // a janela abre já no clique: se esperar o processamento, o navegador bloqueia calado
+  var win=window.open('','_blank');
+  if(!win){ showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true); return; }
+
+  var v=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var fM=v('ffMot'), fP=v('ffPlaca'), fA=v('ffAbast'), fD=v('ffDesp');
+  var fMes=v('ffMes'), fDia=v('ffDia'), fSem=v('ffSemana'), fDtIni=v('ffDtIni'), fDtFim=v('ffDtFim');
+
+  var data=finFilteredData||[];
+
+  var tComb=0,tLit=0,tArla=0,tDesp=0,vManut=0,nManut=0;
+  data.forEach(function(r){
+    tComb+=num(r['VALOR TOTAL']);
+    tLit+=num(r['QTDADE LITROS']);
+    tArla+=num(r['ARLA VALOR']);
+    tDesp+=despesaFinanceira(r);
+    var m=despesaManutencao(r);
+    if(m>0){ vManut+=m; nManut++; }
+  });
+  var pMedio=tLit>0?tComb/tLit:0;
+  var cTotal=tComb+tArla+tDesp;
+
+  // as mesmas linhas da tabela da tela: só o que tem algum valor financeiro
+  var rows=data.filter(function(r){ return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']; })
+               .sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
+
+  var fl=[];
+  if(fDtIni||fDtFim) fl.push('Período: '+(fDtIni?formatDateBR(fDtIni):'(início)')+' até '+(fDtFim?formatDateBR(fDtFim):'(hoje)'));
+  else if(fDia) fl.push('Dia: '+formatDateBR(fDia));
+  else if(fSem) fl.push('Semana: '+getWeekDisplay(fSem));
+  else if(fMes) fl.push('Mês: '+getMonthLabel(fMes));
+  if(fM) fl.push('Motorista: '+fM);
+  if(fP) fl.push('Placa: '+fP);
+  if(fA) fl.push('Local Abast.: '+fA);
+  if(fD) fl.push('Classe Despesa: '+fD);
+  var filtrosTxt=fl.join(' · ')||'Todos os períodos';
+
+  var logoEl=document.querySelector('.sidebar-logo img');
+  var logoSrc=logoEl?logoEl.src:'';
+  var esc=function(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Analítico Financeiro</title><style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box}';
+  html+='body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
+  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:12px}';
+  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}';
+  html+='.rep-head h1{font-size:18px;color:#085425;line-height:1.1}';
+  html+='.rep-head .sub{font-size:11px;color:#444;margin-top:2px}';
+  html+='.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
+  html+='.aviso{border:1px solid #d9b382;background:#fdf6ec;border-radius:6px;padding:6px 9px;font-size:9px;color:#6b4e16;margin-bottom:12px}';
+  html+='.kpi-row{display:grid;gap:6px;margin-bottom:14px}';
+  html+='.kpi-card{border:1px solid #ccc;border-radius:8px;padding:6px 3px;text-align:center}';
+  html+='.kpi-icon{font-size:12px;margin-bottom:2px}';
+  html+='.kpi-value{font-size:13px;font-weight:700;color:#085425}';
+  html+='.kpi-label{font-size:7px;text-transform:uppercase;color:#666;margin-top:2px;letter-spacing:.2px}';
+  html+='table{width:100%;border-collapse:collapse;table-layout:fixed}';
+  html+='th,td{border:1px solid #ccc;padding:3px 4px;font-size:8px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}';
+  html+='th{background:#0D692C;color:#fff;font-weight:600;font-size:7.5px;text-transform:uppercase}';
+  html+='tbody tr:nth-child(even){background:#f4f8fb}';
+  html+='td.num{text-align:right;font-variant-numeric:tabular-nums}';
+  html+='thead{display:table-header-group}tr{page-break-inside:avoid}';
+  html+='.foot{margin-top:10px;font-size:9px;color:#666;text-align:center}';
+  html+='@page{size:portrait;margin:10mm}';
+  html+='@media print{body{padding:0}}';
+  html+='</style></head><body>';
+
+  html+='<div class="rep-head">';
+  if(logoSrc) html+='<img src="'+logoSrc+'" alt="Logo">';
+  html+='<div><h1>BIOMASSA CHAPARINI</h1>';
+  html+='<div class="sub">Relatório Analítico Financeiro</div>';
+  html+='<div class="sub"><b>Filtros:</b> '+esc(filtrosTxt)+'</div>';
+  html+='<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div>';
+  html+='</div></div>';
+
+  if(nManut>0){
+    html+='<div class="aviso">🔧 <b>'+nManut+' lançamento'+(nManut>1?'s':'')+' de manutenção</b> no período, somando R$'+numBR(vManut,2)+
+          ', não entra'+(nManut>1?'m':'')+' neste relatório — esse gasto é apresentado na aba Manutenção.</div>';
+  }
+
+  var cards=[
+    ['⛽','R$'+numBR(tComb,2),'Total Combustível'],
+    ['📊','R$'+numBR(pMedio,2),'Preço Médio/Litro'],
+    ['🧴','R$'+numBR(tArla,2),'Total ARLA'],
+    ['💸','R$'+numBR(tDesp,2),'Total Despesas'],
+    ['💰','R$'+numBR(cTotal,2),'Custo Total']
+  ];
+  html+='<div class="kpi-row" style="grid-template-columns:repeat('+cards.length+',1fr)">';
+  cards.forEach(function(c){
+    html+='<div class="kpi-card"><div class="kpi-icon">'+c[0]+'</div><div class="kpi-value">'+c[1]+'</div><div class="kpi-label">'+c[2]+'</div></div>';
+  });
+  html+='</div>';
+
+  if(!rows.length){
+    html+='<p style="padding:20px;text-align:center;color:#888">Nenhum lançamento financeiro encontrado para os filtros aplicados.</p>';
+  } else {
+    html+='<table><colgroup><col style="width:8%"><col style="width:16%"><col style="width:9%"><col style="width:15%">'+
+          '<col style="width:7%"><col style="width:8%"><col style="width:9%"><col style="width:8%"><col style="width:12%"><col style="width:8%"></colgroup>';
+    html+='<thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th>Litros</th><th>Vlr Unit.</th><th>Vlr Total</th><th>ARLA</th><th>Classe</th><th>Vlr Desp.</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var dsp=despesaFinanceira(r);
+      html+='<tr><td>'+formatDateBR(r.DATA)+'</td>'+
+        '<td>'+esc(r.MOTORISTA||'-')+'</td>'+
+        '<td>'+esc(r.PLACA||'-')+'</td>'+
+        '<td>'+esc(r['LOCAL ABASTECIMENTO']||'-')+'</td>'+
+        '<td class="num">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td>'+
+        '<td class="num">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td>'+
+        '<td class="num">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td>'+
+        '<td class="num">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td>'+
+        '<td>'+(dsp>0?esc(r['CLASSE DESPESA']||'-'):'-')+'</td>'+
+        '<td class="num">'+(dsp>0?'R$'+numBR(dsp,2):'-')+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    html+='<div class="foot">'+rows.length+' lançamento(s) · '+numBR(tLit,0)+' L abastecidos · Custo total do período: R$'+numBR(cTotal,2)+'</div>';
+  }
+
+  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<'+'/script>';
+  html+='</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+

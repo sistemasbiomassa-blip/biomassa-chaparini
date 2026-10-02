@@ -767,7 +767,10 @@
 
       <!-- FINANCEIRO PAGE -->
       <div class="page" id="pageFinanceiro">
-        <div class="page-header"><h1 class="page-title">💰 Financeiro</h1></div>
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <h1 class="page-title">💰 Financeiro</h1>
+          <button class="btn btn-secondary" style="font-size:12px" onclick="exportFinAnaliticoPDF()">📋 Relatório Analítico</button>
+        </div>
         <div class="filters" id="filtersFin"></div>
         <div class="fin-manut-nota" id="finManutNota" style="display:none"></div>
         <div class="kpi-row" id="kpiFin"></div>
