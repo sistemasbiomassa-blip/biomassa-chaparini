@@ -145,6 +145,11 @@ a{color:var(--accent);text-decoration:none}
 .chart-card.full{grid-column:1/-1}
 .chart-title{font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;justify-content:space-between}
 .chart-badge{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-weight:400}
+/* Botão de relatório dentro do título do gráfico: do tamanho do .chart-badge ao lado,
+   senão um .filter-btn-pdf inteiro desequilibra o cabeçalho do card. */
+.chart-title-dir{display:flex;align-items:center;gap:6px}
+.chart-btn-rel{padding:3px 10px;background:var(--accent2);border:none;border-radius:20px;color:#fff;font-size:9px;font-family:'Barlow',sans-serif;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.chart-btn-rel:hover{background:var(--accent);box-shadow:0 2px 10px rgba(0,180,216,0.3)}
 .chart-container{position:relative;width:100%;height:320px}
 .chart-container canvas{display:block;width:100%!important;height:100%!important}
 
@@ -7163,7 +7168,7 @@ function buildFinanceiro(){
   document.getElementById('chartsFin').innerHTML=
     '<div class="chart-card"><div class="chart-title">Combustível + ARLA por Mês <span class="chart-badge">R$</span></div><div class="chart-container"><canvas id="cFinMensal"></canvas></div></div>'+
     '<div class="chart-card"><div class="chart-title">Despesas por Categoria <span class="chart-badge">clique para detalhar</span></div><div class="chart-container"><canvas id="cFinDesp" style="cursor:pointer"></canvas></div></div>'+
-    '<div class="chart-card"><div class="chart-title">Abastecimento por Posto <span class="chart-badge">R$</span></div><div class="chart-container"><canvas id="cFinPosto"></canvas></div></div>'+
+    '<div class="chart-card"><div class="chart-title">Abastecimento por Posto <span class="chart-title-dir"><span class="chart-badge">R$</span><button class="chart-btn-rel" onclick="exportFinPostoPDF()" title="Gerar o relatório deste gráfico em tabela">📋 Relatório</button></span></div><div class="chart-container"><canvas id="cFinPosto"></canvas></div></div>'+
     '<div class="chart-card"><div class="chart-title">Despesas por Motorista <span class="chart-badge">R$</span></div><div class="chart-container"><canvas id="cFinMotDesp"></canvas></div></div>';
 
   var mf={};data.forEach(function(r){var my=getMonthYear(r.DATA);if(!my)return;if(!mf[my])mf[my]={c:0,a:0};mf[my].c+=num(r['VALOR TOTAL']);mf[my].a+=num(r['ARLA VALOR'])});
@@ -7209,6 +7214,88 @@ function buildFinanceiro(){
   document.getElementById('tblFin').innerHTML=tH;
 }
 
+// ==================== RELATÓRIOS EM PDF DO FINANCEIRO ====================
+// Dois relatórios saem desta aba (o analítico geral e o de abastecimento por posto) e
+// os dois usam a mesma folha: retrato, cabeçalho verde com logo, filtros aplicados,
+// uma linha de cards e tabela. O cabeçalho e o estilo ficam aqui para não virarem duas
+// cópias que vão divergindo a cada ajuste. Mesma aparência do Relatório Analítico de
+// Entregas da Produção (js/producao.js).
+function _finRelEsc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function _finRelCabecalho(titulo,filtrosTxt){
+  var logoEl=document.querySelector('.sidebar-logo img');
+  var logoSrc=logoEl?logoEl.src:'';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+_finRelEsc(titulo)+'</title><style>';
+  html+='*{margin:0;padding:0;box-sizing:border-box}';
+  html+='body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
+  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:12px}';
+  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}';
+  html+='.rep-head h1{font-size:18px;color:#085425;line-height:1.1}';
+  html+='.rep-head .sub{font-size:11px;color:#444;margin-top:2px}';
+  html+='.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
+  html+='.aviso{border:1px solid #d9b382;background:#fdf6ec;border-radius:6px;padding:6px 9px;font-size:9px;color:#6b4e16;margin-bottom:12px}';
+  html+='.kpi-row{display:grid;gap:6px;margin-bottom:14px}';
+  html+='.kpi-card{border:1px solid #ccc;border-radius:8px;padding:6px 3px;text-align:center}';
+  html+='.kpi-icon{font-size:12px;margin-bottom:2px}';
+  html+='.kpi-value{font-size:13px;font-weight:700;color:#085425}';
+  html+='.kpi-label{font-size:7px;text-transform:uppercase;color:#666;margin-top:2px;letter-spacing:.2px}';
+  html+='table{width:100%;border-collapse:collapse;table-layout:fixed}';
+  html+='th,td{border:1px solid #ccc;padding:3px 4px;font-size:8px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}';
+  html+='th{background:#0D692C;color:#fff;font-weight:600;font-size:7.5px;text-transform:uppercase}';
+  html+='tbody tr:nth-child(even){background:#f4f8fb}';
+  html+='td.num{text-align:right;font-variant-numeric:tabular-nums}';
+  html+='td.esq{text-align:left}';
+  html+='tfoot td{background:#eaf2ea;font-weight:700;font-size:8.5px;border-top:2px solid #0D692C}';
+  html+='thead{display:table-header-group}tr{page-break-inside:avoid}';
+  html+='.foot{margin-top:10px;font-size:9px;color:#666;text-align:center}';
+  html+='@page{size:portrait;margin:10mm}';
+  html+='@media print{body{padding:0}}';
+  html+='</style></head><body>';
+  html+='<div class="rep-head">';
+  if(logoSrc) html+='<img src="'+logoSrc+'" alt="Logo">';
+  html+='<div><h1>BIOMASSA CHAPARINI</h1>';
+  html+='<div class="sub">'+_finRelEsc(titulo)+'</div>';
+  html+='<div class="sub"><b>Filtros:</b> '+_finRelEsc(filtrosTxt)+'</div>';
+  html+='<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div>';
+  html+='</div></div>';
+  return html;
+}
+
+// cards numa linha só, largura dividida igualmente: [[icone, valor, rótulo], ...]
+function _finRelCards(cards){
+  var html='<div class="kpi-row" style="grid-template-columns:repeat('+cards.length+',1fr)">';
+  cards.forEach(function(c){
+    html+='<div class="kpi-card"><div class="kpi-icon">'+c[0]+'</div><div class="kpi-value">'+c[1]+'</div><div class="kpi-label">'+c[2]+'</div></div>';
+  });
+  return html+'</div>';
+}
+
+function _finRelFechar(win,html){
+  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<'+'/script>';
+  html+='</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+
+// Descrição dos filtros da aba, do jeito que vai impressa no cabeçalho. A Unidade fica
+// de fora de propósito: no Financeiro ela só troca o card de custo unitário, não filtra
+// linha nenhuma (ver buildFinanceiro) — listá-la faria o relatório prometer um recorte
+// que não existe.
+function _finRelFiltrosTxt(){
+  var v=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var fDtIni=v('ffDtIni'), fDtFim=v('ffDtFim'), fDia=v('ffDia'), fSem=v('ffSemana'), fMes=v('ffMes');
+  var fl=[];
+  if(fDtIni||fDtFim) fl.push('Período: '+(fDtIni?formatDateBR(fDtIni):'(início)')+' até '+(fDtFim?formatDateBR(fDtFim):'(hoje)'));
+  else if(fDia) fl.push('Dia: '+formatDateBR(fDia));
+  else if(fSem) fl.push('Semana: '+getWeekDisplay(fSem));
+  else if(fMes) fl.push('Mês: '+getMonthLabel(fMes));
+  if(v('ffMot')) fl.push('Motorista: '+v('ffMot'));
+  if(v('ffPlaca')) fl.push('Placa: '+v('ffPlaca'));
+  if(v('ffAbast')) fl.push('Local Abast.: '+v('ffAbast'));
+  if(v('ffDesp')) fl.push('Classe Despesa: '+v('ffDesp'));
+  return fl.join(' · ')||'Todos os períodos';
+}
+
 // Relatório Analítico Financeiro — mesmo molde do Relatório Analítico de Entregas
 // (js/producao.js): folha em retrato, cabeçalho com logo, uma linha de cards e o
 // detalhamento embaixo. Aqui os cards são os cinco que interessam no fechamento:
@@ -7223,10 +7310,6 @@ function exportFinAnaliticoPDF(){
   // a janela abre já no clique: se esperar o processamento, o navegador bloqueia calado
   var win=window.open('','_blank');
   if(!win){ showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true); return; }
-
-  var v=function(id){ var e=document.getElementById(id); return e?e.value:''; };
-  var fM=v('ffMot'), fP=v('ffPlaca'), fA=v('ffAbast'), fD=v('ffDesp');
-  var fMes=v('ffMes'), fDia=v('ffDia'), fSem=v('ffSemana'), fDtIni=v('ffDtIni'), fDtFim=v('ffDtFim');
 
   var data=finFilteredData||[];
 
@@ -7246,71 +7329,21 @@ function exportFinAnaliticoPDF(){
   var rows=data.filter(function(r){ return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']; })
                .sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
 
-  var fl=[];
-  if(fDtIni||fDtFim) fl.push('Período: '+(fDtIni?formatDateBR(fDtIni):'(início)')+' até '+(fDtFim?formatDateBR(fDtFim):'(hoje)'));
-  else if(fDia) fl.push('Dia: '+formatDateBR(fDia));
-  else if(fSem) fl.push('Semana: '+getWeekDisplay(fSem));
-  else if(fMes) fl.push('Mês: '+getMonthLabel(fMes));
-  if(fM) fl.push('Motorista: '+fM);
-  if(fP) fl.push('Placa: '+fP);
-  if(fA) fl.push('Local Abast.: '+fA);
-  if(fD) fl.push('Classe Despesa: '+fD);
-  var filtrosTxt=fl.join(' · ')||'Todos os períodos';
-
-  var logoEl=document.querySelector('.sidebar-logo img');
-  var logoSrc=logoEl?logoEl.src:'';
-  var esc=function(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Analítico Financeiro</title><style>';
-  html+='*{margin:0;padding:0;box-sizing:border-box}';
-  html+='body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
-  html+='.rep-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #0D692C;padding-bottom:10px;margin-bottom:12px}';
-  html+='.rep-head img{width:54px;height:54px;border-radius:8px;object-fit:cover}';
-  html+='.rep-head h1{font-size:18px;color:#085425;line-height:1.1}';
-  html+='.rep-head .sub{font-size:11px;color:#444;margin-top:2px}';
-  html+='.rep-head .gen{font-size:9px;color:#888;margin-top:3px}';
-  html+='.aviso{border:1px solid #d9b382;background:#fdf6ec;border-radius:6px;padding:6px 9px;font-size:9px;color:#6b4e16;margin-bottom:12px}';
-  html+='.kpi-row{display:grid;gap:6px;margin-bottom:14px}';
-  html+='.kpi-card{border:1px solid #ccc;border-radius:8px;padding:6px 3px;text-align:center}';
-  html+='.kpi-icon{font-size:12px;margin-bottom:2px}';
-  html+='.kpi-value{font-size:13px;font-weight:700;color:#085425}';
-  html+='.kpi-label{font-size:7px;text-transform:uppercase;color:#666;margin-top:2px;letter-spacing:.2px}';
-  html+='table{width:100%;border-collapse:collapse;table-layout:fixed}';
-  html+='th,td{border:1px solid #ccc;padding:3px 4px;font-size:8px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}';
-  html+='th{background:#0D692C;color:#fff;font-weight:600;font-size:7.5px;text-transform:uppercase}';
-  html+='tbody tr:nth-child(even){background:#f4f8fb}';
-  html+='td.num{text-align:right;font-variant-numeric:tabular-nums}';
-  html+='thead{display:table-header-group}tr{page-break-inside:avoid}';
-  html+='.foot{margin-top:10px;font-size:9px;color:#666;text-align:center}';
-  html+='@page{size:portrait;margin:10mm}';
-  html+='@media print{body{padding:0}}';
-  html+='</style></head><body>';
-
-  html+='<div class="rep-head">';
-  if(logoSrc) html+='<img src="'+logoSrc+'" alt="Logo">';
-  html+='<div><h1>BIOMASSA CHAPARINI</h1>';
-  html+='<div class="sub">Relatório Analítico Financeiro</div>';
-  html+='<div class="sub"><b>Filtros:</b> '+esc(filtrosTxt)+'</div>';
-  html+='<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div>';
-  html+='</div></div>';
+  var esc=_finRelEsc;
+  var html=_finRelCabecalho('Relatório Analítico Financeiro',_finRelFiltrosTxt());
 
   if(nManut>0){
     html+='<div class="aviso">🔧 <b>'+nManut+' lançamento'+(nManut>1?'s':'')+' de manutenção</b> no período, somando R$'+numBR(vManut,2)+
           ', não entra'+(nManut>1?'m':'')+' neste relatório — esse gasto é apresentado na aba Manutenção.</div>';
   }
 
-  var cards=[
+  html+=_finRelCards([
     ['⛽','R$'+numBR(tComb,2),'Total Combustível'],
     ['📊','R$'+numBR(pMedio,2),'Preço Médio/Litro'],
     ['🧴','R$'+numBR(tArla,2),'Total ARLA'],
     ['💸','R$'+numBR(tDesp,2),'Total Despesas'],
     ['💰','R$'+numBR(cTotal,2),'Custo Total']
-  ];
-  html+='<div class="kpi-row" style="grid-template-columns:repeat('+cards.length+',1fr)">';
-  cards.forEach(function(c){
-    html+='<div class="kpi-card"><div class="kpi-icon">'+c[0]+'</div><div class="kpi-value">'+c[1]+'</div><div class="kpi-label">'+c[2]+'</div></div>';
-  });
-  html+='</div>';
+  ]);
 
   if(!rows.length){
     html+='<p style="padding:20px;text-align:center;color:#888">Nenhum lançamento financeiro encontrado para os filtros aplicados.</p>';
@@ -7335,10 +7368,78 @@ function exportFinAnaliticoPDF(){
     html+='<div class="foot">'+rows.length+' lançamento(s) · '+numBR(tLit,0)+' L abastecidos · Custo total do período: R$'+numBR(cTotal,2)+'</div>';
   }
 
-  html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<'+'/script>';
-  html+='</body></html>';
-  win.document.write(html);
-  win.document.close();
+  _finRelFechar(win,html);
+}
+
+// Relatório do gráfico "Abastecimento por Posto": a mesma informação da barra, em tabela.
+// Botão pequeno no título do card (ver chartsFin em buildFinanceiro).
+//
+// A soma por posto repete exatamente a do gráfico, inclusive o fallback da chave com o
+// nome errado ('LOCAL ABASTECIEMNTO'), que existe em lançamento antigo — sem ele a tabela
+// não fecharia com a barra. A tabela acrescenta o que o gráfico não mostra mas vem das
+// mesmas linhas: nº de abastecimentos, litros, preço médio por litro e o % do total.
+function exportFinPostoPDF(){
+  var win=window.open('','_blank');
+  if(!win){ showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true); return; }
+
+  var data=finFilteredData||[];
+  var por={}, tVal=0, tLit=0, tN=0, litSemValor=0;
+  data.forEach(function(r){
+    var posto=r['LOCAL ABASTECIMENTO']||r['LOCAL ABASTECIEMNTO'];
+    if(!posto) return;
+    var val=num(r['VALOR TOTAL']), lit=num(r['QTDADE LITROS']);
+    if(val<=0&&lit<=0) return;   // linha sem abastecimento nenhum
+    posto=String(posto).trim();
+    if(!por[posto]) por[posto]={n:0,lit:0,val:0,litSemValor:0};
+    var p=por[posto];
+    p.n++; p.lit+=lit; p.val+=val;
+    tN++; tLit+=lit; tVal+=val;
+    // litro sem preço lançado (abastecimento em tanque antigo) puxa o preço médio pra
+    // baixo; fica contado à parte pra poder avisar embaixo da tabela.
+    if(val<=0&&lit>0){ p.litSemValor+=lit; litSemValor+=lit; }
+  });
+  var postos=Object.keys(por).sort(function(a,b){ return por[b].val-por[a].val; }); // mesma ordem da barra
+  var pMedioGeral=tLit>0?tVal/tLit:0;
+
+  var html=_finRelCabecalho('Abastecimento por Posto',_finRelFiltrosTxt());
+  html+=_finRelCards([
+    ['⛽','R$'+numBR(tVal,2),'Total Combustível'],
+    ['🪣',numBR(tLit,0)+' L','Total Litros'],
+    ['📊','R$'+numBR(pMedioGeral,2),'Preço Médio/Litro'],
+    ['🏪',String(postos.length),postos.length===1?'Posto':'Postos']
+  ]);
+
+  if(!postos.length){
+    html+='<p style="padding:20px;text-align:center;color:#888">Nenhum abastecimento encontrado para os filtros aplicados.</p>';
+  } else {
+    html+='<table><colgroup><col style="width:34%"><col style="width:10%"><col style="width:13%"><col style="width:14%"><col style="width:17%"><col style="width:12%"></colgroup>';
+    html+='<thead><tr><th>Posto</th><th>Abast.</th><th>Litros</th><th>Preço Médio/L</th><th>Valor Total</th><th>% do Total</th></tr></thead><tbody>';
+    postos.forEach(function(nome){
+      var p=por[nome];
+      var pm=p.lit>0?p.val/p.lit:0;
+      var pct=tVal>0?(p.val/tVal*100):0;
+      html+='<tr><td class="esq">'+_finRelEsc(nome)+(p.litSemValor>0?' *':'')+'</td>'+
+        '<td class="num">'+p.n+'</td>'+
+        '<td class="num">'+numBR(p.lit,1)+'</td>'+
+        '<td class="num">'+(p.lit>0?'R$'+numBR(pm,2):'-')+'</td>'+
+        '<td class="num">R$'+numBR(p.val,2)+'</td>'+
+        '<td class="num">'+numBR(pct,1)+'%</td></tr>';
+    });
+    html+='</tbody><tfoot><tr><td class="esq">TOTAL</td>'+
+      '<td class="num">'+tN+'</td>'+
+      '<td class="num">'+numBR(tLit,1)+'</td>'+
+      '<td class="num">R$'+numBR(pMedioGeral,2)+'</td>'+
+      '<td class="num">R$'+numBR(tVal,2)+'</td>'+
+      '<td class="num">100,0%</td></tr></tfoot></table>';
+    if(litSemValor>0){
+      html+='<div class="aviso" style="margin-top:10px">* '+numBR(litSemValor,0)+' L abastecidos sem preço lançado '+
+            '(abastecimento em tanque sem preço de compra registrado). Esses litros entram na coluna Litros, '+
+            'mas não no Valor Total — o preço médio dos postos marcados fica abaixo do real.</div>';
+    }
+    html+='<div class="foot">'+postos.length+' posto(s) · '+tN+' abastecimento(s) · '+numBR(tLit,0)+' L · R$'+numBR(tVal,2)+'</div>';
+  }
+
+  _finRelFechar(win,html);
 }
 
 </script>
