@@ -306,6 +306,21 @@ tbody tr:hover{background:var(--surface2)}
 .manut-frota-km{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);white-space:nowrap}
 .manut-frota-det{font-size:11.5px;color:var(--text2);margin-left:auto;text-align:right}
 
+/* Linha do caminhão abre serviço por serviço — o resumo diz "1 vencido", o detalhe diz
+   qual. Clicar na linha inteira, não num ícone pequeno. */
+.manut-frota-linha{cursor:pointer}
+.manut-frota-seta{color:var(--accent);font-size:11px;width:10px;flex:none}
+.manut-frota-exp{background:var(--surface2);border-bottom:1px solid var(--border)}
+.manut-frota-item{display:flex;align-items:center;gap:12px;padding:7px 18px 7px 40px;
+  border-top:1px solid var(--border);flex-wrap:wrap;font-size:12px}
+.manut-frota-item .manut-chip{width:78px;justify-content:center;flex:none}
+.manut-frota-item-tipo{min-width:180px;color:var(--text)}
+.manut-frota-item-num{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap}
+.manut-frota-prev{color:var(--text2);font-family:'Barlow',sans-serif}
+.manut-frota-item-prox{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  color:var(--text2);white-space:nowrap}
+.manut-frota-sem{color:var(--text2)}
+
 /* ---------- Painel: implantação ---------- */
 .manut-impl-barra{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:14px 18px 0}
 .manut-impl-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease}
@@ -331,6 +346,10 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
    próprios dele fariam dois "Total" diferentes na mesma tela. */
 .nf-rel-resumo{padding:11px 18px;font-size:12.5px;color:var(--text2);border-bottom:1px solid var(--border)}
 .nf-rel-resumo strong{color:var(--text);font-family:JetBrains Mono,monospace;font-size:13px}
+
+/* Tipo fixado pelo filtro do topo: vira texto, não seletor, para não ter dois controles
+   da mesma coisa discordando entre si. */
+.manut-km-sel-fixo{font-size:12px;color:var(--text);font-weight:600}
 
 /* Subtítulo das abas: cada uma responde a uma pergunta */
 .manut-view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
@@ -7574,10 +7593,28 @@ function buildManutencaoFora(){
   var colors=cc();
   var kmByPlaca=_manutCalcKmByPlaca();
   var lastManut=_manutCalcLastManut();
+
+  // Lê o que está escolhido na tela ANTES de montar qualquer coisa. O filtro de tipo
+  // recorta a lista de serviços logo abaixo, então ler depois faria os itens serem
+  // montados com um valor e o resto da tela com outro.
+  var savedPlaca=document.getElementById('fmDashPlaca')?document.getElementById('fmDashPlaca').value:manutFiltro.placa;
+  var savedTipo=document.getElementById('fmDashTipo')?document.getElementById('fmDashTipo').value:manutFiltro.tipo;
+  var savedMot=document.getElementById('fmDashMot')?document.getElementById('fmDashMot').value:manutFiltro.motorista;
+  manutFiltro.placa=savedPlaca;manutFiltro.tipo=savedTipo;manutFiltro.motorista=savedMot;
+
   // Fora de garantia = todas as placas com km conhecido, exceto as com garantia ainda ativa
   var allPlacas=Object.keys(kmByPlaca).filter(function(p){return !placaEmGarantiaAtiva(p)}).sort();
-  var progs=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO&&p.INTERVALO_KM});
-  var todosTipos=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO}).map(function(p){return p.TIPO_MANUTENCAO}).sort();
+  // Só serviço COM intervalo de KM entra no Painel: é o que tem como vencer. Pneus,
+  // Corretiva e Outros não têm régua, então não aparecem aqui nem no filtro de tipo —
+  // oferecê-los no filtro só produzia uma tela vazia sem explicação.
+  var progsTodos=DB.manutProgramada.filter(function(p){return p.TIPO_MANUTENCAO&&p.INTERVALO_KM});
+  var todosTipos=progsTodos.map(function(p){return p.TIPO_MANUTENCAO}).sort();
+  // O filtro de tipo recorta aqui, na origem. Antes ele só pintava as colunas da matriz
+  // de verde com "—" e não mexia em mais nada: com a matriz fechada por padrão, escolher
+  // um tipo não mudava nada visível na tela.
+  var progs=manutFiltro.tipo
+    ? progsTodos.filter(function(p){return p.TIPO_MANUTENCAO===manutFiltro.tipo})
+    : progsTodos;
 
   // Build alerts data
   var alertsData=[];
@@ -7599,10 +7636,6 @@ function buildManutencaoFora(){
 
   // Build filter bar
   var fb=document.getElementById('filtersManut');
-  var savedPlaca=document.getElementById('fmDashPlaca')?document.getElementById('fmDashPlaca').value:manutFiltro.placa;
-  var savedTipo=document.getElementById('fmDashTipo')?document.getElementById('fmDashTipo').value:manutFiltro.tipo;
-  var savedMot=document.getElementById('fmDashMot')?document.getElementById('fmDashMot').value:manutFiltro.motorista;
-  manutFiltro.placa=savedPlaca;manutFiltro.tipo=savedTipo;manutFiltro.motorista=savedMot;
 
   var motPlacas={};
   DB.cadastro.forEach(function(r){
@@ -7738,17 +7771,13 @@ function buildManutencaoFora(){
   ordenados.forEach(function(a){
     tbody+='<tr><td><span class="manut-placa-tag">'+a.placa+'</span></td>';
     a.items.forEach(function(i){
-      // Filter by tipo if active
-      if(manutFiltro.tipo&&i.tipo!==manutFiltro.tipo){
-        tbody+='<td><span class="manut-chip g"><span class="manut-chip-dot"></span>—</span></td>';
-        return;
-      }
       tbody+='<td><span class="manut-chip '+i.status+'"><span class="manut-chip-dot"></span>'+chipLabel[i.status]+'</span></td>';
     });
     tbody+='</tr>';
   });
   document.getElementById('manutMatrizBody').innerHTML=tbody;
-  document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões · mais urgente primeiro';
+  document.getElementById('manutBadgeTotal').textContent=filtered.length+' caminhões · '+
+    (manutFiltro.tipo?'só '+manutFiltro.tipo:progs.length+' serviço'+(progs.length===1?'':'s'))+' · mais urgente primeiro';
 
   // KM & PRÓXIMA TROCA (óleo motor) — TODOS os caminhões, do mais urgente ao menos; a
   // caixa mostra ~5 linhas e rola para o resto (antes cortava em 5 e mandava usar o filtro).
@@ -7791,11 +7820,18 @@ function buildManutencaoFora(){
     });
     kmListH+='</tbody></table></div>';
   }
-  // o tipo mostrado vira um seletor no cabeçalho do painel: antes era um selo discreto
-  // ("óleo motor"), que passava batido e prendia o painel na troca de óleo
-  var selH='<span class="manut-km-sel-lbl">tipo:</span><select id="manutKmSel" onchange="manutKmTipo=this.value;buildManutencao()">';
-  progs.forEach(function(p){ selH+='<option'+(p.TIPO_MANUTENCAO===tipoPainel?' selected':'')+'>'+p.TIPO_MANUTENCAO+'</option>'; });
-  selH+='</select><span class="manut-km-sel-n">'+filtered.length+' caminhões</span>';
+  // Seletor próprio do painel, usado quando NÃO há filtro de tipo no topo. Com o filtro
+  // ativo quem manda é ele — dois controles para a mesma coisa, discordando entre si, é
+  // o tipo de coisa que faz a tela parecer quebrada.
+  var selH;
+  if(manutFiltro.tipo){
+    selH='<span class="manut-km-sel-lbl">tipo:</span><span class="manut-km-sel-fixo">'+tipoPainel+'</span>'+
+      '<span class="manut-km-sel-n">pelo filtro do topo</span>';
+  } else {
+    selH='<span class="manut-km-sel-lbl">tipo:</span><select id="manutKmSel" onchange="manutKmTipo=this.value;buildManutencao()">';
+    progs.forEach(function(p){ selH+='<option'+(p.TIPO_MANUTENCAO===tipoPainel?' selected':'')+'>'+p.TIPO_MANUTENCAO+'</option>'; });
+    selH+='</select><span class="manut-km-sel-n">'+filtered.length+' caminhões</span>';
+  }
   document.getElementById('manutKmBadge').innerHTML=selH;
   document.getElementById('manutKmList').innerHTML=kmListH;
 
@@ -7828,7 +7864,8 @@ function buildManutencaoFora(){
     });
   }
   document.getElementById('manutAcaoList').innerHTML=acaoH;
-  document.getElementById('manutAcaoBadge').textContent=acoes.length+' iten'+(acoes.length===1?'':'s');
+  document.getElementById('manutAcaoBadge').textContent=acoes.length+' iten'+(acoes.length===1?'':'s')+
+    (manutFiltro.tipo?' · só '+manutFiltro.tipo:'');
 
   // ---------- SITUAÇÃO POR CAMINHÃO ----------
   // A pergunta do gestor é "quais caminhões", não "quantos itens": um caminhão com 2 itens
@@ -7847,11 +7884,36 @@ function buildManutencaoFora(){
     if(c.y) det.push('<span style="color:var(--yellow)">'+c.y+' em atenção</span>');
     if(c.g) det.push('<span style="color:var(--green)">'+c.g+' em dia</span>');
     if(c.x) det.push('<span style="color:var(--text2)">'+c.x+' sem registro</span>');
-    frotaH+='<div class="manut-frota-linha">'+
+    // A linha abre: o resumo diz "1 vencido · 4 sem registro", mas não diz O QUÊ. Clicar
+    // mostra serviço por serviço, do pior para o melhor, com quanto falta e a previsão
+    // em dias — que é o que se precisa para ligar para a oficina.
+    var itensOrd=a.items.slice().sort(function(x,y){
+      return (ordStatus[x.status]-ordStatus[y.status]) ||
+             ((x.kmRest==null?1e9:x.kmRest)-(y.kmRest==null?1e9:y.kmRest));
+    });
+    var detH='';
+    itensOrd.forEach(function(i){
+      var prev=_manutPrevisao(i.kmRest,kmDia[a.placa]);
+      var falta=i.kmRest==null
+        ? '<span class="manut-frota-sem">nunca registrada</span>'
+        : (i.kmRest<0
+            ? '<span style="color:var(--red)">'+Math.round(-i.kmRest).toLocaleString('pt-BR')+' km atrás</span>'
+            : 'faltam '+Math.round(i.kmRest).toLocaleString('pt-BR')+' km');
+      detH+='<div class="manut-frota-item">'+
+        '<span class="manut-chip '+i.status+'"><span class="manut-chip-dot"></span>'+chipLabel[i.status]+'</span>'+
+        '<span class="manut-frota-item-tipo">'+i.tipo+'</span>'+
+        '<span class="manut-frota-item-num">'+falta+(prev?' <span class="manut-frota-prev">· '+prev+'</span>':'')+'</span>'+
+        '<span class="manut-frota-item-prox">'+(i.proxM!=null?'próxima em '+Math.round(i.proxM).toLocaleString('pt-BR')+' km':'')+'</span>'+
+        '</div>';
+    });
+    var idp='frt_'+a.placa.replace(/[^A-Za-z0-9]/g,'');
+    frotaH+='<div class="manut-frota-linha" onclick="_toggleFrota(\''+idp+'\')" title="Clique para ver serviço por serviço">'+
+      '<span class="manut-frota-seta" id="'+idp+'_s">▸</span>'+
       '<span class="manut-chip '+a.worst+'"><span class="manut-chip-dot"></span>'+chipLabel[a.worst]+'</span>'+
       '<span class="manut-placa-tag">'+a.placa+'</span>'+
       '<span class="manut-frota-km">'+Math.round(a.kmAtual).toLocaleString('pt-BR')+' km</span>'+
-      '<span class="manut-frota-det">'+det.join(' · ')+'</span></div>';
+      '<span class="manut-frota-det">'+det.join(' · ')+'</span></div>'+
+      '<div class="manut-frota-exp" id="'+idp+'" style="display:none">'+detH+'</div>';
   });
   document.getElementById('manutFrotaList').innerHTML=frotaH||'<div class="manut-vazio-ok">Nenhum caminhão com histórico nesta seleção.</div>';
   document.getElementById('manutFrotaBadge').textContent=comHist.length+' caminhõe'+(comHist.length===1?'':'s')+' no controle';
@@ -7886,6 +7948,15 @@ function buildManutencaoFora(){
   // CONSUMO MÉDIO movido para a aba Consumo (buildConsumo)
   // "Histórico Recente" (6 últimas) removido: o Detalhamento de Manutenção logo abaixo
   // mostra o histórico completo, com filtros próprios.
+}
+
+// Abre/fecha o detalhe de um caminhão no quadro "Situação por caminhão".
+function _toggleFrota(id){
+  var box=document.getElementById(id), seta=document.getElementById(id+'_s');
+  if(!box) return;
+  var aberto=box.style.display!=='none';
+  box.style.display=aberto?'none':'';
+  if(seta) seta.textContent=aberto?'▸':'▾';
 }
 
 function toggleManutTag(cor,el){
