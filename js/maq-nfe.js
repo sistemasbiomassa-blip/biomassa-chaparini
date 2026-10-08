@@ -19,10 +19,34 @@ function openMaqNfeModal(){
 }
 function closeMaqNfeModal(){ document.getElementById('maqNfeOverlay').classList.remove('show'); _maqNfe={grupos:[],rejeitados:[]}; }
 
+// Prepara os lançamentos recém-lidos: o que já dá para adivinhar vem preenchido, o resto
+// fica em branco esperando a conferência.
+function _maqNfePrepararGrupos(L){
+  var lista=(DB.maquinas||[]).map(function(m){ return {id:m.ID, nome:m.IDENTIFICACAO}; });
+  L.grupos.forEach(function(g){
+    // compra sem OS (insumo a granel) já nasce como Insumo; com serviço/OS o usuário escolhe
+    g.maq=''; g.floresta=''; g.tipo=(!g.os && !g.servicos)?'Insumo':''; g.dividir=false; g.itemMaq=[];
+    g.maqLida=false; g.maqTrecho='';
+    // o fornecedor escreve a máquina nas informações complementares da nota
+    g.maqsNota=nfAcharMaquinas(g.textoLivre, lista);
+    if(g.maqsNota.length===1){
+      g.maq=String(g.maqsNota[0].maq.id);
+      g.maqLida=true;
+      // nome escrito errado na nota ("SKIDY 02"): preenche, mas pede conferência
+      if(!g.maqsNota[0].exato) g.maqTrecho=g.maqsNota[0].trecho;
+    }
+    else if(g.maqsNota.length>1 && g.itens.length>1){
+      // mais de uma máquina citada: já abre dividido, mas sem adivinhar qual item é de
+      // qual — o usuário aponta item a item (fica incompleto até ele escolher)
+      g.dividir=true; g.itemMaq=g.itens.map(function(){ return ''; });
+    }
+  });
+  return L;
+}
+
 function maqNfeLerArquivos(){
   nfLerSelecao(document.getElementById('maqNfeFiles'),'maq',function(L){
-    // compra sem OS (insumo a granel) já nasce como Insumo; com serviço/OS o usuário escolhe
-    L.grupos.forEach(function(g){ g.maq=''; g.floresta=''; g.tipo=(!g.os && !g.servicos)?'Insumo':''; });
+    _maqNfePrepararGrupos(L);
     _maqNfe=L;
     _maqNfeRender();
     var n=L.grupos.filter(_maqNfeImportavel).length, fora=L.rejeitados.length+L.grupos.filter(function(g){return g.erro;}).length;
@@ -32,7 +56,36 @@ function maqNfeLerArquivos(){
 }
 
 function _maqNfeImportavel(g){ return !g.erro; }
-function _maqNfeCompleto(g){ return g.anexarA || ((g.maq||g.floresta) && g.tipo); }
+function _maqNfeCompleto(g){
+  if(g.anexarA) return true;
+  if(!g.tipo) return false;
+  // dividida: cada item precisa de uma máquina (se é para ir tudo na fazenda, não divide)
+  if(g.dividir) return g.itens.every(function(it,n){ return !!g.itemMaq[n]; });
+  return !!(g.maq||g.floresta);
+}
+// Nota que atende mais de uma máquina (ex.: óleo de motor do PICADOR 02 + hidráulico da
+// ESCAVADEIRA 02 na mesma NF-e): cada item vai para a sua máquina e o sistema cria um
+// lançamento por máquina, com o valor dos itens dela. A nota fica ligada aos dois.
+function _maqNfeDividir(i,ligar){
+  var g=_maqNfe.grupos[i]; if(!g) return;
+  g.dividir=!!ligar;
+  if(g.dividir && !g.itemMaq.length) g.itemMaq=g.itens.map(function(){ return g.maq||''; });
+  _maqNfeRender();
+}
+function _maqNfeItemMaq(i,n,v){
+  var g=_maqNfe.grupos[i]; if(!g) return;
+  g.itemMaq[n]=v;
+  _maqNfeRender();
+}
+// máquinas distintas escolhidas, na ordem em que aparecem (cada uma vira um lançamento)
+function _maqNfeDestinos(g){
+  var ordem=[];
+  (g.itens||[]).forEach(function(it,n){
+    var m=String(g.itemMaq[n]||'');
+    if(ordem.indexOf(m)<0) ordem.push(m);
+  });
+  return ordem;
+}
 
 function _maqNfeOpcoesMaq(sel){
   var o='<option value="">— só fazenda —</option>';
@@ -76,8 +129,29 @@ function _maqNfeRender(){
     if(g.anexarA){
       destino='<td colspan="3" style="font-size:11.5px"><span class="maq-chip maq-chip-b">Anexar</span> '+
               'soma ao lançamento da '+_nfEsc('NF-e '+g.anexarA.numero)+', já importada (mesma OS '+_nfEsc(g.os)+')</td>';
+    } else if(g.dividir){
+      var dest=_maqNfeDestinos(g).filter(function(m){ return m; });
+      var citadas=(g.maqsNota&&g.maqsNota.length>1)
+        ? '<div class="nf-lido">a nota cita: '+_nfEsc(g.maqsNota.map(function(x){return x.maq.nome;}).join(', '))+'</div>'
+        : '';
+      destino='<td style="font-size:11.5px"><span class="maq-chip maq-chip-b">Dividida</span>'+citadas+
+              (dest.length?'<div style="margin-top:3px">'+dest.map(function(m){ return _nfEsc(maqNome(m)); }).join('<br>')+'</div>'
+                          :'<div class="nf-alerta">escolha a máquina de cada item abaixo</div>')+
+              '<a class="nf-link" onclick="_maqNfeDividir('+i+',false)">voltar a uma máquina só</a></td>'+
+              '<td><select onchange="_maqNfeSet('+i+',&quot;tipo&quot;,this.value)">'+_maqNfeOpcoesTipo(g.tipo,true)+'</select></td>'+
+              '<td><select onchange="_maqNfeSet('+i+',&quot;floresta&quot;,this.value)">'+_maqNfeOpcoesFl(g.floresta)+'</select></td>';
     } else {
-      destino='<td><select onchange="_maqNfeSet('+i+',&quot;maq&quot;,this.value)">'+_maqNfeOpcoesMaq(g.maq)+'</select></td>'+
+      // o nome da máquina costuma vir nas observações da nota: avisa o que foi lido
+      var citou=(g.maqsNota||[]).map(function(x){ return x.maq.nome; });
+      var avMaq='';
+      if(g.maqLida && citou.length===1 && String(g.maq)===String(g.maqsNota[0].maq.id))
+        avMaq=g.maqTrecho
+          ? '<span class="nf-alerta">a nota diz "'+_nfEsc(g.maqTrecho)+'" — entendi que é esta, confira</span>'
+          : '<span class="nf-lido">✓ lida da nota</span>';
+      else if(citou.length>1)
+        avMaq='<span class="nf-alerta">a nota cita '+_nfEsc(citou.join(', '))+'</span>';
+      destino='<td><select onchange="_maqNfeSet('+i+',&quot;maq&quot;,this.value)">'+_maqNfeOpcoesMaq(g.maq)+'</select>'+avMaq+
+              (g.itens.length>1?'<a class="nf-link" onclick="_maqNfeDividir('+i+',true)">dividir por item</a>':'')+'</td>'+
               '<td><select onchange="_maqNfeSet('+i+',&quot;tipo&quot;,this.value)">'+_maqNfeOpcoesTipo(g.tipo,true)+'</select></td>'+
               '<td><select onchange="_maqNfeSet('+i+',&quot;floresta&quot;,this.value)">'+_maqNfeOpcoesFl(g.floresta)+'</select></td>';
     }
@@ -90,7 +164,10 @@ function _maqNfeRender(){
       destino+
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
       '</tr>'+
-      '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+nfItensHtml(g)+'</td></tr>';
+      '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+
+        nfItensHtml(g, g.dividir?function(it,n){
+          return '<select class="nf-item-maq" onchange="_maqNfeItemMaq('+i+','+n+',this.value)">'+_maqNfeOpcoesMaq(g.itemMaq[n]||'')+'</select>';
+        }:null)+'</td></tr>';
   });
   cont.innerHTML=h+'</tbody></table></div>';
   _maqNfeResumo();
@@ -126,13 +203,45 @@ function maqNfeAplicarTodos(campo){
 function _maqNfePayload(g){
   var docs=g.docs.map(nfDocPayload);
   if(g.anexarA) return {destino:'maq', anexar_a:g.anexarA.id, documentos:docs};
-  return {destino:'maq', documentos:docs, lancamentos:[{
-    data:g.data, id_maquina:g.maq||'', tipo:g.tipo, servico:nfResumoItens(g),
-    custo_pecas:g.pecas, custo_mao_obra:g.servicos, custo_terceiros:0,
-    oficina_fornecedor:g.emitNome||'', floresta_opc:g.floresta||'',
-    obs:nfRotuloNotas(g)+(g.os?' · OS '+g.os:''),
-    usuario_nome_legado:currentUserData?currentUserData.nome:''
-  }]};
+  var nome=currentUserData?currentUserData.nome:'';
+  var obs=nfRotuloNotas(g)+(g.os?' · OS '+g.os:'');
+  if(!g.dividir){
+    return {destino:'maq', documentos:docs, lancamentos:[{
+      data:g.data, id_maquina:g.maq||'', tipo:g.tipo, servico:nfResumoItens(g),
+      custo_pecas:g.pecas, custo_mao_obra:g.servicos, custo_terceiros:0,
+      oficina_fornecedor:g.emitNome||'', floresta_opc:g.floresta||'',
+      obs:obs, usuario_nome_legado:nome
+    }]};
+  }
+  // Dividida: um lançamento por máquina, com o valor dos itens dela. Os itens do payload
+  // levam destino_idx (posição do lançamento), e o banco guarda de quem é cada item.
+  var ordem=_maqNfeDestinos(g), porMaq={};
+  ordem.forEach(function(m,k){ porMaq[m]={idx:k, itens:[]}; });
+  g.itens.forEach(function(it,n){ porMaq[String(g.itemMaq[n]||'')].itens.push(it); });
+  var k=0;
+  docs.forEach(function(d){
+    d.itens=(d.itens||[]).map(function(it){
+      var copia={}, m=String(g.itemMaq[k++]||'');
+      for(var campo in it) copia[campo]=it[campo];
+      copia.destino_idx=porMaq[m].idx;
+      return copia;
+    });
+  });
+  var soma=function(itens,servico){
+    return Math.round(itens.filter(function(i){ return servico?(i.tipo==='SERVICO'):(i.tipo!=='SERVICO'); })
+      .reduce(function(a,i){ return a+num(i.valor); },0)*100)/100;
+  };
+  return {destino:'maq', documentos:docs, lancamentos:ordem.map(function(m){
+    var itens=porMaq[m].itens;
+    return {
+      data:g.data, id_maquina:m||'', tipo:g.tipo,
+      servico:nfResumoItens({itens:itens, os:g.os}),
+      custo_pecas:soma(itens,false), custo_mao_obra:soma(itens,true), custo_terceiros:0,
+      oficina_fornecedor:g.emitNome||'', floresta_opc:g.floresta||'',
+      obs:obs+' · nota dividida entre '+ordem.length+' máquinas',
+      usuario_nome_legado:nome
+    };
+  })};
 }
 
 function maqNfeImportar(){

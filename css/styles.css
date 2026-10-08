@@ -472,6 +472,10 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px;padding:8px 10px;border:1px dashed var(--border);border-radius:8px}
 .nf-bulk-tit{color:var(--text2);text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;font-weight:600}
 .nf-bulk-item{display:inline-flex;align-items:center;gap:5px}
+/* divisão da nota entre máquinas (js/maq-nfe.js) */
+.nf-link{display:block;margin-top:4px;font-size:10.5px;color:var(--accent);cursor:pointer;text-decoration:underline}
+.nf-link:hover{opacity:.8}
+.nf-itens-box select.nf-item-maq{padding:3px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);max-width:170px}
 /* linha só com a lista de itens, logo abaixo da linha da nota */
 .nf-itens-linha td{padding-top:0 !important;border-bottom:1px solid var(--border)}
 .nf-itens-linha .nf-itens{margin-top:0}

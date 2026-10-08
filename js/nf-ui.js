@@ -7,8 +7,11 @@ function _nfEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/<
 
 // Caminhão: registros "acompanhantes" de uma revisão não guardam nota — ela fica no principal
 function _nfIdPrincipal(destino,id){
-  if(destino!=='caminhao') return id;
-  var r=(typeof findManutRealById==='function')?findManutRealById(id):null;
+  // a nota fica no lançamento principal; os companheiros (outros tipos no caminhão,
+  // outras máquinas na nota dividida) apontam para ele
+  var r=(destino==='caminhao')
+    ? ((typeof findManutRealById==='function')?findManutRealById(id):null)
+    : ((typeof findManutById==='function')?findManutById(id):null);
   return (r && r.NF_PRINCIPAL_ID)?r.NF_PRINCIPAL_ID:id;
 }
 function nfDocsDoLancamento(destino,id){
@@ -78,7 +81,9 @@ function nfAvisoExclusao(destino,id){
 // resumo ("17 peças · 7 serviços") não diz o que a nota tem dentro.
 // Aberta por padrão em nota curta; em nota longa vem fechada, mas o título já mostra as
 // primeiras descrições para não precisar abrir uma por uma num lote grande.
-function nfItensHtml(g){
+// celulaExtra(item, n): HTML de uma coluna a mais por item — usado pelo importador de
+// maquinário para escolher a máquina de cada item quando a nota é dividida.
+function nfItensHtml(g,celulaExtra){
   var its=(g&&g.itens)||[];
   if(!its.length) return '';
   var pc=its.filter(function(i){return i.tipo!=='SERVICO';}).length, sv=its.length-pc;
@@ -87,14 +92,15 @@ function nfItensHtml(g){
   if(sv) resumo.push(sv+(sv===1?' serviço':' serviços'));
   var amostra=its.slice(0,2).map(function(i){ return String(i.descricao||'').slice(0,38); }).join(' · ');
   if(its.length>2) amostra+=' · +'+(its.length-2);
-  var linhas=its.map(function(i){
+  var linhas=its.map(function(i,n){
     var q=num(i.quantidade), serv=i.tipo==='SERVICO';
     return '<tr><td>'+(serv?'🧾':'📦')+'</td>'+
       '<td>'+_nfEsc(i.descricao)+'</td>'+
       '<td class="maq-mono">'+(q?fmt(q,(q%1)?2:0)+(i.unidade?' '+_nfEsc(i.unidade):''):'—')+'</td>'+
-      '<td class="maq-mono">'+fmtR(num(i.valor))+'</td></tr>';
+      '<td class="maq-mono">'+fmtR(num(i.valor))+'</td>'+
+      (celulaExtra?('<td>'+celulaExtra(i,n)+'</td>'):'')+'</tr>';
   }).join('');
-  return '<details class="nf-itens"'+(its.length<=10?' open':'')+'>'+
+  return '<details class="nf-itens"'+((its.length<=10||celulaExtra)?' open':'')+'>'+
     '<summary><strong>'+resumo.join(' · ')+'</strong> <span>'+_nfEsc(amostra)+'</span></summary>'+
     '<div class="nf-itens-box"><table>'+linhas+'</table></div></details>';
 }

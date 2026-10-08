@@ -161,6 +161,95 @@ function nfExtrairOS(texto){
 }
 function _nfAplicarOS(b){ var x=nfExtrairOS(b.textoLivre); b.os=x.os; b.placa=x.placa; b.km=x.km; }
 
+// ---------- achar a máquina no texto da nota ----------
+// Distância de edição, limitada: serve só para "é quase a mesma palavra?"
+function _nfDist(a,b){
+  var m=a.length, n=b.length, linha=[], i, j, ant, tmp;
+  if(Math.abs(m-n)>2) return 9;
+  for(j=0;j<=n;j++) linha[j]=j;
+  for(i=1;i<=m;i++){
+    ant=linha[0]; linha[0]=i;
+    for(j=1;j<=n;j++){
+      tmp=linha[j];
+      linha[j]=Math.min(linha[j]+1, linha[j-1]+1, ant+(a.charAt(i-1)===b.charAt(j-1)?0:1));
+      ant=tmp;
+    }
+  }
+  return linha[n];
+}
+// "SKIDY" é SKIDDER? Aceita só erro de digitação: palavra de 4+ letras, tamanhos
+// parecidos e mesmo começo (ou 2 letras de diferença). Assim "CARRETA" não vira
+// "CARREGADEIRA" (curta demais para o tamanho da outra).
+function _nfParecido(a,b){
+  if(!a||!b) return false;
+  if(a===b) return true;
+  var curto=a.length<b.length?a:b, longo=a.length<b.length?b:a;
+  if(curto.length<4) return false;
+  if(curto.length/longo.length<0.6) return false;
+  if(longo.indexOf(curto)===0) return true;
+  if(curto.slice(0,4)===longo.slice(0,4)) return true;
+  return _nfDist(a,b)<=2;
+}
+function _nfMesmoNumero(a,b){
+  if(!/^\d+$/.test(a||'') || !/^\d+$/.test(b||'')) return false;
+  return parseInt(a,10)===parseInt(b,10);
+}
+// Acha no texto livre da nota as máquinas cadastradas: o fornecedor escreve, por exemplo,
+// "PICADOR 02- ESCAVADEIRA 02" ou "OC: SKIDY 02" nas informações complementares. Compara
+// palavra a palavra (sem acento e sem pontuação) para "PÁ CARREGADEIRA 01" casar com "PA
+// CARREGADEIRA 01" e "PICADOR 02-" não virar "PICADOR 021".
+// Duas passadas: primeiro o nome exato (contando "PICADOR 2" como "PICADOR 02" e a placa
+// solta de quem tem placa no nome); depois, só nas palavras que sobraram, o nome escrito
+// errado — e aí o número TEM de bater, para SKIDDER 02 nunca virar SKIDDER 03. Se a
+// palavra errada serve para duas máquinas, não arrisca nenhuma.
+// maquinas: [{id, nome}] — devolve [{maq, exato, trecho}] na ordem em que aparecem.
+function nfAcharMaquinas(texto,maquinas){
+  var limpo=_nfNorm(texto).replace(/[^A-Z0-9]+/g,' ').trim();
+  if(limpo.length<3) return [];
+  var toks=limpo.split(' '), usado={}, achadas=[], aprox=[];
+
+  (maquinas||[]).forEach(function(m){
+    var nome=_nfNorm(m.nome).replace(/[^A-Z0-9]+/g,' ').trim();
+    if(!nome) return;
+    var tentativas=[nome];
+    // o fornecedor escreve "PICADOR 2" onde o cadastro diz "PICADOR 02" (e vice-versa)
+    var semZero=nome.replace(/ 0(\d)$/,' $1'), comZero=nome.replace(/ (\d)$/,' 0$1');
+    if(semZero!==nome) tentativas.push(semZero);
+    if(comZero!==nome) tentativas.push(comZero);
+    // nome com placa junto ("AMAROK OYA6J73"): a nota pode citar só a placa
+    var placa=(nome.match(/\b[A-Z]{3}\s?\d[A-Z0-9]\d{2}\b/)||[])[0];
+    if(placa) tentativas.push(placa.replace(/\s/g,''));
+    for(var v=0;v<tentativas.length;v++){
+      var alvo=tentativas[v].split(' ');
+      for(var i=0;i+alvo.length<=toks.length;i++){
+        if(toks.slice(i,i+alvo.length).join(' ')!==alvo.join(' ')) continue;
+        for(var k=0;k<alvo.length;k++) usado[i+k]=1;
+        achadas.push({maq:m, exato:true, trecho:alvo.join(' '), pos:i});
+        return;
+      }
+    }
+    // candidata por semelhança (confirmada depois, se ninguém mais disputar a palavra)
+    var partes=nome.split(' '), num=/^\d+$/.test(partes[partes.length-1])?partes.pop():'';
+    if(partes.some(function(p){ return /\d/.test(p); })) return; // nome com placa/código: só exato
+    var chave=partes.sort(function(a,b){ return b.length-a.length; })[0]||'';
+    if(chave.length<4) return;
+    for(var j=0;j<toks.length;j++){
+      if(usado[j] || !_nfParecido(toks[j],chave)) continue;
+      if(num && !_nfMesmoNumero(toks[j+1],num)) continue;
+      aprox.push({maq:m, exato:false, trecho:toks.slice(j,j+(num?2:1)).join(' '), pos:j});
+      break;
+    }
+  });
+
+  // palavra que serve para mais de uma máquina não vale palpite
+  var quantos={};
+  aprox.forEach(function(a){ quantos[a.pos]=(quantos[a.pos]||0)+1; });
+  aprox.forEach(function(a){ if(quantos[a.pos]===1 && !usado[a.pos]) achadas.push(a); });
+
+  achadas.sort(function(a,b){ return a.pos-b.pos; });
+  return achadas.map(function(a){ return {maq:a.maq, exato:a.exato, trecho:a.trecho}; });
+}
+
 function _nfValidar(b){
   if(!b.data) b.erro='sem data de emissão';
   else if(!(b.valor>0)) b.erro='valor total da nota é zero';
@@ -219,6 +308,8 @@ function nfMontarLista(docs,destino){
     g.servicos=_nfR2(g.docs.filter(function(d){return d.modelo==='NFSE';}).reduce(function(a,d){return a+d.valor;},0));
     g.total=_nfR2(g.pecas+g.servicos);
     g.itens=[]; g.docs.forEach(function(d){ g.itens=g.itens.concat(d.itens||[]); });
+    // texto livre das notas do grupo: é onde o fornecedor escreve máquina, OS, placa, KM
+    g.textoLivre=g.docs.map(function(d){ return d.textoLivre||''; }).join(' | ');
     g.outroCnpj=g.docs.filter(function(d){ return d.destCnpj && d.destCnpj!==NF_CNPJ_EMPRESA; }).map(function(d){return d.destNome||d.destCnpj;})[0]||'';
 
     // a outra nota desta OS já foi lançada? então esta se ANEXA ao lançamento existente

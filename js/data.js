@@ -113,7 +113,8 @@ function loadFromSheets(callback) {
     };});
     DB.nfItens = nfItensR.map(function(x){ return {
       ID:x.id, DOCUMENTO_ID:x.documento_id, N_ITEM:x.n_item, TIPO:x.tipo, CODIGO:x.codigo, DESCRICAO:x.descricao,
-      QUANTIDADE:x.quantidade, UNIDADE:x.unidade, VALOR_BRUTO:x.valor_bruto, DESCONTO:x.desconto, VALOR:x.valor
+      QUANTIDADE:x.quantidade, UNIDADE:x.unidade, VALOR_BRUTO:x.valor_bruto, DESCONTO:x.desconto, VALOR:x.valor,
+      MAQ_MANUTENCAO_ID:x.maq_manutencao_id   // nota dividida entre máquinas: de quem é o item
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {
@@ -176,6 +177,7 @@ function loadFromSheets(callback) {
       ID:x.id, DATA:x.data, ID_MAQUINA:x.id_maquina, TIPO:x.tipo, SERVICO:x.servico, HORIMETRO:x.horimetro,
       KM:x.km, CUSTO_PECAS:x.custo_pecas, CUSTO_MAO_OBRA:x.custo_mao_obra, CUSTO_TERCEIROS:x.custo_terceiros,
       CUSTO_TOTAL:x.custo_total, OFICINA_FORNECEDOR:x.oficina_fornecedor, FLORESTA_OPC:x.floresta_opc, OBS:x.obs,
+      NF_PRINCIPAL_ID:x.nf_principal_id,
       USUARIO:x.usuario_nome_legado, _usuarioId:x.usuario_id
     };});
 
