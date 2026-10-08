@@ -158,7 +158,7 @@ function _maqNfeRender(){
     h+='<tr>'+
       '<td class="maq-mono" style="font-size:11.5px">'+_nfEsc(nfRotuloNotas(g))+(g.os?'<div style="color:var(--text2)">OS '+_nfEsc(g.os)+'</div>':'')+'</td>'+
       '<td class="maq-mono">'+_nfEsc(formatDateBR(g.data))+'</td>'+
-      '<td style="max-width:170px;font-size:11px">'+_nfEsc(g.emitNome||'-')+'</td>'+
+      '<td class="nf-forn" title="'+_nfEsc(g.emitNome||'')+'">'+_nfEsc(g.emitNome||'-')+'</td>'+
       '<td class="maq-mono">'+(g.pecas?fmtR(g.pecas):'—')+'</td>'+
       '<td class="maq-mono">'+(g.servicos?fmtR(g.servicos):'—')+'</td>'+
       destino+

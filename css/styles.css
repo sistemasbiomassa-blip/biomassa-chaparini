@@ -472,6 +472,11 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px;padding:8px 10px;border:1px dashed var(--border);border-radius:8px}
 .nf-bulk-tit{color:var(--text2);text-transform:uppercase;font-size:10.5px;letter-spacing:.05em;font-weight:600}
 .nf-bulk-item{display:inline-flex;align-items:center;gap:5px}
+/* td do sistema é white-space:nowrap, então o nome comprido do fornecedor passava por
+   cima da coluna Peças em vez de respeitar a largura. Aqui ele quebra em linhas. */
+.nf-modal .maq-table td.nf-forn{white-space:normal;max-width:180px;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+/* pelo mesmo motivo, o aviso do que foi lido da nota quebra em vez de esticar a coluna */
+.nf-modal .maq-table .nf-lido,.nf-modal .maq-table .nf-alerta{white-space:normal;max-width:200px;line-height:1.3}
 /* divisão da nota entre máquinas (js/maq-nfe.js) */
 .nf-link{display:block;margin-top:4px;font-size:10.5px;color:var(--accent);cursor:pointer;text-decoration:underline}
 .nf-link:hover{opacity:.8}
