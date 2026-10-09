@@ -523,8 +523,10 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-itens{margin-top:6px;font-size:11.5px}
 .nf-itens summary{cursor:pointer;color:var(--text2);list-style:none;padding:3px 0}
 .nf-itens summary::-webkit-details-marker{display:none}
-.nf-itens summary:before{content:"B8 ";color:var(--accent)}
-.nf-itens[open] summary:before{content:"BE "}
+/* triângulo por escape CSS (\25B8/\25BE): escrito direto, o caractere já se perdeu uma
+   vez numa edição e virava "B8" na tela, antes do resumo dos itens */
+.nf-itens summary:before{content:"\25B8  ";color:var(--accent)}
+.nf-itens[open] summary:before{content:"\25BE  "}
 .nf-itens summary strong{color:var(--text)}
 .nf-itens summary span{color:var(--text2)}
 .nf-itens-box{max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:5px;background:var(--surface2)}
@@ -533,6 +535,15 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-itens-box tr:last-child td{border-bottom:none}
 .nf-itens-box td:first-child{width:18px}
 .nf-itens-box td:nth-child(3),.nf-itens-box td:nth-child(4){white-space:nowrap;text-align:right}
+/* Observações da nota (js/nf-ui.js nfObsHtml): mesmo visual da lista de itens */
+.nf-obs{margin-top:5px;font-size:11.5px}
+.nf-obs summary{cursor:pointer;color:var(--text2);list-style:none;padding:3px 0}
+.nf-obs summary::-webkit-details-marker{display:none}
+.nf-obs summary:before{content:"\25B8  ";color:var(--accent)}
+.nf-obs[open] summary:before{content:"\25BE  "}
+.nf-obs summary strong{color:var(--text)}
+.nf-obs-txt{padding:7px 9px;margin-top:5px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);line-height:1.6;white-space:normal;word-break:break-word}
+.nf-obs-txt em{font-style:normal;font-weight:600;color:var(--accent)}
 
 /* selo clicavel nas tabelas + janela de detalhe */
 .nf-selo{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;white-space:nowrap;cursor:pointer;background:rgba(0,180,216,.1);color:var(--accent);border:1px solid rgba(0,180,216,.3)}
@@ -4684,6 +4695,27 @@ function nfAvisoExclusao(destino,id){
 // resumo ("17 peças · 7 serviços") não diz o que a nota tem dentro.
 // Aberta por padrão em nota curta; em nota longa vem fechada, mas o título já mostra as
 // primeiras descrições para não precisar abrir uma por uma num lote grande.
+// Observações da nota: informações complementares da NF-e (infCpl) e descrição do
+// serviço da NFS-e. É ali que o fornecedor escreve máquina, OS, placa e KM — quando o
+// sistema lê alguma dessas coisas, é desse texto que saiu, então dá para conferir o que a
+// nota diz de verdade. Fica fechada para não tomar a tela, com uma prévia no título.
+function nfObsHtml(g){
+  var partes=((g&&g.docs)||[]).map(function(d){
+    var t=_nfLimpaObs(d.textoLivre);
+    return t?{rot:nfRotuloDoc(d), txt:t}:null;
+  }).filter(function(x){ return x; });
+  if(!partes.length) return '';
+  var previa=partes[0].txt.slice(0,70)+(partes[0].txt.length>70?'…':'');
+  return '<details class="nf-obs"><summary><strong>Observações da nota</strong> <span>'+_nfEsc(previa)+'</span></summary>'+
+    partes.map(function(p){
+      return '<div class="nf-obs-txt">'+(partes.length>1?'<em>'+_nfEsc(p.rot)+':</em> ':'')+_nfEsc(p.txt)+'</div>';
+    }).join('')+'</details>';
+}
+// o hash MD-5 que algumas notas trazem no começo não diz nada a quem confere
+function _nfLimpaObs(t){
+  return String(t||'').replace(/MD-?5:\s*[0-9A-Fa-f]{8,}/g,' ').replace(/\s+/g,' ').trim();
+}
+
 // celulaExtra(item, n): HTML de uma coluna a mais por item — usado pelo importador de
 // maquinário para escolher a máquina de cada item quando a nota é dividida.
 function nfItensHtml(g,celulaExtra){
@@ -5022,7 +5054,9 @@ function _maqNfeRender(){
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
       '</tr>'+
       '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+
-        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null)+'</td></tr>';
+        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null)+
+        nfObsHtml(g)+   // o que a nota escreveu: é de onde sai a máquina lida
+        '</td></tr>';
   });
   cont.innerHTML=h+'</tbody></table></div>';
   _maqNfeResumo();
@@ -5252,7 +5286,8 @@ function _camNfeRender(){
       (g.pecas?'<span>📄 Peças <strong>'+fmtR(g.pecas)+'</strong></span>':'')+
       (g.servicos?'<span>🧾 Serviço <strong>'+fmtR(g.servicos)+'</strong></span>':'')+
       '<span>Total <strong>'+fmtR(g.total)+'</strong></span>'+
-      '</div>'+nfItensHtml(g);   // descrição item a item: é por ela que se escolhe o tipo
+      '</div>'+nfItensHtml(g)+   // descrição item a item: é por ela que se escolhe o tipo
+      nfObsHtml(g);              // e o texto da nota, de onde saem placa, OS e KM
 
     if(g.anexarA){
       h+='<div class="nf-card">'+cab+valores+

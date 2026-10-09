@@ -80,7 +80,8 @@ function _camNfeRender(){
       (g.pecas?'<span>📄 Peças <strong>'+fmtR(g.pecas)+'</strong></span>':'')+
       (g.servicos?'<span>🧾 Serviço <strong>'+fmtR(g.servicos)+'</strong></span>':'')+
       '<span>Total <strong>'+fmtR(g.total)+'</strong></span>'+
-      '</div>'+nfItensHtml(g);   // descrição item a item: é por ela que se escolhe o tipo
+      '</div>'+nfItensHtml(g)+   // descrição item a item: é por ela que se escolhe o tipo
+      nfObsHtml(g);              // e o texto da nota, de onde saem placa, OS e KM
 
     if(g.anexarA){
       h+='<div class="nf-card">'+cab+valores+

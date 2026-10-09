@@ -81,6 +81,27 @@ function nfAvisoExclusao(destino,id){
 // resumo ("17 peças · 7 serviços") não diz o que a nota tem dentro.
 // Aberta por padrão em nota curta; em nota longa vem fechada, mas o título já mostra as
 // primeiras descrições para não precisar abrir uma por uma num lote grande.
+// Observações da nota: informações complementares da NF-e (infCpl) e descrição do
+// serviço da NFS-e. É ali que o fornecedor escreve máquina, OS, placa e KM — quando o
+// sistema lê alguma dessas coisas, é desse texto que saiu, então dá para conferir o que a
+// nota diz de verdade. Fica fechada para não tomar a tela, com uma prévia no título.
+function nfObsHtml(g){
+  var partes=((g&&g.docs)||[]).map(function(d){
+    var t=_nfLimpaObs(d.textoLivre);
+    return t?{rot:nfRotuloDoc(d), txt:t}:null;
+  }).filter(function(x){ return x; });
+  if(!partes.length) return '';
+  var previa=partes[0].txt.slice(0,70)+(partes[0].txt.length>70?'…':'');
+  return '<details class="nf-obs"><summary><strong>Observações da nota</strong> <span>'+_nfEsc(previa)+'</span></summary>'+
+    partes.map(function(p){
+      return '<div class="nf-obs-txt">'+(partes.length>1?'<em>'+_nfEsc(p.rot)+':</em> ':'')+_nfEsc(p.txt)+'</div>';
+    }).join('')+'</details>';
+}
+// o hash MD-5 que algumas notas trazem no começo não diz nada a quem confere
+function _nfLimpaObs(t){
+  return String(t||'').replace(/MD-?5:\s*[0-9A-Fa-f]{8,}/g,' ').replace(/\s+/g,' ').trim();
+}
+
 // celulaExtra(item, n): HTML de uma coluna a mais por item — usado pelo importador de
 // maquinário para escolher a máquina de cada item quando a nota é dividida.
 function nfItensHtml(g,celulaExtra){

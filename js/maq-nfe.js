@@ -245,7 +245,9 @@ function _maqNfeRender(){
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
       '</tr>'+
       '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+
-        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null)+'</td></tr>';
+        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null)+
+        nfObsHtml(g)+   // o que a nota escreveu: é de onde sai a máquina lida
+        '</td></tr>';
   });
   cont.innerHTML=h+'</tbody></table></div>';
   _maqNfeResumo();
