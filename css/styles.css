@@ -481,6 +481,10 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-link{display:block;margin-top:4px;font-size:10.5px;color:var(--accent);cursor:pointer;text-decoration:underline}
 .nf-link:hover{opacity:.8}
 .nf-itens-box select.nf-item-maq{padding:3px 6px;font-size:11px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);max-width:170px}
+/* quantidade do item repartida: uma linha por máquina (máquina · quanto · quanto custa) */
+.nf-parte{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.nf-itens-box input.nf-parte-qtd{width:58px;padding:3px 6px;font-size:11px;text-align:right;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace}
+.nf-parte-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);white-space:nowrap}
 /* linha só com a lista de itens, logo abaixo da linha da nota */
 .nf-itens-linha td{padding-top:0 !important;border-bottom:1px solid var(--border)}
 .nf-itens-linha .nf-itens{margin-top:0}
