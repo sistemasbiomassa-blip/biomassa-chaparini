@@ -1459,7 +1459,9 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
           </div>
           <div class="table-container" id="mcTabelaBox" style="margin-top:14px">
             <div class="table-header"><h3>Todos os gastos</h3><span class="chart-badge" id="mcDetalheTotal"></span></div>
-            <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Data</th><th>Placa</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
+            <!-- O cabeçalho é montado em js/manut-custos.js: a coluna Ações só existe
+                 para quem pode editar (ADMIN/ANALISTA). -->
+            <div class="table-scroll"><table class="mc-tbl"><thead><tr id="mcDetalheHead"></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
           </div>
           <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
                por dentro. Fechado por padrão para não parecer um segundo relatório. -->
@@ -2607,7 +2609,15 @@ function confirmDelete(){
       DB.cadastro.splice(found.idx, 1);
       showToast('✅ Lançamento excluído!');
       closeDeleteModal();
-      buildHistorico();
+      // Redesenha a página onde o botão foi clicado (mesma rota do saveEdit): o botão de
+      // excluir cadastro aparece no Histórico e também na sub-aba Histórico da Manutenção.
+      var ativaDel=document.querySelector('.nav-item.active');
+      var pgDel=ativaDel?ativaDel.getAttribute('data-page'):'historico';
+      if(pgDel==='manutencao') buildManutencao();
+      else if(pgDel==='producao') buildProducao();
+      else if(pgDel==='financeiro') buildFinanceiro();
+      else if(pgDel==='tempoespera') buildTempoEspera();
+      else buildHistorico();
     } else {
       showToast('❌ Falha ao excluir: '+((res&&res.error)||'erro desconhecido'),true);
     }
@@ -6935,7 +6945,23 @@ function createFilters(containerId,filterDefs,extraHtml,clearFn,noPdfBtn){
       displayOptions=filteredWeeks;
       displayLabels=filteredWeeks.map(getWeekDisplay);
     }
-    if(displayLabels){
+    // f.groups: opções em <optgroup>, para quando o mesmo dropdown precisa oferecer
+    // duas taxonomias diferentes (ex: Histórico da Manutenção, que lista tipo de
+    // manutenção e classe de despesa de viagem). Numa lista única alfabética as duas
+    // se misturam e parece que só existe uma delas.
+    if(f.groups){
+      f.groups.forEach(function(g){
+        if(!g.options||!g.options.length) return;
+        var og=document.createElement('optgroup');
+        og.label=g.label;
+        g.options.forEach(function(o){
+          var op=document.createElement('option');
+          op.value=o; op.textContent=o;
+          og.appendChild(op);
+        });
+        sel.appendChild(og);
+      });
+    } else if(displayLabels){
       displayOptions.forEach(function(o,i){sel.innerHTML+='<option value="'+o+'">'+(displayLabels[i]||o)+'</option>'});
     } else {
       displayOptions.forEach(function(o){sel.innerHTML+='<option value="'+o+'">'+o+'</option>'});
@@ -8481,24 +8507,69 @@ function resetManutGarFiltros(){
 }
 
 // ==================== DETALHAMENTO DE MANUTENÇÃO ====================
-function buildManutDetalhamento(){
-  var uPlaca=[],uTipo=[],plaSet={},tipoSet={};
+// A aba Histórico responde "o que já foi feito neste caminhão", e isso hoje é lançado em
+// dois lugares diferentes do sistema:
+//   • lançamento → registro de manut_realizada (tem tipo, KM, nota fiscal, posições de pneu)
+//   • despesa    → linha de cadastro com classe marcada em classes_despesa.manutencao
+// Até 2026-10-12 só os lançamentos apareciam aqui: um remendo de pneu lançado como
+// despesa de viagem aparecia em Custos e sumia desta tela, mesmo estando no sistema. Ele
+// estranhou, com razão — é histórico de serviço do mesmo jeito. As duas origens vêm
+// juntas desde então, com o mesmo selo de origem da aba Custos. Nada é copiado: cada uma
+// continua gravada onde sempre esteve, aqui elas só são lidas juntas.
+// A despesa não tem tipo de manutenção nem KM, então não entra na matriz nem gera alerta:
+// as colunas de controle vêm vazias de propósito, e o selo diz por quê.
+function _mdLinhas(){
+  var out=[];
   DB.manutRealizada.forEach(function(r){
-    if(r.PLACA&&!plaSet[r.PLACA]){plaSet[r.PLACA]=1;uPlaca.push(r.PLACA)}
-    if(r.TIPO_MANUTENCAO&&!tipoSet[r.TIPO_MANUTENCAO]){tipoSet[r.TIPO_MANUTENCAO]=1;uTipo.push(r.TIPO_MANUTENCAO)}
+    out.push({
+      origem:'lancamento', id:r.ID, data:String(r.DATA_MANUTENCAO||'').slice(0,10),
+      placa:r.PLACA||'', tipo:r.TIPO_MANUTENCAO||'', km:r.KM_NA_MANUTENCAO,
+      motorista:r.MOTORISTA||'', valor:r.VALOR, local:r.LOCAL_SERVICO||'',
+      nota:r.NOTA_FISCAL||'', obs:r['OBSERVAÇÃO']||'', usuario:r.USUARIO||''
+    });
   });
-  uPlaca.sort();uTipo.sort();
+  // Só as classes marcadas como manutenção (OFICINA, BORRACHARIA, PEÇAS...). O resto da
+  // despesa de viagem é do Financeiro e não tem nada a ver com histórico de serviço.
+  DB.cadastro.forEach(function(r){
+    var v=despesaManutencao(r);
+    if(v<=0) return;
+    out.push({
+      origem:'despesa', id:r.ID, data:String(r.DATA||'').slice(0,10),
+      placa:r.PLACA||'', tipo:r['CLASSE DESPESA']||'', km:null,
+      motorista:r.MOTORISTA||'', valor:v, local:r['LOCAL DESPESA']||'',
+      nota:'', obs:r['DESCR. DESPESA']||'', usuario:r.USUARIO||''
+    });
+  });
+  return out.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
+}
+
+function buildManutDetalhamento(){
+  var todas=_mdLinhas();
+  var plaSet={},tipoManut={},classeDesp={};
+  todas.forEach(function(l){
+    if(l.placa) plaSet[l.placa]=1;
+    if(!l.tipo) return;
+    if(l.origem==='despesa') classeDesp[l.tipo]=1; else tipoManut[l.tipo]=1;
+  });
 
   createFilters('filtersManutDet',[
-    {id:'fmdPlaca',label:'Placa',options:uPlaca,onChange:buildManutDetalhamento},
-    {id:'fmdTipo',label:'Tipo',options:uTipo,onChange:buildManutDetalhamento},
+    {id:'fmdPlaca',label:'Placa',options:Object.keys(plaSet).sort(),onChange:buildManutDetalhamento},
+    // Dois optgroups porque são taxonomias diferentes: numa lista única alfabética
+    // "BORRACHARIA" e "Pneus" se misturam e parece que só existe uma das duas.
+    {id:'fmdTipo',label:'Tipo',groups:[
+      {label:'Tipo de manutenção',options:Object.keys(tipoManut).sort()},
+      {label:'Categoria da despesa de viagem',options:Object.keys(classeDesp).sort()}
+    ],onChange:buildManutDetalhamento},
+    {id:'fmdOrigem',label:'Origem',options:['despesa','lancamento'],
+     optionLabels:['Despesa de viagem','Lançado na manutenção'],onChange:buildManutDetalhamento},
     {type:'dateRange',idIni:'fmdDtIni',idFim:'fmdDtFim',onChange:buildManutDetalhamento}
   ], '<button class="filter-btn-pdf" onclick="exportManutDetPDF()">📄 Exportar PDF</button>',
-     function(){ clearFilters(['fmdPlaca','fmdTipo','fmdDtIni','fmdDtFim'],buildManutDetalhamento); },
+     function(){ clearFilters(['fmdPlaca','fmdTipo','fmdOrigem','fmdDtIni','fmdDtFim'],buildManutDetalhamento); },
      true);   // noPdfBtn: o botão genérico exporta a PÁGINA inteira; aqui queremos só este quadro
 
   var fPlaca=(document.getElementById('fmdPlaca')||{}).value||'';
   var fTipo=(document.getElementById('fmdTipo')||{}).value||'';
+  var fOrigem=(document.getElementById('fmdOrigem')||{}).value||'';
   var fDtIni=(document.getElementById('fmdDtIni')||{}).value||'';
   var fDtFim=(document.getElementById('fmdDtFim')||{}).value||'';
 
@@ -8508,39 +8579,56 @@ function buildManutDetalhamento(){
   var placasGarantia={};
   if(soGarantia) DB.garantiaCaminhoes.filter(garantiaEstaAtiva).forEach(function(g){ placasGarantia[String(g.PLACA).replace(/\s+/g,'')]=1; });
 
-  var rows=DB.manutRealizada.filter(function(r){
-    if(soGarantia && !placasGarantia[String(r.PLACA||'').replace(/\s+/g,'')]) return false;
-    if(fPlaca && r.PLACA!==fPlaca) return false;
-    if(fTipo && r.TIPO_MANUTENCAO!==fTipo) return false;
-    if((fDtIni||fDtFim) && !dateInRange(r.DATA_MANUTENCAO,fDtIni,fDtFim)) return false;
+  var rows=todas.filter(function(l){
+    if(soGarantia && !placasGarantia[String(l.placa||'').replace(/\s+/g,'')]) return false;
+    if(fPlaca && l.placa!==fPlaca) return false;
+    if(fTipo && l.tipo!==fTipo) return false;
+    if(fOrigem && l.origem!==fOrigem) return false;
+    if((fDtIni||fDtFim) && !dateInRange(l.data,fDtIni,fDtFim)) return false;
     return true;
-  }).sort(function(a,b){return String(b.DATA_MANUTENCAO||'').localeCompare(String(a.DATA_MANUTENCAO||''))});
+  });
 
   var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
-  var colCount=canEdit?11:10;
-  var tH='<div class="table-header"><h3>Detalhamento de Manutenção'+(soGarantia?' — em garantia':'')+'</h3><span class="chart-badge">'+rows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Tipo</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
-  rows.forEach(function(r){
+  var colCount=canEdit?12:11;
+  var nLanc=0;
+  rows.forEach(function(l){ if(l.origem==='lancamento') nLanc++; });
+  var badge=rows.length+' registros'+(rows.length?' · '+nLanc+' na manutenção · '+(rows.length-nLanc)+' despesa de viagem':'');
+  var tH='<div class="table-header"><h3>Detalhamento de Manutenção'+(soGarantia?' — em garantia':'')+'</h3><span class="chart-badge">'+badge+'</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Placa</th><th>Origem</th><th>Tipo</th><th>KM</th><th>Motorista</th><th>Valor</th><th>Local do Serviço</th><th>Nota Fiscal</th><th>Observação</th><th>Pneus</th>'+(canEdit?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  rows.forEach(function(l){
+    var ehDesp=l.origem==='despesa';
     var actCell='';
     if(canEdit){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
-      actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openManutRealModal(\''+r.ID+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
-        (currentUserData.perfil==='ADMIN'?' <button class="btn-delete-row" onclick="openManutRealDelete(\''+r.ID+'\')" title="Excluir">🗑️</button>':'')+'</td>';
+      // Cada origem abre o modal da sua própria tabela: despesa vai para o modal do
+      // Cadastro (o mesmo do Financeiro e da Produção), lançamento vai para o da Manutenção.
+      var canEditThis=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+      var fnEdit=ehDesp?'openEditModal':'openManutRealModal';
+      var fnDel=ehDesp?'openDeleteModal':'openManutRealDelete';
+      actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="'+fnEdit+'(\''+l.id+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
+        (currentUserData.perfil==='ADMIN'?' <button class="btn-delete-row" onclick="'+fnDel+'(\''+l.id+'\')" title="Excluir">🗑️</button>':'')+'</td>';
     }
-    var itensPneu=DB.manutPneusItens.filter(function(it){return String(it.MANUT_REALIZADA_ID)===String(r.ID)});
-    var pneuCell=itensPneu.length?'<span class="pneu-count-badge" onclick="_toggleManutDetPneu(\''+r.ID+'\')">🛞 '+itensPneu.length+' ▾</span>':'<span style="color:var(--text2)">—</span>';
-    tH+='<tr><td style="'+mono+'">'+formatDateBR(r.DATA_MANUTENCAO)+'</td>'+
-      '<td style="'+mono+';color:var(--accent)">'+(r.PLACA||'-')+'</td>'+
-      '<td>'+(r.TIPO_MANUTENCAO||'-')+'</td>'+
-      '<td style="'+mono+'">'+(r.KM_NA_MANUTENCAO?numBR(r.KM_NA_MANUTENCAO,2):'-')+'</td>'+
-      '<td>'+(r.MOTORISTA||'-')+'</td>'+
-      '<td style="'+mono+';color:#ef4444">'+(r.VALOR?'R$'+numBR(r.VALOR,2):'-')+'</td>'+
-      '<td>'+(r.LOCAL_SERVICO||'-')+'</td>'+
-      '<td style="'+mono+'">'+((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',r.ID))||(r.NOTA_FISCAL||'-'))+'</td>'+
-      '<td>'+(r['OBSERVAÇÃO']||'-')+'</td>'+
+    // Pneu só existe no lançamento da Manutenção — a despesa de viagem não tem posição
+    // nem número de pneu (é o limite que impede calcular vida útil a partir dela).
+    var itensPneu=ehDesp?[]:DB.manutPneusItens.filter(function(it){return String(it.MANUT_REALIZADA_ID)===String(l.id)});
+    var pneuCell=itensPneu.length?'<span class="pneu-count-badge" onclick="_toggleManutDetPneu(\''+l.id+'\')">🛞 '+itensPneu.length+' ▾</span>':'<span style="color:var(--text2)">—</span>';
+    var selo=ehDesp
+      ? '<span class="mc-org mc-org-d" title="Lançada como despesa na viagem. Não tem tipo de manutenção nem KM, então não entra na matriz e não gera alerta.">despesa</span>'
+      : '<span class="mc-org mc-org-l" title="Lançada direto na aba Manutenção, com tipo e KM.">manutenção</span>';
+    var vazio='<span style="color:var(--text2)">—</span>';
+    var notaCell=ehDesp?vazio:((typeof nfSeloNotas==='function'&&nfSeloNotas('caminhao',l.id))||(l.nota?_mcEsc(l.nota):'-'));
+    tH+='<tr><td style="'+mono+'">'+formatDateBR(l.data)+'</td>'+
+      '<td style="'+mono+';color:var(--accent)">'+(l.placa?_mcEsc(l.placa):'-')+'</td>'+
+      '<td>'+selo+'</td>'+
+      '<td>'+(l.tipo?_mcEsc(l.tipo):'-')+'</td>'+
+      '<td style="'+mono+'">'+(l.km?numBR(l.km,2):vazio)+'</td>'+
+      '<td>'+(l.motorista?_mcEsc(l.motorista):'-')+'</td>'+
+      '<td style="'+mono+';color:#ef4444">'+(l.valor?'R$'+numBR(l.valor,2):'-')+'</td>'+
+      '<td>'+(l.local?_mcEsc(l.local):'-')+'</td>'+
+      '<td style="'+mono+'">'+notaCell+'</td>'+
+      '<td'+(ehDesp?' title="Descrição da despesa"':'')+'>'+(l.obs?_mcEsc(l.obs):'-')+'</td>'+
       '<td>'+pneuCell+'</td>'+actCell+'</tr>';
     if(itensPneu.length){
-      tH+='<tr id="mdPneuExp_'+r.ID+'" style="display:none"><td colspan="'+colCount+'" style="background:var(--surface2);padding:14px 20px">'+
+      tH+='<tr id="mdPneuExp_'+l.id+'" style="display:none"><td colspan="'+colCount+'" style="background:var(--surface2);padding:14px 20px">'+
         '<table class="pneu-mini-tbl"><thead><tr><th>Posição</th><th>Pneu removido</th><th>Pneu instalado</th><th>Marca/Modelo</th></tr></thead><tbody>'+
         itensPneu.map(function(it){return '<tr><td>'+_pneuPosLabel(it)+'</td><td style="'+mono+'">'+(it.PNEU_REMOVIDO||'-')+'</td><td style="'+mono+';color:var(--green)">'+(it.PNEU_INSTALADO||'-')+'</td><td>'+(it.MARCA_MODELO||'-')+'</td></tr>';}).join('')+
         '</tbody></table></td></tr>';
@@ -8555,6 +8643,7 @@ function exportManutDetPDF(){
   var f=[];
   if(v('fmdPlaca')) f.push('Placa: '+v('fmdPlaca'));
   if(v('fmdTipo')) f.push('Tipo: '+v('fmdTipo'));
+  if(v('fmdOrigem')) f.push('Origem: '+(v('fmdOrigem')==='despesa'?'despesa de viagem':'lançado na manutenção'));
   if(v('fmdDtIni')||v('fmdDtFim')) f.push('Período: '+(v('fmdDtIni')?formatDateBR(v('fmdDtIni')):'início')+' até '+(v('fmdDtFim')?formatDateBR(v('fmdDtFim')):'hoje'));
   exportSecaoPDF('tblManutDet','Detalhamento de Manutenção',f.join(' · ')||'nenhum (todos os registros)',true);
 }
@@ -8703,7 +8792,7 @@ function confirmManutRealDelete(){
 // Por isso a coluna "Origem": o que veio da despesa não tem tipo de manutenção nem KM,
 // e não gera alerta — é gasto, não é controle de periodicidade.
 // ============================================================
-var mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''};
+var mcFiltro={dtIni:'',dtFim:'',placa:'',motorista:'',origem:'',classe:''};
 
 function _mcLinhas(){
   var out=[];
@@ -8713,8 +8802,9 @@ function _mcLinhas(){
     if(v<=0) return;
     out.push({
       origem:'despesa', data:String(r.DATA||'').slice(0,10), placa:r.PLACA||'',
+      motorista:r.MOTORISTA||'',
       categoria:r['CLASSE DESPESA']||'(sem classe)', descricao:r['DESCR. DESPESA']||'',
-      local:r['LOCAL DESPESA']||'', valor:v, id:r.ID
+      local:r['LOCAL DESPESA']||'', valor:v, id:r.ID, usuario:r.USUARIO||''
     });
   });
   // 2) lançamentos da própria aba Manutenção
@@ -8723,8 +8813,9 @@ function _mcLinhas(){
     if(v<=0) return;
     out.push({
       origem:'lancamento', data:String(r.DATA_MANUTENCAO||'').slice(0,10), placa:r.PLACA||'',
+      motorista:r.MOTORISTA||'',
       categoria:r.TIPO_MANUTENCAO||'(sem tipo)', descricao:r['OBSERVAÇÃO']||'',
-      local:r.LOCAL_SERVICO||'', valor:v, id:r.ID, km:r.KM_NA_MANUTENCAO
+      local:r.LOCAL_SERVICO||'', valor:v, id:r.ID, km:r.KM_NA_MANUTENCAO, usuario:r.USUARIO||''
     });
   });
   return out.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
@@ -8733,6 +8824,7 @@ function _mcLinhas(){
 function _mcFiltrar(linhas){
   return linhas.filter(function(l){
     if(mcFiltro.placa && l.placa!==mcFiltro.placa) return false;
+    if(mcFiltro.motorista && l.motorista!==mcFiltro.motorista) return false;
     if(mcFiltro.origem && l.origem!==mcFiltro.origem) return false;
     if(mcFiltro.classe && l.categoria!==mcFiltro.classe) return false;
     if((mcFiltro.dtIni||mcFiltro.dtFim) && !dateInRange(l.data,mcFiltro.dtIni,mcFiltro.dtFim)) return false;
@@ -8741,7 +8833,7 @@ function _mcFiltrar(linhas){
 }
 
 function _mcSet(campo,valor){ mcFiltro[campo]=valor; buildManutCustos(); }
-function resetMcFiltros(){ mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''}; buildManutCustos(); }
+function resetMcFiltros(){ mcFiltro={dtIni:'',dtFim:'',placa:'',motorista:'',origem:'',classe:''}; buildManutCustos(); }
 
 function buildManutCustos(){
   var wrap=document.getElementById('manutViewCustos');
@@ -8750,8 +8842,8 @@ function buildManutCustos(){
   var linhas=_mcFiltrar(todas);
 
   // ---------- barra de filtros ----------
-  var placas={},cats={};
-  todas.forEach(function(l){ if(l.placa) placas[l.placa]=1; cats[l.categoria]=1; });
+  var placas={},cats={},mots={};
+  todas.forEach(function(l){ if(l.placa) placas[l.placa]=1; cats[l.categoria]=1; if(l.motorista) mots[l.motorista]=1; });
   var fb=document.getElementById('filtersManutCusto');
   if(fb){
     var h='<span class="filter-label">Filtros</span>';
@@ -8760,6 +8852,9 @@ function buildManutCustos(){
     h+='<select class="filter-select" onchange="_mcSet(\'placa\',this.value)"><option value="">🚛 Todas as placas</option>';
     Object.keys(placas).sort().forEach(function(p){ h+='<option'+(mcFiltro.placa===p?' selected':'')+'>'+p+'</option>'; });
     h+='</select>';
+    h+='<select class="filter-select" onchange="_mcSet(\'motorista\',this.value)"><option value="">👤 Todos motoristas</option>';
+    Object.keys(mots).sort().forEach(function(m){ h+='<option value="'+_mcEsc(m)+'"'+(mcFiltro.motorista===m?' selected':'')+'>'+_mcEsc(m)+'</option>'; });
+    h+='</select>';
     h+='<select class="filter-select" onchange="_mcSet(\'classe\',this.value)"><option value="">🏷️ Todas as categorias</option>';
     Object.keys(cats).sort().forEach(function(c){ h+='<option'+(mcFiltro.classe===c?' selected':'')+'>'+_mcEsc(c)+'</option>'; });
     h+='</select>';
@@ -8767,8 +8862,9 @@ function buildManutCustos(){
        '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
        '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
     h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
-    // retrato (false): preferência de quem usa o relatório — as 7 colunas caem bem na
-    // largura do A4 em pé, e assim a folha sai no mesmo formato do resto do arquivo.
+    // retrato (false): preferência de quem usa o relatório — a folha sai no mesmo
+    // formato do resto do arquivo. A coluna Ações não vai para o PDF (_pdfPrepararClone
+    // tira a coluna cujo cabeçalho é "Ações"), então continuam 8 colunas de conteúdo.
     h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),false,\'kpiManutCusto\')">📄 Exportar PDF</button>';
     fb.innerHTML=h;
   }
@@ -8822,6 +8918,14 @@ function buildManutCustos(){
   document.getElementById('mcVeiculoBody').innerHTML=ph||'<tr><td colspan="4" class="mc-vazio">Nenhum gasto no período.</td></tr>';
 
   // ---------- detalhe ----------
+  // Editar daqui em vez de ter que achar o lançamento na aba de origem. O botão abre o
+  // modal certo conforme a origem: despesa de viagem vai para o modal do Cadastro (o
+  // mesmo do Financeiro e da Produção) e lançamento vai para o modal da Manutenção.
+  // A permissão segue a regra das outras abas; a garantia de verdade é o RLS no banco.
+  var mcPodeEditar=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mcCols=mcPodeEditar?9:8;
+  var cab=document.getElementById('mcDetalheHead');
+  if(cab) cab.innerHTML='<th>Data</th><th>Placa</th><th>Motorista</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th>'+(mcPodeEditar?'<th>Ações</th>':'');
   var th='';
   linhas.forEach(function(l){
     var selo=l.origem==='despesa'
@@ -8829,13 +8933,15 @@ function buildManutCustos(){
       : '<span class="mc-org mc-org-l" title="Lançada direto na aba Manutenção, com tipo e KM.">manutenção</span>';
     th+='<tr><td class="mc-num">'+formatDateBR(l.data)+'</td>'+
         '<td>'+(l.placa?'<span class="manut-placa-tag">'+_mcEsc(l.placa)+'</span>':'<span class="mc-vazio-cel">—</span>')+'</td>'+
+        '<td>'+(l.motorista?_mcEsc(l.motorista):'<span class="mc-vazio-cel">—</span>')+'</td>'+
         '<td>'+selo+'</td>'+
         '<td>'+_mcEsc(l.categoria)+'</td>'+
         '<td>'+(l.descricao?_mcEsc(l.descricao):'<span class="mc-vazio-cel">—</span>')+'</td>'+
         '<td>'+(l.local?_mcEsc(l.local):'<span class="mc-vazio-cel">—</span>')+'</td>'+
-        '<td class="mc-num mc-val">R$'+numBR(l.valor,2)+'</td></tr>';
+        '<td class="mc-num mc-val">R$'+numBR(l.valor,2)+'</td>'+
+        (mcPodeEditar?_mcCelulaAcoes(l):'')+'</tr>';
   });
-  document.getElementById('mcDetalheBody').innerHTML=th||'<tr><td colspan="7" class="mc-vazio">Nenhum gasto no período.</td></tr>';
+  document.getElementById('mcDetalheBody').innerHTML=th||'<tr><td colspan="'+mcCols+'" class="mc-vazio">Nenhum gasto no período.</td></tr>';
 
   // O quadro de peças e serviços é o detalhe DESTA mesma seleção: herda o filtro e é
   // redesenhado junto. Sem isso, duas tabelas vizinhas mostravam recortes diferentes.
@@ -8843,10 +8949,20 @@ function buildManutCustos(){
   document.getElementById('mcDetalheTotal').textContent=linhas.length+' lançamentos · R$'+numBR(total,2);
 }
 
+// ANALISTA só edita o que ele mesmo lançou; ADMIN edita tudo. Mesma regra do
+// Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
+function _mcCelulaAcoes(l){
+  var dono=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+  if(!dono) return '<td><span style="color:#888;font-size:11px">-</span></td>';
+  var fn=l.origem==='despesa'?'openEditModal':'openManutRealModal';
+  return '<td><button class="btn-edit-row" onclick="'+fn+'(\''+String(l.id).replace(/'/g,"\\'")+'\')" title="Editar '+(l.origem==='despesa'?'a despesa da viagem':'o lançamento de manutenção')+'">✏️</button></td>';
+}
+
 function _mcResumoFiltros(){
   var f=[];
   if(mcFiltro.dtIni||mcFiltro.dtFim) f.push('Período: '+(mcFiltro.dtIni?formatDateBR(mcFiltro.dtIni):'início')+' até '+(mcFiltro.dtFim?formatDateBR(mcFiltro.dtFim):'hoje'));
   if(mcFiltro.placa) f.push('Placa: '+mcFiltro.placa);
+  if(mcFiltro.motorista) f.push('Motorista: '+mcFiltro.motorista);
   if(mcFiltro.classe) f.push('Categoria: '+mcFiltro.classe);
   if(mcFiltro.origem) f.push('Origem: '+(mcFiltro.origem==='despesa'?'despesa de viagem':'lançado na manutenção'));
   return f.join(' · ')||'nenhum (todos os registros)';

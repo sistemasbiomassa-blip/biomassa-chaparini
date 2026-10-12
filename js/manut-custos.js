@@ -11,7 +11,7 @@
 // Por isso a coluna "Origem": o que veio da despesa não tem tipo de manutenção nem KM,
 // e não gera alerta — é gasto, não é controle de periodicidade.
 // ============================================================
-var mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''};
+var mcFiltro={dtIni:'',dtFim:'',placa:'',motorista:'',origem:'',classe:''};
 
 function _mcLinhas(){
   var out=[];
@@ -21,8 +21,9 @@ function _mcLinhas(){
     if(v<=0) return;
     out.push({
       origem:'despesa', data:String(r.DATA||'').slice(0,10), placa:r.PLACA||'',
+      motorista:r.MOTORISTA||'',
       categoria:r['CLASSE DESPESA']||'(sem classe)', descricao:r['DESCR. DESPESA']||'',
-      local:r['LOCAL DESPESA']||'', valor:v, id:r.ID
+      local:r['LOCAL DESPESA']||'', valor:v, id:r.ID, usuario:r.USUARIO||''
     });
   });
   // 2) lançamentos da própria aba Manutenção
@@ -31,8 +32,9 @@ function _mcLinhas(){
     if(v<=0) return;
     out.push({
       origem:'lancamento', data:String(r.DATA_MANUTENCAO||'').slice(0,10), placa:r.PLACA||'',
+      motorista:r.MOTORISTA||'',
       categoria:r.TIPO_MANUTENCAO||'(sem tipo)', descricao:r['OBSERVAÇÃO']||'',
-      local:r.LOCAL_SERVICO||'', valor:v, id:r.ID, km:r.KM_NA_MANUTENCAO
+      local:r.LOCAL_SERVICO||'', valor:v, id:r.ID, km:r.KM_NA_MANUTENCAO, usuario:r.USUARIO||''
     });
   });
   return out.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
@@ -41,6 +43,7 @@ function _mcLinhas(){
 function _mcFiltrar(linhas){
   return linhas.filter(function(l){
     if(mcFiltro.placa && l.placa!==mcFiltro.placa) return false;
+    if(mcFiltro.motorista && l.motorista!==mcFiltro.motorista) return false;
     if(mcFiltro.origem && l.origem!==mcFiltro.origem) return false;
     if(mcFiltro.classe && l.categoria!==mcFiltro.classe) return false;
     if((mcFiltro.dtIni||mcFiltro.dtFim) && !dateInRange(l.data,mcFiltro.dtIni,mcFiltro.dtFim)) return false;
@@ -49,7 +52,7 @@ function _mcFiltrar(linhas){
 }
 
 function _mcSet(campo,valor){ mcFiltro[campo]=valor; buildManutCustos(); }
-function resetMcFiltros(){ mcFiltro={dtIni:'',dtFim:'',placa:'',origem:'',classe:''}; buildManutCustos(); }
+function resetMcFiltros(){ mcFiltro={dtIni:'',dtFim:'',placa:'',motorista:'',origem:'',classe:''}; buildManutCustos(); }
 
 function buildManutCustos(){
   var wrap=document.getElementById('manutViewCustos');
@@ -58,8 +61,8 @@ function buildManutCustos(){
   var linhas=_mcFiltrar(todas);
 
   // ---------- barra de filtros ----------
-  var placas={},cats={};
-  todas.forEach(function(l){ if(l.placa) placas[l.placa]=1; cats[l.categoria]=1; });
+  var placas={},cats={},mots={};
+  todas.forEach(function(l){ if(l.placa) placas[l.placa]=1; cats[l.categoria]=1; if(l.motorista) mots[l.motorista]=1; });
   var fb=document.getElementById('filtersManutCusto');
   if(fb){
     var h='<span class="filter-label">Filtros</span>';
@@ -68,6 +71,9 @@ function buildManutCustos(){
     h+='<select class="filter-select" onchange="_mcSet(\'placa\',this.value)"><option value="">🚛 Todas as placas</option>';
     Object.keys(placas).sort().forEach(function(p){ h+='<option'+(mcFiltro.placa===p?' selected':'')+'>'+p+'</option>'; });
     h+='</select>';
+    h+='<select class="filter-select" onchange="_mcSet(\'motorista\',this.value)"><option value="">👤 Todos motoristas</option>';
+    Object.keys(mots).sort().forEach(function(m){ h+='<option value="'+_mcEsc(m)+'"'+(mcFiltro.motorista===m?' selected':'')+'>'+_mcEsc(m)+'</option>'; });
+    h+='</select>';
     h+='<select class="filter-select" onchange="_mcSet(\'classe\',this.value)"><option value="">🏷️ Todas as categorias</option>';
     Object.keys(cats).sort().forEach(function(c){ h+='<option'+(mcFiltro.classe===c?' selected':'')+'>'+_mcEsc(c)+'</option>'; });
     h+='</select>';
@@ -75,8 +81,9 @@ function buildManutCustos(){
        '<option value="despesa"'+(mcFiltro.origem==='despesa'?' selected':'')+'>Despesa de viagem</option>'+
        '<option value="lancamento"'+(mcFiltro.origem==='lancamento'?' selected':'')+'>Lançado na manutenção</option></select>';
     h+='<button class="manut-filter-reset" onclick="resetMcFiltros()">↺ Limpar filtros</button>';
-    // retrato (false): preferência de quem usa o relatório — as 7 colunas caem bem na
-    // largura do A4 em pé, e assim a folha sai no mesmo formato do resto do arquivo.
+    // retrato (false): preferência de quem usa o relatório — a folha sai no mesmo
+    // formato do resto do arquivo. A coluna Ações não vai para o PDF (_pdfPrepararClone
+    // tira a coluna cujo cabeçalho é "Ações"), então continuam 8 colunas de conteúdo.
     h+='<button class="filter-btn-pdf" onclick="exportSecaoPDF(\'mcTabelaBox\',\'Custos de Manutenção\',_mcResumoFiltros(),false,\'kpiManutCusto\')">📄 Exportar PDF</button>';
     fb.innerHTML=h;
   }
@@ -130,6 +137,14 @@ function buildManutCustos(){
   document.getElementById('mcVeiculoBody').innerHTML=ph||'<tr><td colspan="4" class="mc-vazio">Nenhum gasto no período.</td></tr>';
 
   // ---------- detalhe ----------
+  // Editar daqui em vez de ter que achar o lançamento na aba de origem. O botão abre o
+  // modal certo conforme a origem: despesa de viagem vai para o modal do Cadastro (o
+  // mesmo do Financeiro e da Produção) e lançamento vai para o modal da Manutenção.
+  // A permissão segue a regra das outras abas; a garantia de verdade é o RLS no banco.
+  var mcPodeEditar=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mcCols=mcPodeEditar?9:8;
+  var cab=document.getElementById('mcDetalheHead');
+  if(cab) cab.innerHTML='<th>Data</th><th>Placa</th><th>Motorista</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th>'+(mcPodeEditar?'<th>Ações</th>':'');
   var th='';
   linhas.forEach(function(l){
     var selo=l.origem==='despesa'
@@ -137,13 +152,15 @@ function buildManutCustos(){
       : '<span class="mc-org mc-org-l" title="Lançada direto na aba Manutenção, com tipo e KM.">manutenção</span>';
     th+='<tr><td class="mc-num">'+formatDateBR(l.data)+'</td>'+
         '<td>'+(l.placa?'<span class="manut-placa-tag">'+_mcEsc(l.placa)+'</span>':'<span class="mc-vazio-cel">—</span>')+'</td>'+
+        '<td>'+(l.motorista?_mcEsc(l.motorista):'<span class="mc-vazio-cel">—</span>')+'</td>'+
         '<td>'+selo+'</td>'+
         '<td>'+_mcEsc(l.categoria)+'</td>'+
         '<td>'+(l.descricao?_mcEsc(l.descricao):'<span class="mc-vazio-cel">—</span>')+'</td>'+
         '<td>'+(l.local?_mcEsc(l.local):'<span class="mc-vazio-cel">—</span>')+'</td>'+
-        '<td class="mc-num mc-val">R$'+numBR(l.valor,2)+'</td></tr>';
+        '<td class="mc-num mc-val">R$'+numBR(l.valor,2)+'</td>'+
+        (mcPodeEditar?_mcCelulaAcoes(l):'')+'</tr>';
   });
-  document.getElementById('mcDetalheBody').innerHTML=th||'<tr><td colspan="7" class="mc-vazio">Nenhum gasto no período.</td></tr>';
+  document.getElementById('mcDetalheBody').innerHTML=th||'<tr><td colspan="'+mcCols+'" class="mc-vazio">Nenhum gasto no período.</td></tr>';
 
   // O quadro de peças e serviços é o detalhe DESTA mesma seleção: herda o filtro e é
   // redesenhado junto. Sem isso, duas tabelas vizinhas mostravam recortes diferentes.
@@ -151,10 +168,20 @@ function buildManutCustos(){
   document.getElementById('mcDetalheTotal').textContent=linhas.length+' lançamentos · R$'+numBR(total,2);
 }
 
+// ANALISTA só edita o que ele mesmo lançou; ADMIN edita tudo. Mesma regra do
+// Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
+function _mcCelulaAcoes(l){
+  var dono=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+  if(!dono) return '<td><span style="color:#888;font-size:11px">-</span></td>';
+  var fn=l.origem==='despesa'?'openEditModal':'openManutRealModal';
+  return '<td><button class="btn-edit-row" onclick="'+fn+'(\''+String(l.id).replace(/'/g,"\\'")+'\')" title="Editar '+(l.origem==='despesa'?'a despesa da viagem':'o lançamento de manutenção')+'">✏️</button></td>';
+}
+
 function _mcResumoFiltros(){
   var f=[];
   if(mcFiltro.dtIni||mcFiltro.dtFim) f.push('Período: '+(mcFiltro.dtIni?formatDateBR(mcFiltro.dtIni):'início')+' até '+(mcFiltro.dtFim?formatDateBR(mcFiltro.dtFim):'hoje'));
   if(mcFiltro.placa) f.push('Placa: '+mcFiltro.placa);
+  if(mcFiltro.motorista) f.push('Motorista: '+mcFiltro.motorista);
   if(mcFiltro.classe) f.push('Categoria: '+mcFiltro.classe);
   if(mcFiltro.origem) f.push('Origem: '+(mcFiltro.origem==='despesa'?'despesa de viagem':'lançado na manutenção'));
   return f.join(' · ')||'nenhum (todos os registros)';

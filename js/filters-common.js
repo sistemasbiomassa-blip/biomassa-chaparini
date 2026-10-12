@@ -93,7 +93,23 @@ function createFilters(containerId,filterDefs,extraHtml,clearFn,noPdfBtn){
       displayOptions=filteredWeeks;
       displayLabels=filteredWeeks.map(getWeekDisplay);
     }
-    if(displayLabels){
+    // f.groups: opções em <optgroup>, para quando o mesmo dropdown precisa oferecer
+    // duas taxonomias diferentes (ex: Histórico da Manutenção, que lista tipo de
+    // manutenção e classe de despesa de viagem). Numa lista única alfabética as duas
+    // se misturam e parece que só existe uma delas.
+    if(f.groups){
+      f.groups.forEach(function(g){
+        if(!g.options||!g.options.length) return;
+        var og=document.createElement('optgroup');
+        og.label=g.label;
+        g.options.forEach(function(o){
+          var op=document.createElement('option');
+          op.value=o; op.textContent=o;
+          og.appendChild(op);
+        });
+        sel.appendChild(og);
+      });
+    } else if(displayLabels){
       displayOptions.forEach(function(o,i){sel.innerHTML+='<option value="'+o+'">'+(displayLabels[i]||o)+'</option>'});
     } else {
       displayOptions.forEach(function(o){sel.innerHTML+='<option value="'+o+'">'+o+'</option>'});

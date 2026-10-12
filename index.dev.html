@@ -849,7 +849,9 @@
           </div>
           <div class="table-container" id="mcTabelaBox" style="margin-top:14px">
             <div class="table-header"><h3>Todos os gastos</h3><span class="chart-badge" id="mcDetalheTotal"></span></div>
-            <div class="table-scroll"><table class="mc-tbl"><thead><tr><th>Data</th><th>Placa</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
+            <!-- O cabeçalho é montado em js/manut-custos.js: a coluna Ações só existe
+                 para quem pode editar (ADMIN/ANALISTA). -->
+            <div class="table-scroll"><table class="mc-tbl"><thead><tr id="mcDetalheHead"></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
           </div>
           <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
                por dentro. Fechado por padrão para não parecer um segundo relatório. -->

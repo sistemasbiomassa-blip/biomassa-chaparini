@@ -730,7 +730,15 @@ function confirmDelete(){
       DB.cadastro.splice(found.idx, 1);
       showToast('✅ Lançamento excluído!');
       closeDeleteModal();
-      buildHistorico();
+      // Redesenha a página onde o botão foi clicado (mesma rota do saveEdit): o botão de
+      // excluir cadastro aparece no Histórico e também na sub-aba Histórico da Manutenção.
+      var ativaDel=document.querySelector('.nav-item.active');
+      var pgDel=ativaDel?ativaDel.getAttribute('data-page'):'historico';
+      if(pgDel==='manutencao') buildManutencao();
+      else if(pgDel==='producao') buildProducao();
+      else if(pgDel==='financeiro') buildFinanceiro();
+      else if(pgDel==='tempoespera') buildTempoEspera();
+      else buildHistorico();
     } else {
       showToast('❌ Falha ao excluir: '+((res&&res.error)||'erro desconhecido'),true);
     }
