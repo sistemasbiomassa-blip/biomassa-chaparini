@@ -141,7 +141,7 @@ function buildManutCustos(){
   // modal certo conforme a origem: despesa de viagem vai para o modal do Cadastro (o
   // mesmo do Financeiro e da Produção) e lançamento vai para o modal da Manutenção.
   // A permissão segue a regra das outras abas; a garantia de verdade é o RLS no banco.
-  var mcPodeEditar=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mcPodeEditar=podeEditarCadastro();
   var mcCols=mcPodeEditar?9:8;
   var cab=document.getElementById('mcDetalheHead');
   if(cab) cab.innerHTML='<th>Data</th><th>Placa</th><th>Motorista</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th>'+(mcPodeEditar?'<th>Ações</th>':'');
@@ -164,14 +164,14 @@ function buildManutCustos(){
 
   // O quadro de peças e serviços é o detalhe DESTA mesma seleção: herda o filtro e é
   // redesenhado junto. Sem isso, duas tabelas vizinhas mostravam recortes diferentes.
-  if(typeof nfRelSincronizar==='function'){ nfRelSincronizar(mcFiltro); buildNfRelatorio(); }
+  if(typeof nfRelSincronizar==='function'){ nfRelSincronizar('manut',mcFiltro); buildNfRelatorio('manut'); }
   document.getElementById('mcDetalheTotal').textContent=linhas.length+' lançamentos · R$'+numBR(total,2);
 }
 
-// ANALISTA só edita o que ele mesmo lançou; ADMIN edita tudo. Mesma regra do
-// Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
+// ANALISTA e DIRETOR só editam o que eles mesmos lançaram; ADMIN edita tudo. Mesma regra
+// do Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
 function _mcCelulaAcoes(l){
-  var dono=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+  var dono=ehDonoLancamento(l.usuario);
   if(!dono) return '<td><span style="color:#888;font-size:11px">-</span></td>';
   var fn=l.origem==='despesa'?'openEditModal':'openManutRealModal';
   return '<td><button class="btn-edit-row" onclick="'+fn+'(\''+String(l.id).replace(/'/g,"\\'")+'\')" title="Editar '+(l.origem==='despesa'?'a despesa da viagem':'o lançamento de manutenção')+'">✏️</button></td>';

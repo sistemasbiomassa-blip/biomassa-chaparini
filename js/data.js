@@ -501,20 +501,37 @@ var EDIT_FIELDS=[
 
 var _editingComplementar=false;
 
+// ==================== PERMISSAO DE EDICAO (lancamentos do CADASTRO) ====================
+// Quem enxerga a coluna Acoes nas listagens que leem o Cadastro (Financeiro, Producao,
+// Tempo de Espera, Consumo, Manutencao e Custos de Manutencao). O DIRETOR entra aqui
+// porque o RLS ja o deixa inserir e editar os PROPRIOS lancamentos de cadastro
+// (supabase/migrations/0013_complementar_cadastro.sql) — enquanto ele ficou de fora
+// desta checagem, a coluna inteira era omitida pra ele e o lapis nunca aparecia, nem
+// nas linhas dele mesmo.
+function podeEditarCadastro(){
+  if(!currentUserData) return false;
+  var p=currentUserData.perfil;
+  return p==='ADMIN'||p==='ANALISTA'||p==='DIRETOR';
+}
+// Dono da linha: ADMIN edita qualquer uma; os outros perfis, so a propria. A comparacao
+// e pelo nome gravado em USUARIO (usuario_nome_legado), igual ao que o insert grava em
+// _comUsuarioAtual(). No banco a trava usa usuario_id, entao linha antiga importada da
+// planilha (sem usuario_id) abre o modal mas so aceita preencher campo vazio.
+function ehDonoLancamento(owner){
+  if(!currentUserData) return false;
+  if(currentUserData.perfil==='ADMIN') return true;
+  return owner===currentUserData.nome||owner===currentUserData.usuario;
+}
+
 function openEditModal(key, complementar){
   var found=findRowByKey(key);
   if(!found){ showToast('Registro não encontrado',true); return; }
   // Permissão (a garantia de verdade é o RLS/trigger no banco; isso aqui só evita abrir o modal à toa)
   if(!currentUserData) return;
-  if(currentUserData.perfil!=='ADMIN'){
-    if(currentUserData.perfil!=='ANALISTA' && currentUserData.perfil!=='DIRETOR'){ showToast('Sem permissão para editar',true); return; }
-    if(!complementar){
-      var owner=found.row.USUARIO;
-      if(owner!==currentUserData.nome && owner!==currentUserData.usuario){
-        showToast('❌ Você só pode editar os seus próprios lançamentos',true);
-        return;
-      }
-    }
+  if(!podeEditarCadastro()){ showToast('Sem permissão para editar',true); return; }
+  if(!complementar && !ehDonoLancamento(found.row.USUARIO)){
+    showToast('❌ Você só pode editar os seus próprios lançamentos',true);
+    return;
   }
   _editingKey=key;
   _editingComplementar=!!complementar;

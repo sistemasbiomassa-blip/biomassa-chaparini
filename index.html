@@ -374,10 +374,10 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .manut-km-tbl .manut-km-bg{height:6px;min-width:130px}
 /* Cards da Manutenção menores que o padrão. O .kpi-card é o mesmo de outras 6 páginas,
    por isso o ajuste é só aqui (Fora e Em Garantia). */
-#kpiManut,#kpiManutGar,#kpiNfRel{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
-#kpiManut .kpi-card,#kpiManutGar .kpi-card,#kpiNfRel .kpi-card{padding:10px 14px;border-radius:12px}
-#kpiManut .kpi-icon,#kpiManutGar .kpi-icon,#kpiNfRel .kpi-icon{font-size:15px;margin-bottom:3px}
-#kpiManut .kpi-value,#kpiManutGar .kpi-value,#kpiNfRel .kpi-value{font-size:20px}
+#kpiManut,#kpiManutGar,[id^="kpiNfRel"]{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+#kpiManut .kpi-card,#kpiManutGar .kpi-card,[id^="kpiNfRel"] .kpi-card{padding:10px 14px;border-radius:12px}
+#kpiManut .kpi-icon,#kpiManutGar .kpi-icon,[id^="kpiNfRel"] .kpi-icon{font-size:15px;margin-bottom:3px}
+#kpiManut .kpi-value,#kpiManutGar .kpi-value,[id^="kpiNfRel"] .kpi-value{font-size:20px}
 
 .manut-consumo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .manut-consumo-item:last-child{border-bottom:none}
@@ -453,7 +453,13 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .nf-rel-filtros{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px}
 .nf-rel-atalhos,.nf-rel-linha{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .nf-rel-atalhos{margin-bottom:10px}
-.nf-rel-linha #nfRelBusca{min-width:240px;flex:1}
+.nf-rel-linha .nf-rel-busca{min-width:240px;flex:1}
+/* Busca de produto fora do bloco fechado (Manutenção › Custos): tem que se ler como o
+   campo principal da seção, não como um filtro a mais. */
+.nf-rel-busca-topo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px}
+.nf-rel-busca-topo .nf-rel-busca{min-width:280px;flex:1;background:var(--surface2)}
+.nf-rel-busca-eco{font-size:12.5px;color:var(--text2);white-space:nowrap}
+.nf-rel-busca-eco strong{color:var(--text);font-family:JetBrains Mono,monospace;font-size:13px}
 .nf-rel-datas{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--text2)}
 .nf-rel-datas input{border:none;background:transparent;font-size:11px;color:var(--text);font-family:inherit}
 .nf-rel-nota{font-size:11px;color:var(--text2);margin-top:10px;line-height:1.5}
@@ -1463,10 +1469,20 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
                  para quem pode editar (ADMIN/ANALISTA). -->
             <div class="table-scroll"><table class="mc-tbl"><thead><tr id="mcDetalheHead"></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
           </div>
+          <!-- Busca por produto. "Quanto gastei de estopa" é pergunta de rotina, e o campo
+               que responde isso estava dentro do <details> abaixo, fechado — ninguém achava.
+               Agora fica aqui fora, sempre à vista, com o total do que casou ao lado;
+               digitar abre o bloco com o detalhamento. -->
+          <div class="nf-rel-busca-topo">
+            <input type="text" class="filter-select nf-rel-busca" id="nfRelBuscaTopo"
+                   placeholder="🔎 Quanto gastei com... (ex.: estopa, correia, filtro de ar)"
+                   oninput="_nfRelBuscar('manut',this.value)">
+            <span class="nf-rel-busca-eco" id="nfRelBuscaTopoEco"></span>
+          </div>
           <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
                por dentro. Fechado por padrão para não parecer um segundo relatório. -->
-          <details class="manut-panel manut-matriz-det" style="margin-top:14px">
-            <summary class="manut-matriz-sum">🔩 Abrir as notas por dentro <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
+          <details class="manut-panel manut-matriz-det" id="nfRelDetalhes" style="margin-top:10px">
+            <summary class="manut-matriz-sum">🔩 As notas por dentro, produto por produto <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
             <div class="nf-rel-filtros" id="nfRelFiltros"></div>
             <div id="nfRelConteudo"></div>
           </details>
@@ -1634,6 +1650,7 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
           <div class="tab active" onclick="switchTab(this,'tabMaquinas')">Máquinas</div>
           <div class="tab" onclick="switchTab(this,'tabMaqAbast')">Abastecimento</div>
           <div class="tab" onclick="switchTab(this,'tabMaqManut')">Manutenção</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqPecas')">Peças e Produtos</div>
           <div class="tab" onclick="switchTab(this,'tabMaqLocal')">Localização</div>
           <div class="tab" onclick="switchTab(this,'tabMaqCusto')">Custo por Floresta</div>
         </div>
@@ -1679,6 +1696,24 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
             <div class="table-header"><h3>🔧 Manutenções e consertos</h3><span class="chart-badge" id="maqMtCount">0 registros</span></div>
             <div class="table-scroll" id="maqMtTableContainer"></div>
           </div>
+        </div>
+        <!-- Peças e produtos das notas de máquina/insumo: instância 'maq' de
+             js/nf-relatorio.js. Responde "quanto gastei de estopa, de óleo, de correia"
+             no maquinário — o mesmo que a busca de Manutenção › Custos responde do lado
+             caminhão. Aqui é aba própria porque Maquinários não tinha nenhum caminho até
+             esses itens, e são mais itens do que o lado caminhão. -->
+        <div class="tab-content" id="tabMaqPecas">
+          <!-- Mesma barra de busca de Manutenção › Custos, com o mesmo texto: é a mesma
+               pergunta dos dois lados da frota, então não pode mudar de cara nem de lugar
+               de uma aba para a outra. Os filtros finos ficam abaixo. -->
+          <div class="nf-rel-busca-topo">
+            <input type="text" class="filter-select nf-rel-busca" id="nfRelBuscaTopoMaq"
+                   placeholder="🔎 Quanto gastei com... (ex.: estopa, correia, filtro de ar)"
+                   oninput="_nfRelBuscar('maq',this.value)">
+            <span class="nf-rel-busca-eco" id="nfRelBuscaTopoMaqEco"></span>
+          </div>
+          <div class="nf-rel-filtros" id="nfRelFiltrosMaq"></div>
+          <div id="nfRelConteudoMaq"></div>
         </div>
         <div class="tab-content" id="tabMaqLocal">
           <div class="filters">
@@ -2380,20 +2415,37 @@ var EDIT_FIELDS=[
 
 var _editingComplementar=false;
 
+// ==================== PERMISSAO DE EDICAO (lancamentos do CADASTRO) ====================
+// Quem enxerga a coluna Acoes nas listagens que leem o Cadastro (Financeiro, Producao,
+// Tempo de Espera, Consumo, Manutencao e Custos de Manutencao). O DIRETOR entra aqui
+// porque o RLS ja o deixa inserir e editar os PROPRIOS lancamentos de cadastro
+// (supabase/migrations/0013_complementar_cadastro.sql) — enquanto ele ficou de fora
+// desta checagem, a coluna inteira era omitida pra ele e o lapis nunca aparecia, nem
+// nas linhas dele mesmo.
+function podeEditarCadastro(){
+  if(!currentUserData) return false;
+  var p=currentUserData.perfil;
+  return p==='ADMIN'||p==='ANALISTA'||p==='DIRETOR';
+}
+// Dono da linha: ADMIN edita qualquer uma; os outros perfis, so a propria. A comparacao
+// e pelo nome gravado em USUARIO (usuario_nome_legado), igual ao que o insert grava em
+// _comUsuarioAtual(). No banco a trava usa usuario_id, entao linha antiga importada da
+// planilha (sem usuario_id) abre o modal mas so aceita preencher campo vazio.
+function ehDonoLancamento(owner){
+  if(!currentUserData) return false;
+  if(currentUserData.perfil==='ADMIN') return true;
+  return owner===currentUserData.nome||owner===currentUserData.usuario;
+}
+
 function openEditModal(key, complementar){
   var found=findRowByKey(key);
   if(!found){ showToast('Registro não encontrado',true); return; }
   // Permissão (a garantia de verdade é o RLS/trigger no banco; isso aqui só evita abrir o modal à toa)
   if(!currentUserData) return;
-  if(currentUserData.perfil!=='ADMIN'){
-    if(currentUserData.perfil!=='ANALISTA' && currentUserData.perfil!=='DIRETOR'){ showToast('Sem permissão para editar',true); return; }
-    if(!complementar){
-      var owner=found.row.USUARIO;
-      if(owner!==currentUserData.nome && owner!==currentUserData.usuario){
-        showToast('❌ Você só pode editar os seus próprios lançamentos',true);
-        return;
-      }
-    }
+  if(!podeEditarCadastro()){ showToast('Sem permissão para editar',true); return; }
+  if(!complementar && !ehDonoLancamento(found.row.USUARIO)){
+    showToast('❌ Você só pode editar os seus próprios lançamentos',true);
+    return;
   }
   _editingKey=key;
   _editingComplementar=!!complementar;
@@ -3492,6 +3544,7 @@ function switchTab(el,tabId){
   if(tabId==='tabMaqLocal') renderMaqLocalTable();
   if(tabId==='tabMaqAbast') renderMaqAbastTable();
   if(tabId==='tabMaqManut') renderMaqManutTable();
+  if(tabId==='tabMaqPecas') buildNfRelatorio('maq');
   if(tabId==='tabMaqCusto') renderMaqCusto();
   if(tabId==='tabComboioSaldos') renderComboioSaldos();
   if(tabId==='tabComboioEntradas') renderComboioEntradas();
@@ -5423,18 +5476,41 @@ function camNfeImportar(){
 </script>
 <script>
 // ============================================================
-// ===== MANUTENÇÃO > PEÇAS E SERVIÇOS (itens das notas) ======
-// Consulta as peças e serviços das notas fiscais importadas (nf_itens) para responder:
-// quanto se gastou em filtro de ar, quantos litros de óleo uma placa levou, quanto de cada
+// ===== PEÇAS, PRODUTOS E SERVIÇOS DAS NOTAS (nf_itens) ======
+// Consulta os itens das notas fiscais importadas para responder: quanto se gastou em
+// estopa, em filtro de ar, quantos litros de óleo uma placa levou, quanto de cada
 // revisão foi peça e quanto foi mão de obra, quem gasta mais em freio.
 // Só existe item para o que entrou por XML — lançamento digitado à mão tem só o total.
+//
+// Duas instâncias, porque as notas de caminhão e as de máquina/insumo moram em abas
+// diferentes do sistema (decisão do redesenho: item de máquina não aparece em
+// Manutenção, e vice-versa):
+//   'manut' — embutida em Manutenção › Custos. Herda período e veículo do filtro do
+//             topo e mostra resumo de uma linha, para não virar um segundo relatório
+//             com totais próprios ao lado do primeiro. Só caminhão.
+//   'maq'   — aba própria em Maquinários › Peças e Produtos. Relatório completo, com
+//             KPIs e filtros próprios. Só máquina/insumo.
+// Cada instância tem estado e containers próprios: id repetido no documento faz
+// getElementById devolver sempre o primeiro, e a segunda instância nunca desenharia.
 // ============================================================
-var nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''};
-// Dentro da aba Custos este quadro é o DETALHE do que está acima, não um relatório
-// paralelo: herda período e veículo do filtro do topo, esconde os seletores que
-// passariam a brigar com ele, e fica só com caminhão (nota de máquina é da aba
-// Maquinário). Fora da aba Custos nada disso vale e o relatório segue completo.
-var nfRelEmbutido=false;
+var NF_REL_CFG={
+  manut:{
+    filtros:'nfRelFiltros', conteudo:'nfRelConteudo',
+    embutido:true, origemFixa:'caminhao',
+    // a busca fica fora do <details>, sempre à vista: é a pergunta mais comum
+    // ("quanto gastei de estopa") e dentro do bloco fechado ninguém achava
+    buscaTopo:'nfRelBuscaTopo', detalhes:'nfRelDetalhes'
+  },
+  maq:{
+    filtros:'nfRelFiltrosMaq', conteudo:'nfRelConteudoMaq',
+    embutido:false, origemFixa:'maq',
+    // a busca tambem fica fora da barra de filtros aqui, para a aba abrir com a mesma
+    // cara de Manutencao > Custos (nao tem <details> nesta: a aba ja e o relatorio)
+    buscaTopo:'nfRelBuscaTopoMaq'
+  }
+};
+function _nfRelNovo(origem){ return {busca:'',atalho:'',origem:origem||'',alvo:'',tipo:'',dtIni:'',dtFim:''}; }
+var nfRelEst={ manut:_nfRelNovo('caminhao'), maq:_nfRelNovo('maq') };
 
 // Mesmo reconhecimento do importador (js/nf-parse.js NF_REGRAS_TIPO), para "filtro de ar"
 // não pegar o filtro de cabine nem "óleo motor" pegar óleo de câmbio. Freio aqui é GASTO
@@ -5447,6 +5523,13 @@ var NF_REL_ATALHOS=[
   {id:'freio', rotulo:'🛑 Freio',                re:/FREIO|PASTILHA|\bLONA\b/},
   {id:'pneu',  rotulo:'🛞 Pneu',                 re:/PNEU|CAMARA\s+DE\s+AR|RECAP/}
 ];
+
+// Texto indo para dentro de um onclick='...': _nfEsc cuida do HTML mas não do apóstrofo
+// nem da barra invertida, que quebrariam a string JS. Descrição de nota também vem com
+// quebra de linha de vez em quando.
+function _nfRelAttr(s){
+  return _nfEsc(String(s==null?'':s).replace(/[\r\n]+/g,' ').replace(/\\/g,'\\\\')).replace(/'/g,"\\'");
+}
 
 function _nfRelUn(u){
   var n=_nfNorm(u).trim();
@@ -5475,40 +5558,46 @@ function _nfRelLinhas(){
   });
   return out;
 }
-function _nfRelFiltrar(linhas){
-  var at=NF_REL_ATALHOS.filter(function(a){ return a.id===nfRel.atalho; })[0];
-  var palavras=_nfNorm(nfRel.busca).split(/\s+/).filter(Boolean);
+function _nfRelFiltrar(k,linhas){
+  var S=nfRelEst[k];
+  var at=NF_REL_ATALHOS.filter(function(a){ return a.id===S.atalho; })[0];
+  var palavras=_nfNorm(S.busca).split(/\s+/).filter(Boolean);
   return linhas.filter(function(l){
-    if(nfRel.origem && l.origem!==nfRel.origem) return false;
-    if(nfRel.alvo && l.alvo!==nfRel.alvo) return false;
-    if(nfRel.tipo && l.item.TIPO!==nfRel.tipo) return false;
-    if(nfRel.dtIni && l.data<nfRel.dtIni) return false;
-    if(nfRel.dtFim && l.data>nfRel.dtFim) return false;
+    if(S.origem && l.origem!==S.origem) return false;
+    if(S.alvo && l.alvo!==S.alvo) return false;
+    if(S.tipo && l.item.TIPO!==S.tipo) return false;
+    if(S.dtIni && l.data<S.dtIni) return false;
+    if(S.dtFim && l.data>S.dtFim) return false;
     if(at && !at.re.test(l.norm)) return false;
-    for(var k=0;k<palavras.length;k++){ if(l.norm.indexOf(palavras[k])<0) return false; }
+    for(var i=0;i<palavras.length;i++){ if(l.norm.indexOf(palavras[i])<0) return false; }
     return true;
   });
 }
 
-// soResultado: redesenha só o resultado, sem refazer a barra de filtros (usado pela busca,
-// para o campo de texto não perder o foco a cada letra digitada)
-function nfRelSincronizar(f){
-  nfRelEmbutido=true;
-  nfRel.origem='caminhao';          // máquina e insumo pertencem à aba Maquinário
-  nfRel.alvo=f.placa||'';
-  nfRel.dtIni=f.dtIni||'';
-  nfRel.dtFim=f.dtFim||'';
+// Chamado por Manutenção › Custos: o quadro é o detalhe do que está acima, então herda
+// o recorte do filtro do topo em vez de ter seletores próprios brigando com ele.
+function nfRelSincronizar(k,f){
+  if(typeof f==='undefined'){ f=k; k='manut'; }   // compatibilidade com a chamada antiga
+  var S=nfRelEst[k];
+  S.origem=NF_REL_CFG[k].origemFixa;   // máquina e insumo pertencem à aba Maquinários
+  S.alvo=f.placa||'';
+  S.dtIni=f.dtIni||'';
+  S.dtFim=f.dtFim||'';
 }
 
-function buildNfRelatorio(soResultado){
-  var cont=document.getElementById('nfRelConteudo'); if(!cont) return;
+function buildNfRelatorio(k,soResultado){
+  k=k||'manut';
+  var C=NF_REL_CFG[k], S=nfRelEst[k];
+  var cont=document.getElementById(C.conteudo); if(!cont) return;
+  S.origem=C.origemFixa;               // a instância nunca sai do seu lado da frota
   var todas=_nfRelLinhas();
-  if(!soResultado) _nfRelFiltros(todas);
+  if(!soResultado) _nfRelFiltros(k,todas);
+  _nfRelEcoBusca(k);
   if(!todas.length){
     cont.innerHTML='<div class="nf-rel-vazio">Nenhuma nota fiscal importada ainda.<br>Importe em Cadastro → Manutenção Realizada (caminhões) ou Maquinários → Manutenção.</div>';
     return;
   }
-  var L=_nfRelFiltrar(todas);
+  var L=_nfRelFiltrar(k,todas);
   if(!L.length){ cont.innerHTML='<div class="nf-rel-vazio">Nada encontrado com esses filtros.</div>'; return; }
 
   // ---- totais ----
@@ -5523,7 +5612,7 @@ function buildNfRelatorio(soResultado){
   // quantidade somada por unidade, sem converter (balde de 20 L não vira litro sozinho)
   var qtdTxt=Object.keys(un).sort(function(a,b){ return a==='L'?-1:(b==='L'?1:a.localeCompare(b)); })
     .map(function(u){ return fmt(un[u],(un[u]%1)?1:0)+' '+u; }).join(' · ')||'—';
-  var h=nfRelEmbutido?'':'<div class="kpi-row" id="kpiNfRel">'+
+  var h=C.embutido?'':'<div class="kpi-row" id="kpiNfRel_'+k+'">'+
     '<div class="kpi-card"><div class="kpi-icon">💰</div><div class="kpi-value">'+fmtR(Math.round(tot*100)/100)+'</div><div class="kpi-label">Total</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🔩</div><div class="kpi-value">'+fmtR(Math.round(pc*100)/100)+'</div><div class="kpi-label">Peças'+(tot?' · '+Math.round(pc/tot*100)+'%':'')+'</div></div>'+
     '<div class="kpi-card"><div class="kpi-icon">🧰</div><div class="kpi-value">'+fmtR(Math.round(sv*100)/100)+'</div><div class="kpi-label">Mão de obra'+(tot?' · '+Math.round(sv/tot*100)+'%':'')+'</div></div>'+
@@ -5531,20 +5620,48 @@ function buildNfRelatorio(soResultado){
     '<div class="kpi-card"><div class="kpi-icon">📄</div><div class="kpi-value">'+Object.keys(notas).length+'</div><div class="kpi-label">Notas</div></div>'+
     '</div>';
   // no modo embutido o resumo vira uma linha só, sem competir com os indicadores do topo
-  if(nfRelEmbutido) h='<div class="nf-rel-resumo">'+L.length+' itens em '+Object.keys(notas).length+
+  if(C.embutido) h='<div class="nf-rel-resumo">'+L.length+' itens em '+Object.keys(notas).length+
     ' nota(s) · <strong>'+fmtR(Math.round(tot*100)/100)+'</strong> — peças '+fmtR(Math.round(pc*100)/100)+
     ' · mão de obra '+fmtR(Math.round(sv*100)/100)+'</div>';
 
+  // ---- por produto ----
+  // Responde "quanto gastei de estopa" sem precisar saber o que digitar: a lista mostra
+  // cada descrição com quantas vezes entrou e quanto somou. Clicar joga a descrição na
+  // busca, e aí dá para encurtar o termo e juntar as variações ("ESTOPA" e "ESTOPA DE
+  // MALHA COSTURADA" são itens diferentes na nota, mas o mesmo produto na prática).
+  var pr={};
+  L.forEach(function(l){
+    var d=String(l.item.DESCRICAO||'(sem descrição)').trim();
+    if(!pr[d]) pr[d]={v:0, n:0, q:0, un:'', sv:(l.item.TIPO==='SERVICO')};
+    var p=pr[d]; p.v+=l.valor; p.n++;
+    var q=num(l.item.QUANTIDADE);
+    if(q){ var u=_nfRelUn(l.item.UNIDADE); if(!p.un||p.un===u){ p.un=u; p.q+=q; } else p.un='*'; }
+  });
+  var prL=Object.keys(pr).sort(function(a,b){ return pr[b].v-pr[a].v; });
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Por produto — quanto somou cada um</div>'+
+     '<div class="manut-ph-badge">'+prL.length+' produto(s)</div></div>'+
+     '<div class="table-scroll" style="max-height:340px"><table class="manut-km-tbl"><thead><tr><th>Produto / serviço</th><th></th><th>Vezes</th><th>Qtd</th><th>Total</th></tr></thead><tbody>';
+  prL.forEach(function(d){
+    var p=pr[d];
+    h+='<tr class="nf-rel-clica" onclick="_nfRelBuscarProduto(\''+k+'\',\''+_nfRelAttr(d)+'\')" title="Buscar só este">'+
+       '<td style="white-space:normal;min-width:260px">'+_nfEsc(d)+'</td>'+
+       '<td><span class="maq-chip '+(p.sv?'maq-chip-b':'maq-chip-g')+'">'+(p.sv?'Serviço':'Peça')+'</span></td>'+
+       '<td class="manut-km-num">'+p.n+'</td>'+
+       '<td class="manut-km-num">'+(p.q&&p.un!=='*'?fmt(p.q,(p.q%1)?2:0)+' '+_nfEsc(p.un):'—')+'</td>'+
+       '<td class="manut-km-num"><strong>'+fmtR(Math.round(p.v*100)/100)+'</strong></td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+
   // ---- ranking por placa/máquina ----
   var rk={};
-  L.forEach(function(l){ var k=l.alvo; if(!rk[k]) rk[k]={v:0,pc:0,sv:0,origem:l.origem}; rk[k].v+=l.valor; if(l.item.TIPO==='SERVICO') rk[k].sv+=l.valor; else rk[k].pc+=l.valor; });
+  L.forEach(function(l){ var kk=l.alvo; if(!rk[kk]) rk[kk]={v:0,pc:0,sv:0,origem:l.origem}; rk[kk].v+=l.valor; if(l.item.TIPO==='SERVICO') rk[kk].sv+=l.valor; else rk[kk].pc+=l.valor; });
   var rkL=Object.keys(rk).sort(function(a,b){ return rk[b].v-rk[a].v; }), mx=rkL.length?rk[rkL[0]].v:0;
-  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Quem gastou mais</div><div class="manut-ph-badge">'+rkL.length+' placa(s)/máquina(s)</div></div><div class="nf-rel-rank">';
-  rkL.forEach(function(k,i){
-    var o=rk[k];
-    h+='<div class="nf-rel-rank-lin" onclick="_nfRelSetAlvo(\''+_nfEsc(k).replace(/'/g,"\\'")+'\')" title="Filtrar só esta">'+
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Quem gastou mais</div><div class="manut-ph-badge">'+rkL.length+(C.origemFixa==='maq'?' máquina(s)/insumo(s)':' placa(s)')+'</div></div><div class="nf-rel-rank">';
+  rkL.forEach(function(kk,i){
+    var o=rk[kk];
+    h+='<div class="nf-rel-rank-lin" onclick="_nfRelSetAlvo(\''+k+'\',\''+_nfRelAttr(kk)+'\')" title="Filtrar só esta">'+
        '<span class="nf-rel-pos">'+(i+1)+'</span>'+
-       '<span class="'+(o.origem==='caminhao'?'manut-placa-tag':'nf-rel-maq')+'">'+_nfEsc(k)+'</span>'+
+       '<span class="'+(o.origem==='caminhao'?'manut-placa-tag':'nf-rel-maq')+'">'+_nfEsc(kk)+'</span>'+
        '<div class="nf-rel-barra"><div style="width:'+(mx?Math.max(2,Math.round(o.v/mx*100)):0)+'%"></div></div>'+
        '<span class="manut-km-num">'+fmtR(Math.round(o.v*100)/100)+'</span>'+
        '<span class="nf-rel-split">peça '+fmtR(Math.round(o.pc*100)/100)+' · serviço '+fmtR(Math.round(o.sv*100)/100)+'</span></div>';
@@ -5554,18 +5671,18 @@ function buildNfRelatorio(soResultado){
   // ---- por manutenção (revisão): quanto foi peça e quanto foi mão de obra ----
   var mt={};
   L.forEach(function(l){
-    var k=l.origem+'|'+l.lancId;
-    if(!mt[k]) mt[k]={origem:l.origem, id:l.lancId, alvo:l.alvo, data:l.data, oficina:l.doc.EMITENTE_NOME, os:l.doc.OS_NUMERO, pc:0, sv:0, docs:{}};
-    var m=mt[k];
+    var kk=l.origem+'|'+l.lancId;
+    if(!mt[kk]) mt[kk]={origem:l.origem, id:l.lancId, alvo:l.alvo, data:l.data, oficina:l.doc.EMITENTE_NOME, os:l.doc.OS_NUMERO, pc:0, sv:0, docs:{}};
+    var m=mt[kk];
     if(l.data<m.data) m.data=l.data;
     if(l.item.TIPO==='SERVICO') m.sv+=l.valor; else m.pc+=l.valor;
     m.docs[l.doc.ID]=(l.doc.MODELO==='NFSE'?'NFS-e ':'NF-e ')+l.doc.NUMERO;
   });
   var mtL=Object.keys(mt).sort(function(a,b){ return String(mt[b].data).localeCompare(String(mt[a].data)); });
   h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Por manutenção — peça × mão de obra</div><div class="manut-ph-badge">'+mtL.length+' manutenção(ões)</div></div>'+
-     '<div class="table-scroll" style="max-height:320px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>Placa / Máquina</th><th>Oficina</th><th>Notas</th><th>Peças</th><th>Mão de obra</th><th>Total</th><th>% peças</th></tr></thead><tbody>';
-  mtL.forEach(function(k){
-    var m=mt[k], t=m.pc+m.sv;
+     '<div class="table-scroll" style="max-height:320px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>'+(C.origemFixa==='maq'?'Máquina':'Placa')+'</th><th>Oficina</th><th>Notas</th><th>Peças</th><th>Mão de obra</th><th>Total</th><th>% peças</th></tr></thead><tbody>';
+  mtL.forEach(function(kk){
+    var m=mt[kk], t=m.pc+m.sv;
     h+='<tr class="nf-rel-clica" onclick="nfAbrirDetalhe(\''+m.origem+'\',\''+m.id+'\')" title="Ver as peças e serviços">'+
        '<td class="manut-km-num">'+_nfEsc(formatDateBR(m.data))+'</td>'+
        '<td>'+(m.origem==='caminhao'?'<span class="manut-placa-tag">'+_nfEsc(m.alvo)+'</span>':_nfEsc(m.alvo))+'</td>'+
@@ -5580,8 +5697,8 @@ function buildNfRelatorio(soResultado){
 
   // ---- itens ----
   L.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)) || (b.valor-a.valor); });
-  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Peças e serviços</div><div class="manut-ph-badge">'+L.length+' item(ns)</div></div>'+
-     '<div class="table-scroll" style="max-height:420px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>Placa / Máquina</th><th>Descrição</th><th></th><th>Qtd</th><th>Valor</th><th>Nota</th></tr></thead><tbody>';
+  h+='<div class="manut-panel nf-rel-bloco"><div class="manut-ph"><div class="manut-ph-title">Item a item</div><div class="manut-ph-badge">'+L.length+' item(ns)</div></div>'+
+     '<div class="table-scroll" style="max-height:420px"><table class="manut-km-tbl"><thead><tr><th>Data</th><th>'+(C.origemFixa==='maq'?'Máquina':'Placa')+'</th><th>Descrição</th><th></th><th>Qtd</th><th>Valor</th><th>Nota</th></tr></thead><tbody>';
   L.forEach(function(l){
     var q=num(l.item.QUANTIDADE), sv=l.item.TIPO==='SERVICO';
     h+='<tr class="nf-rel-clica" onclick="nfAbrirDetalhe(\''+l.origem+'\',\''+l.lancId+'\')">'+
@@ -5598,39 +5715,82 @@ function buildNfRelatorio(soResultado){
 }
 
 // ---- barra de filtros ----
-function _nfRelFiltros(todas){
-  var el=document.getElementById('nfRelFiltros'); if(!el) return;
+function _nfRelFiltros(k,todas){
+  var C=NF_REL_CFG[k], S=nfRelEst[k];
+  var el=document.getElementById(C.filtros); if(!el) return;
   var alvos={};
-  todas.forEach(function(l){ if(!nfRel.origem || l.origem===nfRel.origem) alvos[l.alvo]=l.origem; });
+  todas.forEach(function(l){ if(!S.origem || l.origem===S.origem) alvos[l.alvo]=l.origem; });
   var alvoL=Object.keys(alvos).sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
-  if(nfRel.alvo && !alvos[nfRel.alvo]) nfRel.alvo='';
+  if(S.alvo && !alvos[S.alvo]) S.alvo='';
   var sel=function(v,o){ return v===o?' selected':''; };
   var h='<div class="nf-rel-atalhos"><span class="filter-label">Atalhos</span>';
   NF_REL_ATALHOS.forEach(function(a){
-    h+='<div class="manut-filter-tag'+(nfRel.atalho===a.id?' active':'')+'" onclick="_nfRelSet(\'atalho\',\''+(nfRel.atalho===a.id?'':a.id)+'\')">'+a.rotulo+'</div>';
+    h+='<div class="manut-filter-tag'+(S.atalho===a.id?' active':'')+'" onclick="_nfRelSet(\''+k+'\',\'atalho\',\''+(S.atalho===a.id?'':a.id)+'\')">'+a.rotulo+'</div>';
   });
   h+='</div><div class="nf-rel-linha">'+
-    '<input type="text" class="filter-select" id="nfRelBusca" placeholder="🔎 Buscar na descrição (ex.: correia, graxa)" value="'+_nfEsc(nfRel.busca)+'" oninput="_nfRelBuscar(this.value)">'+
-    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'origem\',this.value)"><option value="">🚛🚜 Caminhões e máquinas</option><option value="caminhao"'+sel(nfRel.origem,'caminhao')+'>🚛 Só caminhões</option><option value="maq"'+sel(nfRel.origem,'maq')+'>🚜 Só maquinário</option></select>')+
-    (nfRelEmbutido?'':'<select class="filter-select" onchange="_nfRelSet(\'alvo\',this.value)"><option value="">Todas as placas/máquinas</option>'+
-      alvoL.map(function(a){ return '<option'+sel(nfRel.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>')+
-    '<select class="filter-select" onchange="_nfRelSet(\'tipo\',this.value)"><option value="">Peças e serviços</option><option value="PECA"'+sel(nfRel.tipo,'PECA')+'>Só peças</option><option value="SERVICO"'+sel(nfRel.tipo,'SERVICO')+'>Só mão de obra</option></select>'+
-    (nfRelEmbutido?'':'<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(nfRel.dtIni)+'" onchange="_nfRelSet(\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(nfRel.dtFim)+'" onchange="_nfRelSet(\'dtFim\',this.value)"></div>')+
-    '<button class="manut-filter-reset" onclick="_nfRelLimpar()">↺ Limpar</button></div>'+
+    // na instância embutida a busca mora fora do <details>, sempre visível
+    (C.buscaTopo?'':'<input type="text" class="filter-select nf-rel-busca" id="nfRelBusca_'+k+'" placeholder="🔎 Quanto gastei com... (ex.: estopa, correia, filtro de ar)" value="'+_nfEsc(S.busca)+'" oninput="_nfRelBuscar(\''+k+'\',this.value)">')+
+    (C.embutido?'':'<select class="filter-select" onchange="_nfRelSet(\''+k+'\',\'alvo\',this.value)"><option value="">'+(C.origemFixa==='maq'?'Todas as máquinas/insumos':'Todas as placas')+'</option>'+
+      alvoL.map(function(a){ return '<option'+sel(S.alvo,a)+'>'+_nfEsc(a)+'</option>'; }).join('')+'</select>')+
+    '<select class="filter-select" onchange="_nfRelSet(\''+k+'\',\'tipo\',this.value)"><option value="">Peças e serviços</option><option value="PECA"'+sel(S.tipo,'PECA')+'>Só peças</option><option value="SERVICO"'+sel(S.tipo,'SERVICO')+'>Só mão de obra</option></select>'+
+    (C.embutido?'':'<div class="nf-rel-datas">📅 De <input type="date" value="'+_nfEsc(S.dtIni)+'" onchange="_nfRelSet(\''+k+'\',\'dtIni\',this.value)"> até <input type="date" value="'+_nfEsc(S.dtFim)+'" onchange="_nfRelSet(\''+k+'\',\'dtFim\',this.value)"></div>')+
+    '<button class="manut-filter-reset" onclick="_nfRelLimpar(\''+k+'\')">↺ Limpar</button></div>'+
     '<div class="nf-rel-nota">ℹ️ Só entra o que foi importado por nota fiscal (XML). Manutenção digitada à mão não tem as peças, só o total. '+
     'Busca por texto pega peça e serviço: "filtro de ar" também acha a mão de obra "substituir filtro de ar" — use "Só peças" para separar.</div>';
   el.innerHTML=h;
 }
-function _nfRelSet(campo,v){ nfRel[campo]=v; buildNfRelatorio(); }
-function _nfRelSetAlvo(a){ nfRel.alvo=(nfRel.alvo===a)?'':a; buildNfRelatorio(); }
-var _nfRelTimer=null;
-function _nfRelBuscar(v){
-  nfRel.busca=v;
-  clearTimeout(_nfRelTimer);
-  _nfRelTimer=setTimeout(function(){ buildNfRelatorio(true); },250);
+function _nfRelSet(k,campo,v){ nfRelEst[k][campo]=v; buildNfRelatorio(k); }
+function _nfRelSetAlvo(k,a){ var S=nfRelEst[k]; S.alvo=(S.alvo===a)?'':a; buildNfRelatorio(k); }
+
+// Busca: redesenha só o resultado (soResultado=true), senão o campo perderia o foco a
+// cada letra digitada.
+var _nfRelTimer={};
+function _nfRelBuscar(k,v){
+  nfRelEst[k].busca=v;
+  clearTimeout(_nfRelTimer[k]);
+  _nfRelTimer[k]=setTimeout(function(){ buildNfRelatorio(k,true); },250);
 }
-function _nfRelLimpar(){ nfRel={busca:'',atalho:'',origem:'',alvo:'',tipo:'',dtIni:'',dtFim:''}; buildNfRelatorio(); }
-// ===== FIM PEÇAS E SERVIÇOS =====
+// Clicar numa linha de "Por produto" joga a descrição na busca
+function _nfRelBuscarProduto(k,d){
+  var S=nfRelEst[k];
+  S.busca=(S.busca===d)?'':d;
+  S.atalho='';
+  buildNfRelatorio(k);
+}
+// Mantém o campo de fora do <details> e o resumo ao lado dele em sincronia com o estado,
+// e abre o bloco sozinho quando há algo buscado — digitar e nada aparecer seria pior
+// do que o problema que a busca resolve.
+function _nfRelEcoBusca(k){
+  var C=NF_REL_CFG[k], S=nfRelEst[k];
+  if(!C.buscaTopo) return;
+  var inp=document.getElementById(C.buscaTopo);
+  if(inp && inp.value!==S.busca) inp.value=S.busca;
+  var det=document.getElementById(C.detalhes);
+  if(det && (S.busca||S.atalho)) det.open=true;
+  var eco=document.getElementById(C.buscaTopo+'Eco');
+  if(eco){
+    if(!S.busca && !S.atalho){ eco.innerHTML=''; return; }
+    var L=_nfRelFiltrar(k,_nfRelLinhas()), t=0, q={};
+    L.forEach(function(l){
+      t+=l.valor;
+      var n=num(l.item.QUANTIDADE);
+      if(n){ var u=_nfRelUn(l.item.UNIDADE); q[u]=(q[u]||0)+n; }
+    });
+    var qtd=Object.keys(q).map(function(u){ return fmt(q[u],(q[u]%1)?1:0)+' '+u; }).join(' · ');
+    eco.innerHTML=L.length
+      ? '<strong>'+fmtR(Math.round(t*100)/100)+'</strong> em '+L.length+' item(ns)'+(qtd?' · '+_nfEsc(qtd):'')
+      : 'nada encontrado nas notas';
+  }
+}
+function _nfRelLimpar(k){
+  nfRelEst[k]=_nfRelNovo(NF_REL_CFG[k].origemFixa);
+  // A instância embutida não é dona do período nem do veículo — quem manda é o filtro do
+  // topo de Custos. Limpar aqui não pode largar o quadro fora daquele recorte, senão ele
+  // passa a mostrar mais do que a tabela logo acima.
+  if(NF_REL_CFG[k].embutido && typeof mcFiltro!=='undefined') nfRelSincronizar(k,mcFiltro);
+  buildNfRelatorio(k);
+}
+// ===== FIM PEÇAS, PRODUTOS E SERVIÇOS =====
 </script>
 <script>
 // ============================================================
@@ -7291,14 +7451,14 @@ function buildProducao(){
   chartInstances['cProdClientes']=new Chart(ctxC,{type:'bar',data:{labels:cs.map(function(c){return c[0]}),datasets:[{label:'TON',data:cs.map(function(c){return c[1].ton}),backgroundColor:makeGradH(ctxC,'rgba(59,130,246,0.85)','rgba(59,130,246,0.2)'),borderRadius:6,borderSkipped:false},{label:'M³',data:cs.map(function(c){return c[1].m3}),backgroundColor:makeGradH(ctxC,'rgba(249,115,22,0.85)','rgba(249,115,22,0.2)'),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}},datalabels:prodDL('end','end',null,function(v){return v?numBR(v,1):''})},scales:{x:{stacked:true,ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}},y:{stacked:true,ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   // Table with modern styling
-  var canEditEnt=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditEnt=podeEditarCadastro();
   var tH='<div class="table-header"><h3>Detalhamento de Entregas</h3><span class="chart-badge">'+entregas.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Carga</th><th>Descarga</th><th>Qtd</th><th>Und</th><th>Nota</th>'+(canEditEnt?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   entregas.sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')}).forEach(function(r){
     var u=r['LOCAL DESCARGA']?getUnit(r['LOCAL DESCARGA']):'';
     var tagClass=u==='M³'?'style="color:#f97316"':'style="color:#3b82f6"';
     var actCell='';
     if(canEditEnt){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(r.USUARIO);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
     tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL CARGA']||'-')+'</td><td>'+(r['LOCAL DESCARGA']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.QUANTIDADE?numBR(r.QUANTIDADE,2):'-')+'</td><td '+tagClass+'>'+u+'</td><td>'+(r.NOTA||'-')+'</td>'+actCell+'</tr>';
@@ -7628,12 +7788,12 @@ function buildFinanceiro(){
   chartInstances['cFinMotDesp']=new Chart(ctxFD,{type:'bar',data:{labels:mde.map(function(m){return m[0]}),datasets:[{data:mde.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxFD,'rgba(239,68,68,0.85)','rgba(239,68,68,0.2)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   var finRows=data.filter(function(r){return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
-  var canEditFin=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditFin=podeEditarCadastro();
   var tH='<div class="table-header"><h3>Detalhamento Financeiro</h3><span class="chart-badge">'+finRows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th>Litros</th><th>Vlr Unit.</th><th>Vlr Total</th><th>ARLA</th><th>Classe</th><th>Vlr Desp.</th>'+(canEditFin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   finRows.forEach(function(r){
     var actCell='';
     if(canEditFin){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(r.USUARIO);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
     tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(despesaFinanceira(r)>0?(r['CLASSE DESPESA']||'-'):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(despesaFinanceira(r)>0?'R$'+numBR(despesaFinanceira(r),2):'-')+'</td>'+actCell+'</tr>';
@@ -7885,7 +8045,7 @@ function buildManutencao(){
   buildManutencaoFora();
   buildManutencaoGarantia();
   buildManutDetalhamento();
-  if(typeof buildNfRelatorio==='function') buildNfRelatorio();
+  if(typeof buildNfRelatorio==='function') buildNfRelatorio('manut');
   if(typeof buildManutCustos==='function') buildManutCustos();
 }
 
@@ -7901,7 +8061,7 @@ function showManutView(view){
   // garantia — então fica só na visão principal, em vez de repetida em cada aba.
   var pneu=document.getElementById('manutConsultaPneu');
   if(pneu) pneu.style.display='';
-  if(view==='custos'){ buildManutCustos(); if(typeof buildNfRelatorio==='function') buildNfRelatorio(); }
+  if(view==='custos'){ buildManutCustos(); if(typeof buildNfRelatorio==='function') buildNfRelatorio('manut'); }
   else if(view==='historico') buildManutDetalhamento();
 }
 
@@ -8588,7 +8748,7 @@ function buildManutDetalhamento(){
     return true;
   });
 
-  var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEdit=podeEditarCadastro();
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   var colCount=canEdit?12:11;
   var nLanc=0;
@@ -8601,7 +8761,9 @@ function buildManutDetalhamento(){
     if(canEdit){
       // Cada origem abre o modal da sua própria tabela: despesa vai para o modal do
       // Cadastro (o mesmo do Financeiro e da Produção), lançamento vai para o da Manutenção.
-      var canEditThis=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+      // Linha de origem 'lancamento' e da manut_realizada, onde o RLS so libera ADMIN e o
+      // ANALISTA dono — mas o DIRETOR nem consegue inserir ali, entao nunca e dono de uma.
+      var canEditThis=ehDonoLancamento(l.usuario);
       var fnEdit=ehDesp?'openEditModal':'openManutRealModal';
       var fnDel=ehDesp?'openDeleteModal':'openManutRealDelete';
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="'+fnEdit+'(\''+l.id+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
@@ -8922,7 +9084,7 @@ function buildManutCustos(){
   // modal certo conforme a origem: despesa de viagem vai para o modal do Cadastro (o
   // mesmo do Financeiro e da Produção) e lançamento vai para o modal da Manutenção.
   // A permissão segue a regra das outras abas; a garantia de verdade é o RLS no banco.
-  var mcPodeEditar=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var mcPodeEditar=podeEditarCadastro();
   var mcCols=mcPodeEditar?9:8;
   var cab=document.getElementById('mcDetalheHead');
   if(cab) cab.innerHTML='<th>Data</th><th>Placa</th><th>Motorista</th><th>Origem</th><th>Categoria</th><th>Descrição</th><th>Local / Fornecedor</th><th>Valor</th>'+(mcPodeEditar?'<th>Ações</th>':'');
@@ -8945,14 +9107,14 @@ function buildManutCustos(){
 
   // O quadro de peças e serviços é o detalhe DESTA mesma seleção: herda o filtro e é
   // redesenhado junto. Sem isso, duas tabelas vizinhas mostravam recortes diferentes.
-  if(typeof nfRelSincronizar==='function'){ nfRelSincronizar(mcFiltro); buildNfRelatorio(); }
+  if(typeof nfRelSincronizar==='function'){ nfRelSincronizar('manut',mcFiltro); buildNfRelatorio('manut'); }
   document.getElementById('mcDetalheTotal').textContent=linhas.length+' lançamentos · R$'+numBR(total,2);
 }
 
-// ANALISTA só edita o que ele mesmo lançou; ADMIN edita tudo. Mesma regra do
-// Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
+// ANALISTA e DIRETOR só editam o que eles mesmos lançaram; ADMIN edita tudo. Mesma regra
+// do Detalhamento Financeiro (js/financeiro.js) e do de Produção (js/producao.js).
 function _mcCelulaAcoes(l){
-  var dono=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+  var dono=ehDonoLancamento(l.usuario);
   if(!dono) return '<td><span style="color:#888;font-size:11px">-</span></td>';
   var fn=l.origem==='despesa'?'openEditModal':'openManutRealModal';
   return '<td><button class="btn-edit-row" onclick="'+fn+'(\''+String(l.id).replace(/'/g,"\\'")+'\')" title="Editar '+(l.origem==='despesa'?'a despesa da viagem':'o lançamento de manutenção')+'">✏️</button></td>';
@@ -9539,7 +9701,7 @@ function renderConsumoAbastList(){
     return;
   }
   // Checa se o usuário pode ver a coluna de ações
-  var podeEditarAlgo = !!(currentUserData && (currentUserData.perfil==='ADMIN' || currentUserData.perfil==='ANALISTA'));
+  var podeEditarAlgo = podeEditarCadastro();
   var h='<div class="table-scroll" style="max-height:60vh;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead style="background:var(--surface2);position:sticky;top:0;z-index:2"><tr>';
   h+='<th style="text-align:left;padding:8px 12px;font-weight:500;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Data</th>';
   h+='<th style="text-align:left;padding:8px 12px;font-weight:500;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Motorista</th>';
@@ -9553,15 +9715,8 @@ function renderConsumoAbastList(){
   h+='</tr></thead><tbody>';
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   rows.forEach(function(r){
-    // Decide se mostra o botão editar nesta linha (ADMIN: sempre; ANALISTA: só próprios)
-    var podeEditarLinha=false;
-    if(currentUserData){
-      if(currentUserData.perfil==='ADMIN') podeEditarLinha=true;
-      else if(currentUserData.perfil==='ANALISTA'){
-        var owner=r.USUARIO;
-        if(owner===currentUserData.nome || owner===currentUserData.usuario) podeEditarLinha=true;
-      }
-    }
+    // Decide se mostra o botão editar nesta linha (ADMIN: sempre; ANALISTA/DIRETOR: só próprios)
+    var podeEditarLinha=ehDonoLancamento(r.USUARIO);
     h+='<tr style="border-top:1px solid var(--border)">';
     h+='<td style="padding:8px 12px;'+mono+'">'+formatDateBR(r.DATA)+'</td>';
     h+='<td style="padding:8px 12px">'+(r.MOTORISTA||'-')+'</td>';
@@ -10088,7 +10243,7 @@ function buildTempoEspera(){
   chartInstances['cTempoLocal']=new Chart(ctxTL,{type:'bar',data:{labels:locL,datasets:[{data:locL.map(function(d){return Math.round(locData[d].s/locData[d].c)}),backgroundColor:makeGradH(ctxTL,locClr+'0.9)',locClr+'0.3)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return minToHHMM(ctx.raw)}}}},scales:{x:{ticks:{color:colors.text,callback:function(v){return minToHHMM(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   var tempoRows=tempos.sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
-  var canEditTmp=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditTmp=podeEditarCadastro();
 
   // Define colunas visiveis conforme filtro de tipo
   var somenteCarga    = fTipo==='Carga (Floresta)';
@@ -10107,7 +10262,7 @@ function buildTempoEspera(){
   tempoRows.forEach(function(t){
     var actCell='';
     if(canEditTmp){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(t.USUARIO===currentUserData.nome||t.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(t.USUARIO);
       if(canEditThis){
         var btnsTmp='';
         if(t.pendF||t.pendC){ btnsTmp+='<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(t)+'\')" title="Lançar saída" style="background:#f59e0b;color:#1a1a1a;font-size:10px;font-weight:700;padding:4px 8px;white-space:nowrap">\u23F0 Lançar saída</button> '; }

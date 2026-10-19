@@ -248,14 +248,14 @@ function buildProducao(){
   chartInstances['cProdClientes']=new Chart(ctxC,{type:'bar',data:{labels:cs.map(function(c){return c[0]}),datasets:[{label:'TON',data:cs.map(function(c){return c[1].ton}),backgroundColor:makeGradH(ctxC,'rgba(59,130,246,0.85)','rgba(59,130,246,0.2)'),borderRadius:6,borderSkipped:false},{label:'M³',data:cs.map(function(c){return c[1].m3}),backgroundColor:makeGradH(ctxC,'rgba(249,115,22,0.85)','rgba(249,115,22,0.2)'),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:colors.text}},datalabels:prodDL('end','end',null,function(v){return v?numBR(v,1):''})},scales:{x:{stacked:true,ticks:{color:colors.text,callback:function(v){return numBR(v)}},grid:{color:colors.grid}},y:{stacked:true,ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   // Table with modern styling
-  var canEditEnt=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditEnt=podeEditarCadastro();
   var tH='<div class="table-header"><h3>Detalhamento de Entregas</h3><span class="chart-badge">'+entregas.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Carga</th><th>Descarga</th><th>Qtd</th><th>Und</th><th>Nota</th>'+(canEditEnt?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   entregas.sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')}).forEach(function(r){
     var u=r['LOCAL DESCARGA']?getUnit(r['LOCAL DESCARGA']):'';
     var tagClass=u==='M³'?'style="color:#f97316"':'style="color:#3b82f6"';
     var actCell='';
     if(canEditEnt){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(r.USUARIO);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
     tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL CARGA']||'-')+'</td><td>'+(r['LOCAL DESCARGA']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.QUANTIDADE?numBR(r.QUANTIDADE,2):'-')+'</td><td '+tagClass+'>'+u+'</td><td>'+(r.NOTA||'-')+'</td>'+actCell+'</tr>';

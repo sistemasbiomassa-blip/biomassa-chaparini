@@ -114,7 +114,7 @@ function buildTempoEspera(){
   chartInstances['cTempoLocal']=new Chart(ctxTL,{type:'bar',data:{labels:locL,datasets:[{data:locL.map(function(d){return Math.round(locData[d].s/locData[d].c)}),backgroundColor:makeGradH(ctxTL,locClr+'0.9)',locClr+'0.3)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return minToHHMM(ctx.raw)}}}},scales:{x:{ticks:{color:colors.text,callback:function(v){return minToHHMM(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   var tempoRows=tempos.sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
-  var canEditTmp=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditTmp=podeEditarCadastro();
 
   // Define colunas visiveis conforme filtro de tipo
   var somenteCarga    = fTipo==='Carga (Floresta)';
@@ -133,7 +133,7 @@ function buildTempoEspera(){
   tempoRows.forEach(function(t){
     var actCell='';
     if(canEditTmp){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(t.USUARIO===currentUserData.nome||t.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(t.USUARIO);
       if(canEditThis){
         var btnsTmp='';
         if(t.pendF||t.pendC){ btnsTmp+='<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(t)+'\')" title="Lançar saída" style="background:#f59e0b;color:#1a1a1a;font-size:10px;font-weight:700;padding:4px 8px;white-space:nowrap">\u23F0 Lançar saída</button> '; }

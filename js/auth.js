@@ -204,6 +204,7 @@ function switchTab(el,tabId){
   if(tabId==='tabMaqLocal') renderMaqLocalTable();
   if(tabId==='tabMaqAbast') renderMaqAbastTable();
   if(tabId==='tabMaqManut') renderMaqManutTable();
+  if(tabId==='tabMaqPecas') buildNfRelatorio('maq');
   if(tabId==='tabMaqCusto') renderMaqCusto();
   if(tabId==='tabComboioSaldos') renderComboioSaldos();
   if(tabId==='tabComboioEntradas') renderComboioEntradas();

@@ -180,12 +180,12 @@ function buildFinanceiro(){
   chartInstances['cFinMotDesp']=new Chart(ctxFD,{type:'bar',data:{labels:mde.map(function(m){return m[0]}),datasets:[{data:mde.map(function(m){return m[1]}),backgroundColor:makeGradH(ctxFD,'rgba(239,68,68,0.85)','rgba(239,68,68,0.2)'),borderRadius:6,borderSkipped:false,barPercentage:0.55}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:colors.text,callback:function(v){return 'R$'+numBR(v)}},grid:{color:colors.grid}},y:{ticks:{color:colors.text,font:{size:11,weight:'500'}},grid:{display:false}}}}});
 
   var finRows=data.filter(function(r){return r['VALOR TOTAL']||despesaFinanceira(r)>0||r['ARLA VALOR']}).sort(function(a,b){return(b.DATA||'').localeCompare(a.DATA||'')});
-  var canEditFin=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEditFin=podeEditarCadastro();
   var tH='<div class="table-header"><h3>Detalhamento Financeiro</h3><span class="chart-badge">'+finRows.length+' registros</span></div><div class="table-scroll"><table><thead><tr><th>Data</th><th>Motorista</th><th>Placa</th><th>Posto</th><th>Litros</th><th>Vlr Unit.</th><th>Vlr Total</th><th>ARLA</th><th>Classe</th><th>Vlr Desp.</th>'+(canEditFin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   finRows.forEach(function(r){
     var actCell='';
     if(canEditFin){
-      var canEditThis=currentUserData.perfil==='ADMIN'||(r.USUARIO===currentUserData.nome||r.USUARIO===currentUserData.usuario);
+      var canEditThis=ehDonoLancamento(r.USUARIO);
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="openEditModal(\''+rowKeyAttr(r)+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+'</td>';
     }
     tH+='<tr><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+formatDateBR(r.DATA)+'</td><td>'+(r.MOTORISTA||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--accent)">'+(r.PLACA||'-')+'</td><td>'+(r['LOCAL ABASTECIMENTO']||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['QTDADE LITROS']?numBR(r['QTDADE LITROS'],1):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['VALOR UNITARIO']?'R$'+numBR(r['VALOR UNITARIO'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#22c55e">'+(r['VALOR TOTAL']?'R$'+numBR(r['VALOR TOTAL'],2):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r['ARLA VALOR']?'R$'+numBR(r['ARLA VALOR'],2):'-')+'</td><td>'+(despesaFinanceira(r)>0?(r['CLASSE DESPESA']||'-'):'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;color:#ef4444">'+(despesaFinanceira(r)>0?'R$'+numBR(despesaFinanceira(r),2):'-')+'</td>'+actCell+'</tr>';

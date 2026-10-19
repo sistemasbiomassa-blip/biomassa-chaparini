@@ -566,7 +566,7 @@ function renderConsumoAbastList(){
     return;
   }
   // Checa se o usuário pode ver a coluna de ações
-  var podeEditarAlgo = !!(currentUserData && (currentUserData.perfil==='ADMIN' || currentUserData.perfil==='ANALISTA'));
+  var podeEditarAlgo = podeEditarCadastro();
   var h='<div class="table-scroll" style="max-height:60vh;overflow-y:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead style="background:var(--surface2);position:sticky;top:0;z-index:2"><tr>';
   h+='<th style="text-align:left;padding:8px 12px;font-weight:500;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Data</th>';
   h+='<th style="text-align:left;padding:8px 12px;font-weight:500;color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Motorista</th>';
@@ -580,15 +580,8 @@ function renderConsumoAbastList(){
   h+='</tr></thead><tbody>';
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   rows.forEach(function(r){
-    // Decide se mostra o botão editar nesta linha (ADMIN: sempre; ANALISTA: só próprios)
-    var podeEditarLinha=false;
-    if(currentUserData){
-      if(currentUserData.perfil==='ADMIN') podeEditarLinha=true;
-      else if(currentUserData.perfil==='ANALISTA'){
-        var owner=r.USUARIO;
-        if(owner===currentUserData.nome || owner===currentUserData.usuario) podeEditarLinha=true;
-      }
-    }
+    // Decide se mostra o botão editar nesta linha (ADMIN: sempre; ANALISTA/DIRETOR: só próprios)
+    var podeEditarLinha=ehDonoLancamento(r.USUARIO);
     h+='<tr style="border-top:1px solid var(--border)">';
     h+='<td style="padding:8px 12px;'+mono+'">'+formatDateBR(r.DATA)+'</td>';
     h+='<td style="padding:8px 12px">'+(r.MOTORISTA||'-')+'</td>';

@@ -853,10 +853,20 @@
                  para quem pode editar (ADMIN/ANALISTA). -->
             <div class="table-scroll"><table class="mc-tbl"><thead><tr id="mcDetalheHead"></tr></thead><tbody id="mcDetalheBody"></tbody></table></div>
           </div>
+          <!-- Busca por produto. "Quanto gastei de estopa" é pergunta de rotina, e o campo
+               que responde isso estava dentro do <details> abaixo, fechado — ninguém achava.
+               Agora fica aqui fora, sempre à vista, com o total do que casou ao lado;
+               digitar abre o bloco com o detalhamento. -->
+          <div class="nf-rel-busca-topo">
+            <input type="text" class="filter-select nf-rel-busca" id="nfRelBuscaTopo"
+                   placeholder="🔎 Quanto gastei com... (ex.: estopa, correia, filtro de ar)"
+                   oninput="_nfRelBuscar('manut',this.value)">
+            <span class="nf-rel-busca-eco" id="nfRelBuscaTopoEco"></span>
+          </div>
           <!-- Detalhe item a item das notas: é o mesmo dinheiro do quadro acima, aberto
                por dentro. Fechado por padrão para não parecer um segundo relatório. -->
-          <details class="manut-panel manut-matriz-det" style="margin-top:14px">
-            <summary class="manut-matriz-sum">🔩 Abrir as notas por dentro <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
+          <details class="manut-panel manut-matriz-det" id="nfRelDetalhes" style="margin-top:10px">
+            <summary class="manut-matriz-sum">🔩 As notas por dentro, produto por produto <span class="manut-ph-badge">peça a peça, só o que veio por XML</span></summary>
             <div class="nf-rel-filtros" id="nfRelFiltros"></div>
             <div id="nfRelConteudo"></div>
           </details>
@@ -1024,6 +1034,7 @@
           <div class="tab active" onclick="switchTab(this,'tabMaquinas')">Máquinas</div>
           <div class="tab" onclick="switchTab(this,'tabMaqAbast')">Abastecimento</div>
           <div class="tab" onclick="switchTab(this,'tabMaqManut')">Manutenção</div>
+          <div class="tab" onclick="switchTab(this,'tabMaqPecas')">Peças e Produtos</div>
           <div class="tab" onclick="switchTab(this,'tabMaqLocal')">Localização</div>
           <div class="tab" onclick="switchTab(this,'tabMaqCusto')">Custo por Floresta</div>
         </div>
@@ -1069,6 +1080,24 @@
             <div class="table-header"><h3>🔧 Manutenções e consertos</h3><span class="chart-badge" id="maqMtCount">0 registros</span></div>
             <div class="table-scroll" id="maqMtTableContainer"></div>
           </div>
+        </div>
+        <!-- Peças e produtos das notas de máquina/insumo: instância 'maq' de
+             js/nf-relatorio.js. Responde "quanto gastei de estopa, de óleo, de correia"
+             no maquinário — o mesmo que a busca de Manutenção › Custos responde do lado
+             caminhão. Aqui é aba própria porque Maquinários não tinha nenhum caminho até
+             esses itens, e são mais itens do que o lado caminhão. -->
+        <div class="tab-content" id="tabMaqPecas">
+          <!-- Mesma barra de busca de Manutenção › Custos, com o mesmo texto: é a mesma
+               pergunta dos dois lados da frota, então não pode mudar de cara nem de lugar
+               de uma aba para a outra. Os filtros finos ficam abaixo. -->
+          <div class="nf-rel-busca-topo">
+            <input type="text" class="filter-select nf-rel-busca" id="nfRelBuscaTopoMaq"
+                   placeholder="🔎 Quanto gastei com... (ex.: estopa, correia, filtro de ar)"
+                   oninput="_nfRelBuscar('maq',this.value)">
+            <span class="nf-rel-busca-eco" id="nfRelBuscaTopoMaqEco"></span>
+          </div>
+          <div class="nf-rel-filtros" id="nfRelFiltrosMaq"></div>
+          <div id="nfRelConteudoMaq"></div>
         </div>
         <div class="tab-content" id="tabMaqLocal">
           <div class="filters">

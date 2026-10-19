@@ -11,7 +11,7 @@ function buildManutencao(){
   buildManutencaoFora();
   buildManutencaoGarantia();
   buildManutDetalhamento();
-  if(typeof buildNfRelatorio==='function') buildNfRelatorio();
+  if(typeof buildNfRelatorio==='function') buildNfRelatorio('manut');
   if(typeof buildManutCustos==='function') buildManutCustos();
 }
 
@@ -27,7 +27,7 @@ function showManutView(view){
   // garantia — então fica só na visão principal, em vez de repetida em cada aba.
   var pneu=document.getElementById('manutConsultaPneu');
   if(pneu) pneu.style.display='';
-  if(view==='custos'){ buildManutCustos(); if(typeof buildNfRelatorio==='function') buildNfRelatorio(); }
+  if(view==='custos'){ buildManutCustos(); if(typeof buildNfRelatorio==='function') buildNfRelatorio('manut'); }
   else if(view==='historico') buildManutDetalhamento();
 }
 
@@ -714,7 +714,7 @@ function buildManutDetalhamento(){
     return true;
   });
 
-  var canEdit=currentUserData&&(currentUserData.perfil==='ADMIN'||currentUserData.perfil==='ANALISTA');
+  var canEdit=podeEditarCadastro();
   var mono='font-family:JetBrains Mono,monospace;font-size:11px';
   var colCount=canEdit?12:11;
   var nLanc=0;
@@ -727,7 +727,9 @@ function buildManutDetalhamento(){
     if(canEdit){
       // Cada origem abre o modal da sua própria tabela: despesa vai para o modal do
       // Cadastro (o mesmo do Financeiro e da Produção), lançamento vai para o da Manutenção.
-      var canEditThis=currentUserData.perfil==='ADMIN'||(l.usuario===currentUserData.nome||l.usuario===currentUserData.usuario);
+      // Linha de origem 'lancamento' e da manut_realizada, onde o RLS so libera ADMIN e o
+      // ANALISTA dono — mas o DIRETOR nem consegue inserir ali, entao nunca e dono de uma.
+      var canEditThis=ehDonoLancamento(l.usuario);
       var fnEdit=ehDesp?'openEditModal':'openManutRealModal';
       var fnDel=ehDesp?'openDeleteModal':'openManutRealDelete';
       actCell='<td>'+(canEditThis?'<button class="btn-edit-row" onclick="'+fnEdit+'(\''+l.id+'\')" title="Editar">✏️</button>':'<span style="color:#888;font-size:11px">-</span>')+
