@@ -113,8 +113,10 @@ function loadFromSheets(callback) {
     };});
     DB.nfItens = nfItensR.map(function(x){ return {
       ID:x.id, DOCUMENTO_ID:x.documento_id, N_ITEM:x.n_item, TIPO:x.tipo, CODIGO:x.codigo, DESCRICAO:x.descricao,
+      APELIDO:x.apelido,   // "o que é" escrito por quem conferiu a nota (nota só com código)
       QUANTIDADE:x.quantidade, UNIDADE:x.unidade, VALOR_BRUTO:x.valor_bruto, DESCONTO:x.desconto, VALOR:x.valor,
-      MAQ_MANUTENCAO_ID:x.maq_manutencao_id   // nota dividida entre máquinas: de quem é o item
+      // nota dividida entre máquinas ou entre placas: de qual lançamento é este item
+      MAQ_MANUTENCAO_ID:x.maq_manutencao_id, MANUT_REALIZADA_ID:x.manut_realizada_id
     };});
 
     DB.manutProgramada = manutPR.map(function(x){ return {

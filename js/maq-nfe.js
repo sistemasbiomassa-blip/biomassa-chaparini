@@ -27,6 +27,7 @@ function _maqNfePrepararGrupos(L){
     // compra sem OS (insumo a granel) já nasce como Insumo; com serviço/OS o usuário escolhe
     g.maq=''; g.floresta=''; g.tipo=(!g.os && !g.servicos)?'Insumo':''; g.dividir=false; g.itemMaq=[];
     g.itemPartes=[]; g.qtdChutada=false; g.maqLida=false; g.maqTrecho='';
+    nfSemearApelidos(g);   // "o que é" de cada item, lembrado do código do fornecedor
     // o fornecedor escreve a máquina nas informações complementares da nota
     g.maqsNota=nfAcharMaquinas(g.textoLivre, lista);
     if(g.maqsNota.length===1){
@@ -245,7 +246,8 @@ function _maqNfeRender(){
       '<td style="text-align:center"><span class="maq-act" title="Tirar da lista" onclick="_maqNfeRemover('+i+')">✖</span></td>'+
       '</tr>'+
       '<tr class="nf-itens-linha"><td colspan="'+COLS+'">'+
-        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null)+
+        nfItensHtml(g, g.dividir?function(it,n){ return _maqNfeCelulaItem(i,n,it,g); }:null,
+                    {fn:'_maqNfeApelido', i:i, valores:g.itemApelido, lembrados:g.itemApelidoLido})+
         nfObsHtml(g)+   // o que a nota escreveu: é de onde sai a máquina lida
         '</td></tr>';
   });
@@ -299,6 +301,12 @@ function _maqNfeResumo(){
   btn.textContent='📥 Importar '+imp.length+' lançamento(s)';
 }
 
+function _maqNfeApelido(i,n,v){
+  var g=_maqNfe.grupos[i]; if(!g) return;
+  g.itemApelido[n]=String(v||'').trim();
+  g.itemApelidoLido[n]=false;   // escrito agora, não é mais o que veio da memória
+  _maqNfeRender();
+}
 function _maqNfeSet(i,campo,valor){ if(_maqNfe.grupos[i]){ _maqNfe.grupos[i][campo]=valor; _maqNfeResumo(); } }
 function _maqNfeRemover(i){ _maqNfe.grupos.splice(i,1); _maqNfeRender(); }
 function maqNfeAplicarTodos(campo){
@@ -310,7 +318,7 @@ function maqNfeAplicarTodos(campo){
 }
 
 function _maqNfePayload(g){
-  var docs=g.docs.map(nfDocPayload);
+  var docs=nfAplicarApelidos(g, g.docs.map(nfDocPayload));
   if(g.anexarA) return {destino:'maq', anexar_a:g.anexarA.id, documentos:docs};
   var nome=currentUserData?currentUserData.nome:'';
   var obs=nfRotuloNotas(g)+(g.os?' · OS '+g.os:'');

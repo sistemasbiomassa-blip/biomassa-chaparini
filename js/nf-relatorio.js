@@ -54,20 +54,31 @@ function _nfRelAttr(s){
   return _nfEsc(String(s==null?'':s).replace(/[\r\n]+/g,' ').replace(/\\/g,'\\\\')).replace(/'/g,"\\'");
 }
 
+// Nome de uso do item: a loja às vezes descreve a peça só pelo código dela
+// ("HCZ713 STAHL=52X147,4"), e quem confere a nota escreve o apelido ("rolamento de roda
+// dianteira"). O relatório mostra e agrupa pelo apelido quando ele existe.
+function _nfRelNome(i){ return String((i&&i.APELIDO)||(i&&i.DESCRICAO)||'').trim(); }
+
 function _nfRelUn(u){
   var n=_nfNorm(u).trim();
   if(/^(L|LT|LTS|LITRO|LITROS)$/.test(n)) return 'L';
   return n||'UN';
 }
-// De onde veio cada nota: placa do caminhão, ou máquina (ou "insumo" da fazenda)
-function _nfRelOrigem(d){
-  if(d.MANUT_REALIZADA_ID){
-    var r=findManutRealById(d.MANUT_REALIZADA_ID);
-    return {origem:'caminhao', alvo:r?r.PLACA:'?', id:d.MANUT_REALIZADA_ID};
+// De onde veio cada item: placa do caminhão, ou máquina (ou "insumo" da fazenda).
+// Nota dividida (entre máquinas ou entre placas) grava em cada ITEM o lançamento dele —
+// aí vale o item, senão a peça do outro caminhão entrava na conta do primeiro. Item sem
+// dono é o caso normal, da nota inteira num lançamento só.
+function _nfRelOrigem(d,i){
+  var proprio=i && (i.MANUT_REALIZADA_ID || i.MAQ_MANUTENCAO_ID);
+  var cam=proprio?i.MANUT_REALIZADA_ID:d.MANUT_REALIZADA_ID;
+  var maq=proprio?i.MAQ_MANUTENCAO_ID:d.MAQ_MANUTENCAO_ID;
+  if(cam){
+    var r=findManutRealById(cam);
+    return {origem:'caminhao', alvo:r?r.PLACA:'?', id:cam};
   }
-  var m=findManutById(d.MAQ_MANUTENCAO_ID);
+  var m=findManutById(maq);
   var alvo=m?(m.ID_MAQUINA?maqNome(m.ID_MAQUINA):'Insumo · '+(m.FLORESTA_OPC||'sem fazenda')):'?';
-  return {origem:'maq', alvo:alvo, id:d.MAQ_MANUTENCAO_ID};
+  return {origem:'maq', alvo:alvo, id:maq};
 }
 function _nfRelLinhas(){
   var docs={};
@@ -75,9 +86,10 @@ function _nfRelLinhas(){
   var out=[];
   (DB.nfItens||[]).forEach(function(i){
     var d=docs[i.DOCUMENTO_ID]; if(!d) return;
-    var o=_nfRelOrigem(d);
+    var o=_nfRelOrigem(d,i);
     out.push({item:i, doc:d, origem:o.origem, alvo:o.alvo, lancId:o.id,
-      data:String(d.DATA_EMISSAO||'').slice(0,10), norm:_nfNorm(i.DESCRICAO), valor:num(i.VALOR)});
+      data:String(d.DATA_EMISSAO||'').slice(0,10), valor:num(i.VALOR),
+      nome:_nfRelNome(i), norm:_nfNorm(_nfRelNome(i)+' '+(i.DESCRICAO||''))});
   });
   return out;
 }
@@ -154,7 +166,7 @@ function buildNfRelatorio(k,soResultado){
   // MALHA COSTURADA" são itens diferentes na nota, mas o mesmo produto na prática).
   var pr={};
   L.forEach(function(l){
-    var d=String(l.item.DESCRICAO||'(sem descrição)').trim();
+    var d=l.nome||'(sem descrição)';
     if(!pr[d]) pr[d]={v:0, n:0, q:0, un:'', sv:(l.item.TIPO==='SERVICO')};
     var p=pr[d]; p.v+=l.valor; p.n++;
     var q=num(l.item.QUANTIDADE);
@@ -227,7 +239,8 @@ function buildNfRelatorio(k,soResultado){
     h+='<tr class="nf-rel-clica" onclick="nfAbrirDetalhe(\''+l.origem+'\',\''+l.lancId+'\')">'+
        '<td class="manut-km-num">'+_nfEsc(formatDateBR(l.data))+'</td>'+
        '<td>'+(l.origem==='caminhao'?'<span class="manut-placa-tag">'+_nfEsc(l.alvo)+'</span>':_nfEsc(l.alvo))+'</td>'+
-       '<td style="white-space:normal;min-width:260px">'+_nfEsc(l.item.DESCRICAO)+'</td>'+
+       '<td style="white-space:normal;min-width:260px">'+_nfEsc(l.nome)+
+         (l.item.APELIDO?'<div style="font-size:10.5px;color:var(--text2)">'+_nfEsc(l.item.DESCRICAO)+'</div>':'')+'</td>'+
        '<td><span class="maq-chip '+(sv?'maq-chip-b':'maq-chip-g')+'">'+(sv?'Serviço':'Peça')+'</span></td>'+
        '<td class="manut-km-num">'+(q?fmt(q,(q%1)?2:0)+' '+_nfEsc(_nfRelUn(l.item.UNIDADE)):'—')+'</td>'+
        '<td class="manut-km-num"><strong>'+fmtR(l.valor)+'</strong></td>'+

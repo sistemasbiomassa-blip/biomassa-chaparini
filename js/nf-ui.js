@@ -104,7 +104,9 @@ function _nfLimpaObs(t){
 
 // celulaExtra(item, n): HTML de uma coluna a mais por item — usado pelo importador de
 // maquinário para escolher a máquina de cada item quando a nota é dividida.
-function nfItensHtml(g,celulaExtra){
+// apelidoCfg: {fn:'_camNfeApelido', i:<linha>, valores:g.itemApelido, lembrados:g.itemApelidoLido}
+// — campo "o que é" por item, para nota que descreve a peça só por código da loja.
+function nfItensHtml(g,celulaExtra,apelidoCfg){
   var its=(g&&g.itens)||[];
   if(!its.length) return '';
   var pc=its.filter(function(i){return i.tipo!=='SERVICO';}).length, sv=its.length-pc;
@@ -116,14 +118,62 @@ function nfItensHtml(g,celulaExtra){
   var linhas=its.map(function(i,n){
     var q=num(i.quantidade), serv=i.tipo==='SERVICO';
     return '<tr><td>'+(serv?'🧾':'📦')+'</td>'+
-      '<td>'+_nfEsc(i.descricao)+'</td>'+
+      '<td>'+_nfEsc(i.descricao)+_nfApelidoCampo(apelidoCfg,n)+'</td>'+
       '<td class="maq-mono">'+(q?fmt(q,(q%1)?2:0)+(i.unidade?' '+_nfEsc(i.unidade):''):'—')+'</td>'+
       '<td class="maq-mono">'+fmtR(num(i.valor))+'</td>'+
       (celulaExtra?('<td>'+celulaExtra(i,n)+'</td>'):'')+'</tr>';
   }).join('');
-  return '<details class="nf-itens"'+((its.length<=10||celulaExtra)?' open':'')+'>'+
+  return '<details class="nf-itens"'+((its.length<=10||celulaExtra||apelidoCfg)?' open':'')+'>'+
     '<summary><strong>'+resumo.join(' · ')+'</strong> <span>'+_nfEsc(amostra)+'</span></summary>'+
     '<div class="nf-itens-box"><table>'+linhas+'</table></div></details>';
+}
+// ---------- apelido do item ("o que é essa peça") ----------
+// A loja descreve a peça só com o código dela ("HCZ713 STAHL=52X147,4"). O apelido é o
+// nome de uso, escrito uma vez: o relatório agrupa por ele e, na próxima nota do mesmo
+// fornecedor com o mesmo código, ele vem preenchido sozinho.
+function _nfApelidoCampo(cfg,n){
+  if(!cfg) return '';
+  var v=(cfg.valores||[])[n]||'', lembrado=(cfg.lembrados||[])[n] && v;
+  return '<div class="nf-apelido">'+
+    '<input type="text" value="'+_nfEsc(v)+'" placeholder="o que é? (ex: rolamento de roda)" '+
+    'onchange="'+cfg.fn+'('+cfg.i+','+n+',this.value)">'+
+    (lembrado?'<span class="nf-lido" style="display:inline">✓ como da última vez</span>':'')+
+    '</div>';
+}
+// Apelido já usado para este código deste fornecedor (o histórico é a própria memória)
+function nfApelidoConhecido(cnpj,codigo){
+  if(!codigo) return '';
+  var docs={}, achado='', melhor=-1;
+  (DB.nfDocumentos||[]).forEach(function(d){ docs[d.ID]=d; });
+  (DB.nfItens||[]).forEach(function(i){
+    if(!i.APELIDO || String(i.CODIGO||'')!==String(codigo)) return;
+    var d=docs[i.DOCUMENTO_ID];
+    if(cnpj && d && d.EMITENTE_CNPJ && String(d.EMITENTE_CNPJ)!==String(cnpj)) return;
+    if(num(i.ID)>melhor){ melhor=num(i.ID); achado=i.APELIDO; }   // o mais recente manda
+  });
+  return achado;
+}
+// Preenche os apelidos conhecidos de um grupo de notas recém-lido
+function nfSemearApelidos(g){
+  g.itemApelido=[]; g.itemApelidoLido=[];
+  (g.itens||[]).forEach(function(it,n){
+    var a=nfApelidoConhecido(it.emitCnpj||g.emitCnpj, it.codigo);
+    g.itemApelido[n]=a||'';
+    g.itemApelidoLido[n]=!!a;
+  });
+}
+// O que vai para o banco: cada item do documento leva o apelido digitado
+function nfAplicarApelidos(g,docs){
+  var k=0;
+  docs.forEach(function(d){
+    d.itens=(d.itens||[]).map(function(it){
+      var copia={}, a=(g.itemApelido||[])[k++];
+      for(var campo in it) copia[campo]=it[campo];
+      if(a) copia.apelido=a;
+      return copia;
+    });
+  });
+  return docs;
 }
 
 // ---------- caixa de avisos dos importadores ----------

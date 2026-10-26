@@ -307,7 +307,12 @@ function nfMontarLista(docs,destino){
     g.pecas=_nfR2(g.docs.filter(function(d){return d.modelo==='NFE';}).reduce(function(a,d){return a+d.valor;},0));
     g.servicos=_nfR2(g.docs.filter(function(d){return d.modelo==='NFSE';}).reduce(function(a,d){return a+d.valor;},0));
     g.total=_nfR2(g.pecas+g.servicos);
-    g.itens=[]; g.docs.forEach(function(d){ g.itens=g.itens.concat(d.itens||[]); });
+    // cada item leva o CNPJ de quem emitiu: é a chave, junto com o código, para lembrar
+    // o apelido que já foi dado a essa peça em nota anterior do mesmo fornecedor
+    g.itens=[]; g.docs.forEach(function(d){
+      (d.itens||[]).forEach(function(it){ if(!it.emitCnpj) it.emitCnpj=d.emitCnpj; });
+      g.itens=g.itens.concat(d.itens||[]);
+    });
     // texto livre das notas do grupo: é onde o fornecedor escreve máquina, OS, placa, KM
     g.textoLivre=g.docs.map(function(d){ return d.textoLivre||''; }).join(' | ');
     g.outroCnpj=g.docs.filter(function(d){ return d.destCnpj && d.destCnpj!==NF_CNPJ_EMPRESA; }).map(function(d){return d.destNome||d.destCnpj;})[0]||'';
