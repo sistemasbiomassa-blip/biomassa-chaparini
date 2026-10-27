@@ -746,7 +746,24 @@
               <button class="btn btn-secondary" onclick="limparFormCaminhao()">🗑️ LIMPAR</button>
             </div>
           </div>
-          <div class="table-container"><div class="table-header"><h3>Caminhões Cadastrados</h3></div><div class="table-scroll" id="tblCaminhoesContainer"></div></div>
+          <!-- Filtros + gráfico do quadro: a frota já passou de 40 placas, sem filtro
+               achar "as carretas 4 eixos da Randon" virou caça na tabela. O gráfico abaixo
+               lê a MESMA lista filtrada da tabela. -->
+          <div class="filters">
+            <select id="fcmFiltroMarca" class="filter-select" onchange="renderCaminhoesTable()"><option value="">Todas as marcas</option></select>
+            <select id="fcmFiltroModelo" class="filter-select" onchange="renderCaminhoesTable()"><option value="">Todos os modelos</option></select>
+            <select id="fcmFiltroTipo" class="filter-select" onchange="renderCaminhoesTable()"><option value="">Todos os tipos</option><option value="cavalo">Cavalo Mecânico</option><option value="carreta_3_eixos">Carreta 3 eixos</option><option value="carreta_4_eixos">Carreta 4 eixos</option><option value="__vazio__">— tipo não cadastrado —</option></select>
+            <select id="fcmFiltroAno" class="filter-select" onchange="renderCaminhoesTable()"><option value="">Todos os anos</option></select>
+            <button class="filter-btn-clear" onclick="limparFiltrosCaminhoes()">↺ Limpar filtros</button>
+            <button class="filter-btn-pdf" onclick="exportCaminhoesPDF()">📄 Exportar PDF</button>
+          </div>
+          <div class="table-container"><div class="table-header"><h3>Caminhões Cadastrados</h3><span class="chart-badge" id="fcmCount">0 veículos</span></div><div class="table-scroll" id="tblCaminhoesContainer"></div></div>
+          <div class="charts-grid" id="fcmChartGrid">
+            <div class="chart-card full">
+              <div class="chart-title">Veículos por marca <span class="chart-badge" id="fcmChartBadge">segue os filtros acima</span></div>
+              <div class="chart-container"><canvas id="cCamMarca"></canvas></div>
+            </div>
+          </div>
         </div>
       </div>
 
