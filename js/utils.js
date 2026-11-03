@@ -392,7 +392,7 @@ function _pdfPrepararClone(clone){
   // a busca de pneu some junto com o quadro dela; os demais campos/botões, só eles
   var busca=clone.querySelector('#pneuBuscaInput');
   if(busca){ var cx=busca.closest('.table-container'); if(cx) cx.parentNode.removeChild(cx); }
-  clone.querySelectorAll('input,button,.manut-view-tabs').forEach(function(el){ el.parentNode.removeChild(el); });
+  clone.querySelectorAll('input,button,.manut-view-tabs,.view-tabs').forEach(function(el){ el.parentNode.removeChild(el); });
 }
 
 // Exporta SÓ uma seção (um quadro/tabela), em vez da página inteira. O botão genérico dos

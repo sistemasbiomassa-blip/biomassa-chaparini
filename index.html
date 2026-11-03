@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -17,11 +18,15 @@
   --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --border:#30363d;
   --text:#e6edf3; --text2:#8b949e; --accent:#00b4d8; --accent2:#0077b6;
   --green:#2ea043; --yellow:#d29922; --red:#f85149; --orange:#db6d28; --purple:#a371f7; --brand:#FFD700;
+  --ton:#3987e5; --m3:#d95926; --ent:#199e70;   /* series do Relatorio Gerencial */
+  --grid:rgba(255,255,255,0.07);
   --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.4);
 }
 .light {
   --bg:#f0f4f8; --surface:#ffffff; --surface2:#e8eef4; --border:#d0d7de;
   --text:#1f2937; --text2:#57606a; --accent:#0077b6; --accent2:#00b4d8; --brand:#085425;
+  --ton:#2a78d6; --m3:#eb6834; --ent:#1baf7a;
+  --grid:rgba(0,0,0,0.07);
   --shadow:0 4px 24px rgba(0,0,0,0.08);
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -199,10 +204,10 @@ tbody tr:hover{background:var(--surface2)}
 .status-ok{background:rgba(46,160,67,0.15);color:var(--green)}
 
 /* MANUT V2 MOCKUP STYLE */
-.manut-view-tabs{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;margin-bottom:16px}
-.manut-view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
-.manut-view-tab.active{background:var(--surface2);color:var(--text)}
-.manut-view-tab:hover:not(.active){color:var(--text)}
+.manut-view-tabs,.view-tabs{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;margin-bottom:16px}
+.manut-view-tab,.view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
+.manut-view-tab.active,.view-tab.active{background:var(--surface2);color:var(--text)}
+.manut-view-tab:hover:not(.active),.view-tab:hover:not(.active){color:var(--text)}
 .manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap;width:fit-content;max-width:100%}
 .manut-filter-bar .filter-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;margin-right:4px}
 .manut-filter-bar .filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px}
@@ -352,7 +357,7 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .manut-km-sel-fixo{font-size:12px;color:var(--text);font-weight:600}
 
 /* Subtítulo das abas: cada uma responde a uma pergunta */
-.manut-view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
+.manut-view-tab small,.view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
 
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}
@@ -634,6 +639,63 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .pneu-tl-tag.out{background:rgba(248,81,73,0.12);color:var(--red)}
 .pneu-tl-desc{font-size:12.5px}
 .pneu-tl-desc b{color:var(--accent)}
+
+/* ==================== RELATORIO GERENCIAL (visao Diretoria da aba Producao) ====================
+   Uma coluna so, na mesma ordem que vai pro papel. O layout das folhas A4 nao esta aqui: ele e
+   gerado em js/prod-gerencial.js (gerCssFolha), que serve ao palco de impressao e a janela de PDF. */
+.ger-faixa-periodo{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  padding:9px 14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;font-size:12px;color:var(--text2)}
+.ger-faixa-periodo b{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.3px}
+
+.ger-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-bottom:18px}
+.ger-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;min-width:0}
+.ger-kpi-rot{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);font-weight:600}
+.ger-kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:700;line-height:1.05;margin-top:3px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ger-kpi-val .un{font-size:14px;font-weight:600;color:var(--text2);margin-left:3px}
+.ger-kpi-pe{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--text2);min-height:17px}
+.ger-delta{display:inline-flex;align-items:center;gap:3px;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px}
+.ger-delta.sobe{color:var(--green)}
+.ger-delta.desce{color:var(--red)}
+.ger-delta.igual{color:var(--text2)}
+
+.ger-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px 18px;margin-bottom:14px;min-width:0}
+.ger-card-topo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+.ger-card h2{font-size:17px;letter-spacing:.3px}
+.ger-sub{font-size:11.5px;color:var(--text2);margin-bottom:11px}
+.ger-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--text2);margin-bottom:9px}
+.ger-leg span{display:inline-flex;align-items:center;gap:5px}
+.ger-chave{width:11px;height:11px;border-radius:3px;flex:none}
+.ger-chave.linha{height:3px;border-radius:2px;width:15px}
+.ger-graf{position:relative;height:300px}
+.ger-graf.alto{height:380px}
+.ger-par{display:grid;gap:10px}
+
+.ger-rolo{overflow-x:auto;margin:0 -18px;padding:0 18px}
+table.ger-tab{font-size:12.5px;min-width:560px;border-collapse:collapse;width:100%}
+table.ger-tab th{text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);
+  font-weight:600;padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.ger-tab th:first-child{text-align:left}
+table.ger-tab td{padding:6px 9px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table.ger-tab td:first-child{text-align:left;font-weight:500}
+table.ger-tab tbody tr:last-child td{border-bottom:none}
+table.ger-tab tfoot td{border-top:2px solid var(--border);border-bottom:none;font-weight:700;padding-top:8px}
+table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.ger-pos{display:inline-block;width:19px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px}
+
+.ger-notas{margin-top:4px;padding-top:12px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text2)}
+.ger-notas b{color:var(--text)}
+.ger-notas ul{margin:6px 0 0;padding-left:17px}
+.ger-notas li{margin-bottom:3px}
+.ger-vazio{padding:38px 16px;text-align:center;color:var(--text2);font-size:13px}
+
+@media (max-width:640px){
+  .ger-graf{height:260px}
+  .ger-graf.alto{height:330px}
+  .ger-kpi-val{font-size:25px}
+  .ger-rolo{margin:0 -14px;padding:0 14px}
+}
 </style>
 </head>
 <body>
@@ -1394,15 +1456,30 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
       <div class="page" id="pageProducao">
         <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <h1 class="page-title">📊 Produção</h1>
-          <button class="btn btn-secondary admin-only" style="display:none;font-size:12px" onclick="exportProdAnaliticoPDF()">📋 Relatório Analítico</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary admin-only" style="display:none;font-size:12px" onclick="exportProdAnaliticoPDF()">📋 Relatório Analítico</button>
+            <!-- Só na visao Diretoria: imprime as 4 folhas A4 do relatório gerencial. Na visao
+                 Operacional quem imprime é o "📄 Exportar PDF" da barra de filtros, e na Diretoria
+                 esse genérico sai de cena (ver noPdfBtn no createFilters do js/producao.js). -->
+            <button class="btn btn-secondary" id="prodBtnGerPDF" style="display:none;font-size:12px" onclick="exportProdGerencialPDF()">🖨️ Imprimir relatório</button>
+          </div>
         </div>
-        <div style="display:flex;gap:10px;margin-bottom:10px">
+
+        <!-- Duas visoes dos mesmos lancamentos: Operacional (dia a dia) e Diretoria (relatório
+             para apresentar). A barra de filtros é a mesma para as duas. -->
+        <div class="view-tabs">
+          <button class="view-tab active" id="prodTabBtnOperacional" onclick="showProdView('operacional')">📊 Operacional<small>acompanhar o dia a dia</small></button>
+          <button class="view-tab" id="prodTabBtnGerencial" onclick="showProdView('gerencial')">📈 Diretoria<small>relatório para apresentar</small></button>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:10px" id="prodNotaBar">
           <input type="text" inputmode="numeric" id="fpNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildProducao()">
         </div>
         <div class="filters" id="filtersProd"></div>
         <div class="kpi-row" id="kpiProd"></div>
         <div class="charts-grid" id="chartsProd"></div>
         <div class="table-container" id="tblProd"></div>
+        <div id="prodGerencial" style="display:none"></div>
       </div>
 
       <!-- FINANCEIRO PAGE -->
@@ -3097,7 +3174,7 @@ function _pdfPrepararClone(clone){
   // a busca de pneu some junto com o quadro dela; os demais campos/botões, só eles
   var busca=clone.querySelector('#pneuBuscaInput');
   if(busca){ var cx=busca.closest('.table-container'); if(cx) cx.parentNode.removeChild(cx); }
-  clone.querySelectorAll('input,button,.manut-view-tabs').forEach(function(el){ el.parentNode.removeChild(el); });
+  clone.querySelectorAll('input,button,.manut-view-tabs,.view-tabs').forEach(function(el){ el.parentNode.removeChild(el); });
 }
 
 // Exporta SÓ uma seção (um quadro/tabela), em vez da página inteira. O botão genérico dos
@@ -7523,6 +7600,31 @@ var prodMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motoris
 var lastProdKpi=null; // último snapshot dos totais, usado pelo exportPagePDF para montar os KPIs do PDF
 var lastProdFiltros=''; // resumo legível dos filtros ativos, usado no cabeçalho do PDF
 var prodPdfMode=false; // true só durante a geração do PDF — liga os rótulos de valor nos gráficos
+var prodVista='operacional'; // 'operacional' (dia a dia) ou 'gerencial' (relatório da diretoria)
+
+// Alterna as duas visões da aba. A barra de filtros é a mesma para as duas; o que troca são os
+// KPIs, os gráficos e a tabela — e os botões de impressão, que seguem a visão: na Diretoria quem
+// imprime é o botão próprio (4 folhas A4), e o "Exportar PDF" genérico nem é criado na barra.
+function showProdView(v){
+  prodVista = v==='gerencial' ? 'gerencial' : 'operacional';
+  var ger = prodVista==='gerencial';
+  ['kpiProd','chartsProd','tblProd','prodNotaBar'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display = ger?'none':'';
+  });
+  var host=document.getElementById('prodGerencial');
+  if(host){
+    host.style.display = ger?'':'none';
+    // Saindo da visão: esvazia. Senão os canvas dela ficam escondidos na página e entram no
+    // clone do exportPagePDF, que varre todos os canvas de #pageProducao.
+    if(!ger){ if(typeof gerLimparGraficos==='function') gerLimparGraficos(); host.innerHTML=''; }
+  }
+  var btn=document.getElementById('prodBtnGerPDF');
+  if(btn) btn.style.display = ger?'':'none';
+  var t1=document.getElementById('prodTabBtnOperacional'); if(t1) t1.classList.toggle('active', !ger);
+  var t2=document.getElementById('prodTabBtnGerencial'); if(t2) t2.classList.toggle('active', ger);
+  buildProducao();
+}
 
 // Rótulo de valor "scriptable": fica embutido no gráfico desde a criação (desligado por padrão)
 // e só liga quando prodPdfMode=true. Nunca mexe na configuração depois de o gráfico já existir —
@@ -7562,7 +7664,7 @@ function buildProducao(){
     {id:'fpSemana',label:'Semana',options:uSemP,optionLabels:uSemP.map(getWeekDisplay),onChange:buildProducao,linkedMonthId:'fpMes',allWeeks:uSemP},
     {id:'fpUnid',label:'Unidade',options:['TON','M³'],onChange:buildProducao},
     {type:'dateRange',idIni:'fpDtIni',idFim:'fpDtFim',onChange:buildProducao}
-  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); });
+  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); }, prodVista==='gerencial');
 
   var fNota=document.getElementById('fpNota')?document.getElementById('fpNota').value.trim():'';
   var fM=document.getElementById('fpMot')?document.getElementById('fpMot').value:'';
@@ -7593,6 +7695,14 @@ function buildProducao(){
   if(fD) filtrosList.push('Local Descarga: '+fD);
   if(fUnid) filtrosList.push('Unidade: '+fUnid);
   lastProdFiltros=filtrosList.join(' · ');
+
+  // Visão Diretoria: o relatório gerencial toma o lugar dos KPIs, gráficos e tabela daqui.
+  // Recebe as linhas filtradas SEM o período — o cálculo busca o período anterior, que por
+  // definição está fora do intervalo escolhido, e o período ele lê dos mesmos filtros.
+  if(prodVista==='gerencial'){
+    buildProdGerencial(_filtrarLinhasSemPeriodo(), fUnid||'ambos');
+    return;
+  }
 
   var data=DB.cadastro.filter(function(r){
     if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
@@ -7633,11 +7743,12 @@ function buildProducao(){
 
   lastProdKpi={totalViagens:totalViagens,totalTON:totalTON,totalM3:totalM3,camAtivosCount:Object.keys(camAtivos).length,mediaTonPlaca:mediaTonPlaca,mediaM3Placa:mediaM3Placa};
 
-  // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência
-  // e no gráfico dos últimos 15 dias — assim ambos respeitam Placa/Motorista/Local/Unidade/Nota.
-  function _filtrarEntregasSemPeriodo(){
+  // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência, no
+  // gráfico dos últimos 15 dias e na visão Diretoria — todos respeitam Placa/Motorista/Local/
+  // Unidade/Nota. A versão em LINHAS inclui lançamento que não é entrega (abastecimento solto),
+  // que é o que o cálculo de km/L precisa; a de ENTREGAS é a de sempre.
+  function _filtrarLinhasSemPeriodo(){
     return DB.cadastro.filter(function(r){
-      if(!(r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0)) return false;
       if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
       if(fM&&r.MOTORISTA!==fM) return false;
       if(fP&&r.PLACA!==fP) return false;
@@ -7650,6 +7761,9 @@ function buildProducao(){
       }
       return true;
     });
+  }
+  function _filtrarEntregasSemPeriodo(){
+    return _filtrarLinhasSemPeriodo().filter(function(r){ return r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0; });
   }
 
   // Calculate month-over-month trends (respeitando os filtros ativos, exceto período)
@@ -7921,6 +8035,882 @@ function exportProdAnaliticoPDF(){
   win.document.close();
 }
 
+</script>
+<script>
+// ==================== RELATORIO GERENCIAL — CALCULO ====================
+// Camada de calculo da visao Diretoria da aba Producao. SEM DOM de proposito: roda no
+// navegador e no Node (o mesmo arquivo e conferido por teste-calc.js, em
+// Documentos/biomassa-mockups/relatorio-gerencial/, contra 91 consultas no Postgres).
+// Nenhum desenho mora aqui; quem desenha e js/prod-gerencial.js.
+//
+// ENTREGA = linha com LOCAL DESCARGA preenchido e QUANTIDADE > 0 — a mesma regra da aba
+// Relatorio (js/relatorio.js:61), nao a da visao Operacional desta aba, que exige o campo
+// numerico ENTREGA preenchido. As duas batem no mes a mes (out/2026: 404 pelas duas); a
+// diferenca no historico todo e de 21 linhas com descarga e sem o campo ENTREGA, que o
+// relatorio da diretoria deve contar, porque houve entrega.
+(function(root, factory){
+  if(typeof module==='object' && module.exports) module.exports=factory();
+  else root.GER=factory();
+})(typeof self!=='undefined'?self:this, function(){
+
+  // ---------- datas (string YYYY-MM-DD, sem Date pra nao pegar fuso) ----------
+  function ymd(d){ return [d.getUTCFullYear(), String(d.getUTCMonth()+1).padStart(2,'0'), String(d.getUTCDate()).padStart(2,'0')].join('-'); }
+  function toDate(s){ var p=String(s).slice(0,10).split('-'); return new Date(Date.UTC(+p[0], +p[1]-1, +p[2])); }
+  function addDias(s, n){ var d=toDate(s); d.setUTCDate(d.getUTCDate()+n); return ymd(d); }
+  function diffDias(ini, fim){ return Math.round((toDate(fim)-toDate(ini))/86400000)+1; }
+  function ultimoDiaMes(ano, mes){ return new Date(Date.UTC(ano, mes, 0)).getUTCDate(); }
+  function ehDia1(s){ return s.slice(8,10)==='01'; }
+  function ehUltimoDia(s){ var p=s.split('-'); return +p[2]===ultimoDiaMes(+p[0], +p[1]); }
+
+  var MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var MESES_CURTO=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+  function dataBR(s){ var p=String(s).slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+
+  // Aceita YYYY-MM-DD (o que vem do Supabase) e DD/MM/AAAA (digitacao antiga), igual ao
+  // getMonthYear/formatDateBR do js/utils.js. Devolve sempre YYYY-MM-DD, ou '' se nao der.
+  function iso(v){
+    if(!v) return '';
+    if(Object.prototype.toString.call(v)==='[object Date]'){
+      return isNaN(v) ? '' : [v.getFullYear(), String(v.getMonth()+1).padStart(2,'0'), String(v.getDate()).padStart(2,'0')].join('-');
+    }
+    var s=String(v).trim();
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+    var m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    return m ? m[3]+'-'+m[2]+'-'+m[1] : '';
+  }
+  // Mesma conversao do num() de js/utils.js, repetida aqui pra este arquivo rodar no Node
+  // sozinho (o teste nao carrega utils.js).
+  function n(v){
+    if(v===null || v===undefined || v==='') return 0;
+    if(typeof v==='number') return isFinite(v)?v:0;
+    var s=String(v).trim();
+    if(s.indexOf(',')>=0) return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+    if(/\.\d{3}$/.test(s)) return parseFloat(s.replace(/\./g,'')) || 0;
+    return parseFloat(s) || 0;
+  }
+  function txt(v){ return v==null ? '' : String(v).trim(); }
+
+  // "setembro de 2026" quando o intervalo e um mes fechado; senao "01/07/2026 a 30/09/2026"
+  function rotuloPeriodo(ini, fim){
+    if(!ini || !fim) return 'Período completo';
+    var pi=ini.split('-'), pf=fim.split('-');
+    if(ehDia1(ini) && ehUltimoDia(fim)){
+      if(pi[0]===pf[0] && pi[1]===pf[1]) return MESES[+pi[1]-1]+' de '+pi[0];
+      if(pi[0]===pf[0]) return MESES_CURTO[+pi[1]-1]+' a '+MESES_CURTO[+pf[1]-1]+' de '+pi[0];
+    }
+    return dataBR(ini)+' a '+dataBR(fim);
+  }
+
+  // Periodo anterior comparavel: meses fechados voltam o mesmo numero de meses;
+  // qualquer outro intervalo volta o mesmo numero de dias, colado no inicio.
+  function periodoAnterior(ini, fim){
+    if(!ini || !fim) return null;
+    if(ehDia1(ini) && ehUltimoDia(fim)){
+      var pi=ini.split('-'), pf=fim.split('-');
+      var nMeses=(+pf[0]-+pi[0])*12 + (+pf[1]-+pi[1]) + 1;
+      var aIni=new Date(Date.UTC(+pi[0], +pi[1]-1-nMeses, 1));
+      var aFimMes=new Date(Date.UTC(+pf[0], +pf[1]-1-nMeses, 1));
+      var ultimo=ultimoDiaMes(aFimMes.getUTCFullYear(), aFimMes.getUTCMonth()+1);
+      var aFim=new Date(Date.UTC(aFimMes.getUTCFullYear(), aFimMes.getUTCMonth(), ultimo));
+      return {ini:ymd(aIni), fim:ymd(aFim)};
+    }
+    var nd=diffDias(ini, fim);
+    return {ini:addDias(ini, -nd), fim:addDias(ini, -1)};
+  }
+
+  // ---------- base ----------
+  function finalizar(linhas){
+    var datas=linhas.map(function(r){return r.data}).sort();
+    return {linhas:linhas, dataMin:datas[0]||'', dataMax:datas[datas.length-1]||''};
+  }
+
+  // Entrada do sistema: DB.cadastro + BASE.clientesM3 (a lista que o js/data.js monta com os
+  // locais de unidade M3, ja incluindo ADM PF e ADM LEM, que sao sempre m³).
+  function montarDoCadastro(cadastro, locaisM3){
+    var m3={};
+    (locaisM3||[]).forEach(function(l){ m3[txt(l)]=1; });
+    var linhas=[];
+    (cadastro||[]).forEach(function(r){
+      var data=iso(r.DATA);
+      if(!data) return;
+      var des=txt(r['LOCAL DESCARGA']);
+      linhas.push({
+        data:data,
+        mot:txt(r.MOTORISTA),
+        // sem espaco: a mesma normalizacao de placa do js/consumo.js, senao "ABC 1234" e
+        // "ABC1234" viram dois caminhoes e os trechos de km/L nao fecham
+        pla:txt(r.PLACA).replace(/\s/g,''),
+        car:txt(r['LOCAL CARGA']),
+        des:des,
+        qtd:n(r.QUANTIDADE), km:n(r.KM), lit:n(r['QTDADE LITROS']),
+        un: des ? (m3[des]?'M³':'TON') : ''
+      });
+    });
+    return finalizar(linhas);
+  }
+
+  // Entrada do mockup: dados.json colunar com dicionario de strings (so o teste usa).
+  function montarBase(dados){
+    var d=dados.dic, uni=dados.unidadePorLocal||{};
+    return finalizar(dados.linhas.map(function(l){
+      var des=l[4]>=0?d.des[l[4]]:'';
+      return {data:l[0], mot:l[1]>=0?d.mot[l[1]]:'', pla:l[2]>=0?d.pla[l[2]]:'',
+        car:l[3]>=0?d.car[l[3]]:'', des:des, qtd:l[5]||0, km:l[6]||0, lit:l[7]||0,
+        un:des?(uni[des]||'TON'):''};
+    }));
+  }
+
+  function noPeriodo(r, ini, fim){ return (!ini || r.data>=ini) && (!fim || r.data<=fim); }
+  function ehEntrega(r){ return r.qtd>0 && !!r.des; }
+
+  // ---------- km/L tanque-a-tanque ----------
+  // Mesma regra de js/consumo.js (calcSegmentosPorPlaca): ordena os abastecimentos da PLACA por
+  // KM e fecha trechos entre dois abastecimentos; os litros do trecho sao os do abastecimento que
+  // o FECHA. A sequencia usa todos os motoristas da placa — o filtro por motorista so escolhe
+  // quais trechos ja fechados sao dele, senao o km rodado por um substituto entra na conta do outro.
+  function kmLPorMotorista(linhas){
+    var porPlaca={};
+    linhas.forEach(function(r){
+      if(!r.pla || !r.lit || r.lit<=0) return;
+      if(!r.km || r.km<=0) return;
+      (porPlaca[r.pla]=porPlaca[r.pla]||[]).push(r);
+    });
+    var acc={};
+    Object.keys(porPlaca).forEach(function(p){
+      var ab=porPlaca[p].slice().sort(function(a,b){return a.km-b.km});
+      for(var i=1;i<ab.length;i++){
+        var trecho=ab[i].km-ab[i-1].km, lit=ab[i].lit, mot=ab[i].mot;
+        if(trecho<=0 || lit<=0 || !mot) continue;
+        if(!acc[mot]) acc[mot]={km:0, lit:0};
+        acc[mot].km+=trecho; acc[mot].lit+=lit;
+      }
+    });
+    var out={};
+    Object.keys(acc).forEach(function(m){ if(acc[m].lit>0) out[m]=acc[m].km/acc[m].lit; });
+    return out;
+  }
+
+  // ---------- agregacoes ----------
+  function resumo(entregas){
+    var ton=0, m3=0, entTon=0, entM3=0, mot={}, pla={}, dias={};
+    entregas.forEach(function(r){
+      if(r.un==='M³'){ m3+=r.qtd; entM3++; } else { ton+=r.qtd; entTon++; }
+      if(r.mot) mot[r.mot]=1;
+      if(r.pla) pla[r.pla]=1;
+      dias[r.data]=1;
+    });
+    var nDias=Object.keys(dias).length;
+    return {
+      entregas:entregas.length, ton:ton, m3:m3, entTon:entTon, entM3:entM3,
+      motoristas:Object.keys(mot).length, caminhoes:Object.keys(pla).length,
+      diasOperados:nDias,
+      mediaTon:entTon?ton/entTon:0, mediaM3:entM3?m3/entM3:0,
+      entregasDia:nDias?entregas.length/nDias:0
+    };
+  }
+
+  // Agrupa por local (carga ou descarga) mantendo TON e m³ separados — nunca somados.
+  function porLocal(entregas, campo){
+    var g={};
+    entregas.forEach(function(r){
+      var k=r[campo] || '(não informado)';
+      if(!g[k]) g[k]={local:k, entregas:0, ton:0, m3:0, entTon:0, entM3:0};
+      g[k].entregas++;
+      if(r.un==='M³'){ g[k].m3+=r.qtd; g[k].entM3++; } else { g[k].ton+=r.qtd; g[k].entTon++; }
+    });
+    return Object.keys(g).map(function(k){
+      var x=g[k];
+      // unidade dominante, só pra rotular a linha na tabela
+      x.un = x.m3>0 && x.entM3>=x.entTon ? 'M³' : (x.ton>0 ? 'TON' : 'M³');
+      return x;
+    }).sort(function(a,b){ return b.entregas-a.entregas || b.ton+b.m3-(a.ton+a.m3); });
+  }
+
+  function porMotorista(entregas, kml){
+    var g={};
+    entregas.forEach(function(r){
+      var k=r.mot || '(sem motorista)';
+      if(!g[k]) g[k]={mot:k, entregas:0, ton:0, m3:0, placas:{}};
+      g[k].entregas++;
+      if(r.un==='M³') g[k].m3+=r.qtd; else g[k].ton+=r.qtd;
+      if(r.pla) g[k].placas[r.pla]=1;
+    });
+    return Object.keys(g).map(function(k){
+      var x=g[k];
+      return {mot:x.mot, entregas:x.entregas, ton:x.ton, m3:x.m3,
+              placas:Object.keys(x.placas).length, kmL:(kml[x.mot]!=null?kml[x.mot]:null)};
+    }).sort(function(a,b){ return b.entregas-a.entregas; });
+  }
+
+  // Diario ate 62 dias, mensal acima — senao o eixo vira um borrao de rotulos.
+  function evolucao(entregas, ini, fim){
+    var dias=diffDias(ini, fim);
+    var gran = dias<=62 ? 'dia' : 'mes';
+    var g={};
+    entregas.forEach(function(r){
+      var k = gran==='dia' ? r.data : r.data.slice(0,7);
+      if(!g[k]) g[k]={chave:k, entregas:0, ton:0, m3:0};
+      g[k].entregas++;
+      if(r.un==='M³') g[k].m3+=r.qtd; else g[k].ton+=r.qtd;
+    });
+    var pontos=[];
+    if(gran==='dia'){
+      // todos os dias do intervalo, inclusive os parados — o vazio de domingo é informação
+      for(var d=ini; d<=fim; d=addDias(d,1)){
+        var x=g[d]||{chave:d, entregas:0, ton:0, m3:0};
+        x.rotulo=d.slice(8,10)+'/'+d.slice(5,7);
+        pontos.push(x);
+      }
+    } else {
+      Object.keys(g).sort().forEach(function(k){
+        var x=g[k];
+        x.rotulo=MESES_CURTO[+k.slice(5,7)-1]+'/'+k.slice(2,4);
+        pontos.push(x);
+      });
+    }
+    return {granularidade:gran, pontos:pontos};
+  }
+
+  function variacao(atual, ant){
+    if(ant===0 || ant==null) return null;   // sem base de comparacao: a tela mostra "—"
+    return (atual-ant)/ant*100;
+  }
+
+  // ---------- entrada principal ----------
+  function calcular(base, ini, fim){
+    ini=ini||base.dataMin; fim=fim||base.dataMax;
+    var doPeriodo=base.linhas.filter(function(r){ return noPeriodo(r, ini, fim); });
+    var entregas=doPeriodo.filter(ehEntrega);
+    var kpis=resumo(entregas);
+
+    var ant=periodoAnterior(ini, fim), kpisAnt=null, vars=null;
+    if(ant){
+      var entAnt=base.linhas.filter(function(r){ return noPeriodo(r, ant.ini, ant.fim) && ehEntrega(r); });
+      kpisAnt=resumo(entAnt);
+      vars={};
+      ['entregas','ton','m3','motoristas','caminhoes','mediaTon','mediaM3','entregasDia'].forEach(function(k){
+        vars[k]=variacao(kpis[k], kpisAnt[k]);
+      });
+    }
+
+    return {
+      periodo:{ini:ini, fim:fim, dias:diffDias(ini,fim), rotulo:rotuloPeriodo(ini,fim)},
+      anterior: ant ? {ini:ant.ini, fim:ant.fim, rotulo:rotuloPeriodo(ant.ini,ant.fim), kpis:kpisAnt} : null,
+      kpis:kpis, variacao:vars,
+      descarga:porLocal(entregas, 'des'),
+      carga:porLocal(entregas, 'car'),
+      motoristas:porMotorista(entregas, kmLPorMotorista(doPeriodo)),
+      evolucao:evolucao(entregas, ini, fim)
+    };
+  }
+
+  // Top N + "Outros" agregado, pro grafico nao virar sopa de 35 barras no ano inteiro.
+  function topN(lista, n){
+    if(lista.length<=n) return {itens:lista.slice(), resto:0};
+    var itens=lista.slice(0, n), resto=lista.slice(n);
+    var o={local:'Outros ('+resto.length+')', entregas:0, ton:0, m3:0, entTon:0, entM3:0, un:'TON', _outros:true};
+    resto.forEach(function(x){ o.entregas+=x.entregas; o.ton+=x.ton; o.m3+=x.m3; o.entTon+=x.entTon; o.entM3+=x.entM3; });
+    itens.push(o);
+    return {itens:itens, resto:resto.length};
+  }
+
+  return {montarBase:montarBase, montarDoCadastro:montarDoCadastro, calcular:calcular, topN:topN,
+          periodoAnterior:periodoAnterior, rotuloPeriodo:rotuloPeriodo,
+          dataBR:dataBR, iso:iso, addDias:addDias, diffDias:diffDias, ultimoDiaMes:ultimoDiaMes};
+});
+</script>
+<script>
+// ==================== RELATORIO GERENCIAL — DESENHO ====================
+// Visao "Diretoria" da aba Producao: os mesmos lancamentos, arrumados pra apresentar.
+// Entra por buildProdGerencial(), chamado pelo buildProducao() quando prodVista==='gerencial',
+// e sai em PDF por exportProdGerencialPDF(). Toda conta mora em js/prod-gerencial-calc.js (GER).
+//
+// Os graficos registram o chartjs-plugin-datalabels POR GRAFICO (plugins:[ChartDataLabels]),
+// nao global: registrar global ligaria rotulo de valor em todo grafico do sistema de uma vez.
+
+var gerEstado = {
+  unidade:'ambos',   // ambos | TON | M³ — vem do filtro Unidade da aba
+  eixo:'combo'       // combo (barras + linha, 2 eixos) | paineis (dois quadros, 1 eixo cada)
+                     // vale pros dois graficos de local; a evolucao e sempre em paineis
+};
+var gerUltimo = null;   // ultimo resultado calculado, pro PDF nao recalcular
+
+// ---------- formatacao ----------
+function gerN(v, d){ d=d||0; return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function gerVol(v){ v=Number(v||0); return v>=1000 ? gerN(v,0) : gerN(v,1); }
+function gerVolCheio(v){ return gerN(v,1); }
+function gerPct(v){ return (v>0?'+':'')+gerN(v,1)+'%'; }
+function gerEsc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+// ---------- paleta ----------
+// Na tela le os tokens do tema; no papel usa a versao clara, que e a validada pra fundo branco.
+// Le do BODY, nao do :root — o tema claro do sistema e a classe .light no body.
+function gerPaleta(impresso){
+  if(impresso) return {ton:'#2a78d6', m3:'#eb6834', ent:'#1baf7a',
+    texto:'#111111', texto2:'#55606b', grid:'rgba(0,0,0,.09)', fundo:'#ffffff'};
+  var cs=getComputedStyle(document.body);
+  var p=function(nome){ return cs.getPropertyValue(nome).trim(); };
+  return {ton:p('--ton')||'#3987e5', m3:p('--m3')||'#d95926', ent:p('--ent')||'#199e70',
+    texto:p('--text'), texto2:p('--text2'), grid:p('--grid')||'rgba(255,255,255,.07)', fundo:p('--surface')};
+}
+
+// ---------- KPIs ----------
+function gerCardKpi(rot, valor, unidade, delta, textoBase){
+  var d='';
+  if(delta==null) d='<span class="ger-delta igual">—</span>';
+  else {
+    var cls = delta>0.05?'sobe' : (delta<-0.05?'desce':'igual');
+    var seta = delta>0.05?'▲' : (delta<-0.05?'▼':'=');
+    d='<span class="ger-delta '+cls+'">'+seta+' '+gerPct(delta)+'</span>';
+  }
+  return '<div class="ger-kpi"><div class="ger-kpi-rot">'+gerEsc(rot)+'</div>'+
+    '<div class="ger-kpi-val">'+valor+(unidade?'<span class="un">'+gerEsc(unidade)+'</span>':'')+'</div>'+
+    '<div class="ger-kpi-pe">'+d+'<span>'+gerEsc(textoBase)+'</span></div></div>';
+}
+
+function gerBlocoKpis(res, impresso){
+  var k=res.kpis, v=res.variacao||{};
+  var base = res.anterior ? 'vs. '+res.anterior.rotulo : 'sem período anterior';
+  var temTon = gerEstado.unidade!=='M³', temM3 = gerEstado.unidade!=='TON';
+  var cards=[ gerCardKpi('Entregas realizadas', gerN(k.entregas), '', v.entregas, base) ];
+  if(temTon) cards.push(gerCardKpi('Volume em tonelada', gerVol(k.ton), 'TON', v.ton, base));
+  if(temM3)  cards.push(gerCardKpi('Volume em metro cúbico', gerVol(k.m3), 'm³', v.m3, base));
+  cards.push(gerCardKpi('Motoristas', gerN(k.motoristas), '', v.motoristas, base));
+  cards.push(gerCardKpi('Caminhões', gerN(k.caminhoes), '', v.caminhoes, base));
+  cards.push(gerCardKpi('Entregas por dia', gerN(k.entregasDia,1), '', v.entregasDia, k.diasOperados+' dias com entrega'));
+  // Cada media usa so as entregas da PROPRIA unidade como divisor — misturar os dois
+  // divisores daria media errada (as entregas em m³ nao tem tonelada nenhuma).
+  if(temTon) cards.push(gerCardKpi('Média TON por entrega', gerN(k.mediaTon,1), 'TON', v.mediaTon, gerN(k.entTon)+' entregas'));
+  if(temM3)  cards.push(gerCardKpi('Média m³ por entrega', gerN(k.mediaM3,1), 'm³', v.mediaM3, gerN(k.entM3)+' entregas'));
+  // no papel a faixa e de largura fixa: 8 cartoes fecham 2 linhas de 4; 6 fecham 2 de 3
+  var colunas = impresso ? (cards.length % 4 === 0 ? 4 : 3) : 0;
+  var estilo = colunas ? ' style="grid-template-columns:repeat('+colunas+',1fr)"' : '';
+  return '<div class="ger-kpis"'+estilo+'>'+cards.join('')+'</div>';
+}
+
+// ---------- graficos ----------
+function gerLegenda(mostraTon, mostraM3, pal){
+  var f=function(cor,txt,linha){ return '<span><i class="ger-chave'+(linha?' linha':'')+'" style="background:'+cor+'"></i>'+txt+'</span>'; };
+  return '<div class="ger-leg">'+(mostraTon?f(pal.ton,'Volume (TON)'):'')+(mostraM3?f(pal.m3,'Volume (m³)'):'')+
+    f(pal.ent,'Nº de entregas',true)+'</div>';
+}
+
+function gerNovoGrafico(canvas, cfg){
+  destroyChart(canvas.id);
+  // registro local do plugin de rotulo: fora destes graficos nada muda no sistema
+  cfg.plugins = (cfg.plugins||[]).concat(typeof ChartDataLabels!=='undefined' ? [ChartDataLabels] : []);
+  chartInstances[canvas.id]=new Chart(canvas, cfg);
+  return chartInstances[canvas.id];
+}
+
+// Destroi so os graficos desta visao (todos os ids comecam com cGer).
+function gerLimparGraficos(){
+  Object.keys(chartInstances).forEach(function(id){ if(id.indexOf('cGer')===0) destroyChart(id); });
+}
+
+function gerEixoVolume(pal, titulo){
+  return {type:'linear', position:'left', beginAtZero:true,
+    title:{display:!!titulo, text:titulo, color:pal.texto2, font:{size:10}},
+    ticks:{color:pal.texto2, font:{size:10}, callback:function(v){ return gerN(v); }},
+    grid:{color:pal.grid, drawTicks:false}, border:{display:false}};
+}
+function gerEixoEntregas(pal, direita){
+  return {type:'linear', position:direita?'right':'left', beginAtZero:true,
+    title:{display:true, text:'Nº de entregas', color:pal.texto2, font:{size:10}},
+    ticks:{color:pal.texto2, font:{size:10}, precision:0},
+    grid:{drawOnChartArea:!direita, color:pal.grid, drawTicks:false}, border:{display:false}};
+}
+function gerEixoCategoria(pal, mostrarRotulos, giro, curto){
+  var lim = curto ? 22 : 30;
+  return {ticks:{display:mostrarRotulos, color:pal.texto2, font:{size:curto?9:10},
+      maxRotation:giro==null?50:giro, minRotation:0, autoSkip:false,
+      callback:function(v){ var s=this.getLabelForValue(v); return s.length>lim?s.slice(0,lim-1)+'…':s; }},
+    grid:{display:false}, border:{color:pal.grid}};
+}
+function gerRotulo(pal, cfg){
+  return Object.assign({color:pal.texto, font:{size:cfg.tam||10, weight:'600', family:'JetBrains Mono, monospace'},
+    clamp:true, clip:false, display:cfg.display==null?'auto':cfg.display}, cfg);
+}
+
+function gerBarraVol(rot, dados, cor, pal, denso, impresso, topoLivre){
+  // Com muitas categorias (31 dias x 2 series = 62 numeros) o rotulo deitado vira borrao, e acima
+  // da barra ele disputa espaco com a linha de entregas — o 'auto' escondia dois tercos deles.
+  // Girado 90deg e DENTRO da barra ele tem o vao so pra ele; so quando a barra e baixa demais pra
+  // conter o numero ele sobe pra fora, e ai troca pra cor do texto (branco sumiria no fundo).
+  var precisaPx = impresso ? 34 : 46;   // altura minima pra caber o numero + o recuo
+  function cabeDentro(ctx){
+    if(!denso || topoLivre) return false;   // quadro sem a linha de entregas: o rotulo cabe acima
+    var y = ctx.chart.scales[ctx.dataset.yAxisID || 'y'];
+    if(!y) return false;
+    var v = ctx.dataset.data[ctx.dataIndex];
+    return (y.getPixelForValue(Math.max(0, y.min)) - y.getPixelForValue(v)) >= precisaPx;
+  }
+  return {label:rot, data:dados, backgroundColor:cor, borderRadius:4, borderSkipped:false,
+    maxBarThickness:46, order:3,
+    datalabels:gerRotulo(pal,{
+      anchor:'end',
+      align: denso ? function(ctx){ return cabeDentro(ctx) ? 'start' : 'end'; } : 'end',
+      color: denso ? function(ctx){ return cabeDentro(ctx) ? '#ffffff' : pal.texto; } : pal.texto,
+      // dentro da barra o rotulo desce um pouco mais, pra sair de baixo do chip de entregas
+      offset: denso ? function(ctx){ return cabeDentro(ctx) ? (impresso?7:10) : 2; } : 1,
+      tam: denso?(impresso?6.5:8.5):9.5, rotation: denso?-90:0, display:'auto',
+      // o preenchimento padrao do rotulo (4px de cada lado) engorda a caixa em 8px; num mes
+      // cada barra tem ~10px de vao, entao era ele que fazia o 'auto' derrubar os vizinhos
+      padding: denso ? {top:0, bottom:0, left:1, right:1} : 4,
+      formatter:function(v){ return v>0 ? gerVol(v) : ''; }})};
+}
+
+function gerLinhaEnt(dados, pal, eixoId, denso){
+  return {label:'Nº de entregas', type:'line', data:dados, yAxisID:eixoId,
+    borderColor:pal.ent, backgroundColor:pal.ent, borderWidth:2,
+    pointRadius:4, pointHoverRadius:6, pointBackgroundColor:pal.ent,
+    pointBorderColor:pal.fundo, pointBorderWidth:2, tension:.25, order:1,
+    // O numero de entregas nao pode sumir. Em cima do ponto ele colide com o rotulo de volume
+    // (no Cargill os dois caem na mesma altura) e o 'auto' escondia um dos dois — por isso ele
+    // sai ao LADO do ponto, num chip, com display fixo. No quadro denso (dia a dia) nao ha
+    // espaco lateral: ali volta pra cima do ponto, so com o fundo separando das barras.
+    datalabels:gerRotulo(pal,{anchor:'center', align:denso?'top':'right', offset:denso?5:7, tam:10,
+      color:pal.ent, display:true,
+      backgroundColor:pal.fundo, borderColor:denso?null:pal.ent, borderWidth:denso?0:1, borderRadius:4,
+      padding:denso?{top:1,bottom:0,left:2,right:2}:{top:1,bottom:1,left:3,right:3},
+      formatter:function(v){ return v>0?gerN(v):''; }})};
+}
+
+// Desenha o bloco "volume + entregas".
+// combo   = barras de volume + linha de entregas, dois eixos
+// paineis = dois quadros empilhados, um eixo cada, mesma ordem de categorias (forcaPaineis=true
+//           na evolucao: com 31 dias os valores nao cabem num quadro so)
+function gerBlocoGrafico(host, id, labels, serie, impresso, altura, forcaPaineis){
+  var pal=gerPaleta(impresso);
+  var mostraTon = gerEstado.unidade!=='M³', mostraM3 = gerEstado.unidade!=='TON';
+  var denso = labels.length > 14;
+  var classeAlt = (impresso?'ger-graf-folha':'ger-graf')+(altura==='alto'?' alto':'');
+
+  if(gerEstado.eixo==='combo' && !forcaPaineis){
+    host.innerHTML = gerLegenda(mostraTon,mostraM3,pal)+
+      '<div class="'+classeAlt+'"><canvas id="'+id+'"></canvas></div>';
+    var ds=[];
+    if(mostraTon) ds.push(Object.assign(gerBarraVol('Volume (TON)', serie.ton, pal.ton, pal, denso, impresso), {yAxisID:'y'}));
+    if(mostraM3)  ds.push(Object.assign(gerBarraVol('Volume (m³)', serie.m3, pal.m3, pal, denso, impresso), {yAxisID:'y'}));
+    ds.push(gerLinhaEnt(serie.ent, pal, 'y1', denso));
+    gerNovoGrafico(document.getElementById(id), {
+      type:'bar',                       // o combo e um grafico de barras com um dataset type:'line' dentro
+      data:{labels:labels, datasets:ds},
+      options:{responsive:true, maintainAspectRatio:false, animation:impresso?false:{duration:380},
+        layout:{padding:{top:denso?40:16, right:denso?4:30}},
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(c){
+            var v=c.parsed.y;
+            return c.dataset.label+': '+(c.dataset.type==='line'?gerN(v):gerVolCheio(v));
+          }}}},
+        scales:{x:gerEixoCategoria(pal,true,null,impresso),
+          y:gerEixoVolume(pal, mostraTon&&mostraM3?'Volume':(mostraTon?'TON':'m³')),
+          y1:gerEixoEntregas(pal,true)}}
+    });
+    return;
+  }
+
+  // Paineis separados: volume em cima (barras), entregas embaixo (LINHA), um eixo em cada.
+  // Sem a linha de entregas dentro do quadro de volume, o topo fica livre e o rotulo de cada
+  // barra cabe acima dela — e o que resolve o aperto da evolucao diaria.
+  var idA=id+'A', idB=id+'B';
+  var hA = impresso ? (altura==='alto'?'152px':'130px') : (altura==='alto'?'250px':'195px');
+  var hB = impresso ? (altura==='alto'?'96px':'82px') : '130px';
+  host.innerHTML = gerLegenda(mostraTon,mostraM3,pal)+
+    '<div class="ger-par">'+
+    '<div style="position:relative;height:'+hA+'"><canvas id="'+idA+'"></canvas></div>'+
+    '<div style="position:relative;height:'+hB+'"><canvas id="'+idB+'"></canvas></div></div>';
+  var dsA=[];
+  if(mostraTon) dsA.push(gerBarraVol('Volume (TON)', serie.ton, pal.ton, pal, denso, impresso, true));
+  if(mostraM3)  dsA.push(gerBarraVol('Volume (m³)', serie.m3, pal.m3, pal, denso, impresso, true));
+  gerNovoGrafico(document.getElementById(idA), {
+    type:'bar', data:{labels:labels, datasets:dsA},
+    options:{responsive:true, maintainAspectRatio:false, animation:impresso?false:{duration:380},
+      layout:{padding:{top:denso?34:16}},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){ return c.dataset.label+': '+gerVolCheio(c.parsed.y); }}}},
+      scales:{x:gerEixoCategoria(pal,false,null,impresso), y:gerEixoVolume(pal,'Volume')}}
+  });
+  gerNovoGrafico(document.getElementById(idB), {
+    type:'line', data:{labels:labels, datasets:[gerLinhaEnt(serie.ent, pal, 'y', denso)]},
+    options:{responsive:true, maintainAspectRatio:false, animation:impresso?false:{duration:380},
+      layout:{padding:{top:16, right:denso?6:30}},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){ return 'Entregas: '+gerN(c.parsed.y); }}}},
+      scales:{x:gerEixoCategoria(pal,true,null,impresso), y:gerEixoEntregas(pal,false)}}
+  });
+}
+
+// Motoristas: barra horizontal de entregas (a pergunta principal) com o volume escrito na ponta.
+// Volume e entregas tem escalas muito diferentes — virar duas barras na mesma regua esconderia o volume.
+// TODOS os motoristas do periodo, sem top-N: no papel o quadro ganha folha propria.
+function gerGraficoMotoristas(host, id, lista, impresso){
+  var pal=gerPaleta(impresso);
+  var itens=lista;
+  var mostraTon = gerEstado.unidade!=='M³', mostraM3 = gerEstado.unidade!=='TON';
+  var n=Math.max(1, itens.length);
+  // No papel, ~84% da sobra util da folha (uma A4 retrato depois do cabecalho, do titulo e do
+  // rodape da ~885px): preenchendo tudo a barra fica gorda demais para o espaco da linha.
+  // Fonte e espessura acompanham a altura da linha, senao com poucos motoristas fica miudo.
+  var alturaPx, fonte, barra;
+  if(impresso){
+    alturaPx = Math.min(740, Math.max(160, n*42));
+    var linha = alturaPx/n;
+    fonte = Math.max(7, Math.min(11, linha*0.40));
+    barra = Math.max(5, Math.min(16, linha*0.45));
+  } else {
+    alturaPx = Math.max(200, n*23+34);
+    fonte = 11; barra = 20;
+  }
+  var folgaDir = impresso ? Math.min(190, Math.round(25*fonte*0.55)) : 132;
+  host.innerHTML='<div style="position:relative;height:'+Math.round(alturaPx)+'px"><canvas id="'+id+'"></canvas></div>';
+  function textoVol(i){
+    var p=[];
+    if(mostraTon && itens[i].ton>0) p.push(gerVol(itens[i].ton)+' t');
+    if(mostraM3 && itens[i].m3>0) p.push(gerVol(itens[i].m3)+' m³');
+    return p.join(' · ');
+  }
+  gerNovoGrafico(document.getElementById(id), {
+    type:'bar',
+    data:{labels:itens.map(function(x){ return x.mot; }),
+      datasets:[{label:'Entregas', data:itens.map(function(x){ return x.entregas; }),
+        backgroundColor:pal.ent, borderRadius:4, borderSkipped:false, maxBarThickness:Math.round(barra),
+        datalabels:gerRotulo(pal,{anchor:'end', align:'right', offset:5, display:true, tam:impresso?fonte:10,
+          formatter:function(v,ctx){ var t=textoVol(ctx.dataIndex); return gerN(v)+(t?'  ('+t+')':''); }})}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:impresso?false:{duration:380},
+      layout:{padding:{right:folgaDir}},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:function(c){ var t=textoVol(c.dataIndex); return c.parsed.x+' entregas'+(t?' · '+t:''); }}}},
+      scales:{
+        x:{beginAtZero:true, ticks:{color:pal.texto2, font:{size:9}, precision:0}, grid:{color:pal.grid, drawTicks:false}, border:{display:false},
+           title:{display:true, text:'Nº de entregas', color:pal.texto2, font:{size:9}}},
+        y:{ticks:{color:pal.texto, font:{size:impresso?fonte:11, weight:'500'}}, grid:{display:false}, border:{display:false}}}}
+  });
+}
+
+// ---------- tabelas ----------
+function gerTabelaLocais(lista, rotuloCol, total){
+  var mostraTon = gerEstado.unidade!=='M³', mostraM3 = gerEstado.unidade!=='TON';
+  var h='<div class="ger-rolo"><table class="ger-tab"><thead><tr>'+
+    '<th>'+gerEsc(rotuloCol)+'</th><th>Entregas</th><th>% das entregas</th>'+
+    (mostraTon?'<th>Volume (TON)</th>':'')+(mostraM3?'<th>Volume (m³)</th>':'')+
+    '<th>Média/entrega</th></tr></thead><tbody>';
+  lista.forEach(function(x, i){
+    var media = x.entregas ? (x.un==='M³'? x.m3/Math.max(1,x.entM3) : x.ton/Math.max(1,x.entTon)) : 0;
+    h+='<tr><td><span class="ger-pos">'+(i+1)+'</span>'+gerEsc(x.local)+'</td>'+
+      '<td class="num">'+gerN(x.entregas)+'</td>'+
+      '<td class="num">'+gerN(total.entregas?x.entregas/total.entregas*100:0,1)+'%</td>'+
+      (mostraTon?'<td class="num">'+(x.ton>0?gerVolCheio(x.ton):'—')+'</td>':'')+
+      (mostraM3?'<td class="num">'+(x.m3>0?gerVolCheio(x.m3):'—')+'</td>':'')+
+      '<td class="num">'+gerN(media,1)+' '+gerEsc(x.un==='M³'?'m³':'t')+'</td></tr>';
+  });
+  var somaT=0, somaM=0, somaE=0;
+  lista.forEach(function(x){ somaT+=x.ton; somaM+=x.m3; somaE+=x.entregas; });
+  h+='</tbody><tfoot><tr><td>Total</td><td class="num">'+gerN(somaE)+'</td><td class="num">100,0%</td>'+
+    (mostraTon?'<td class="num">'+gerVolCheio(somaT)+'</td>':'')+
+    (mostraM3?'<td class="num">'+gerVolCheio(somaM)+'</td>':'')+
+    '<td></td></tr></tfoot></table></div>';
+  return h;
+}
+
+function gerTabelaMotoristas(lista, total){
+  var mostraTon = gerEstado.unidade!=='M³', mostraM3 = gerEstado.unidade!=='TON';
+  var h='<div class="ger-rolo"><table class="ger-tab"><thead><tr>'+
+    '<th>Motorista</th><th>Entregas</th><th>% das entregas</th>'+
+    (mostraTon?'<th>Volume (TON)</th>':'')+(mostraM3?'<th>Volume (m³)</th>':'')+
+    '<th>Caminhões</th><th>Média km/L</th></tr></thead><tbody>';
+  lista.forEach(function(x, i){
+    h+='<tr><td><span class="ger-pos">'+(i+1)+'</span>'+gerEsc(x.mot)+'</td>'+
+      '<td class="num">'+gerN(x.entregas)+'</td>'+
+      '<td class="num">'+gerN(total.entregas?x.entregas/total.entregas*100:0,1)+'%</td>'+
+      (mostraTon?'<td class="num">'+(x.ton>0?gerVolCheio(x.ton):'—')+'</td>':'')+
+      (mostraM3?'<td class="num">'+(x.m3>0?gerVolCheio(x.m3):'—')+'</td>':'')+
+      '<td class="num">'+gerN(x.placas)+'</td>'+
+      '<td class="num">'+(x.kmL!=null?gerN(x.kmL,2):'—')+'</td></tr>';
+  });
+  var sT=0,sM=0,sE=0;
+  lista.forEach(function(x){ sT+=x.ton; sM+=x.m3; sE+=x.entregas; });
+  h+='</tbody><tfoot><tr><td>Total · '+lista.length+' motoristas</td><td class="num">'+gerN(sE)+'</td><td class="num">100,0%</td>'+
+    (mostraTon?'<td class="num">'+gerVolCheio(sT)+'</td>':'')+
+    (mostraM3?'<td class="num">'+gerVolCheio(sM)+'</td>':'')+
+    '<td></td><td></td></tr></tfoot></table></div>';
+  return h;
+}
+
+// ---------- periodo ----------
+// O periodo vem dos filtros da propria aba (a mesma barra da visao Operacional): intervalo de
+// datas tem prioridade, depois dia, semana e mes. Sem nenhum filtro de periodo, vale tudo o que
+// existe no recorte — e ai nao ha periodo anterior pra comparar, e os deltas saem como "—".
+function gerPeriodoDosFiltros(base){
+  var v=function(id){ var el=document.getElementById(id); return el?el.value:''; };
+  var dtIni=v('fpDtIni'), dtFim=v('fpDtFim'), dia=v('fpDia'), sem=v('fpSemana'), mes=v('fpMes');
+  if(dtIni||dtFim) return {ini:dtIni||base.dataMin, fim:dtFim||base.dataMax};
+  if(dia) return {ini:dia, fim:dia};
+  if(sem){
+    var wp=sem.split('-S'), wy=parseInt(wp[0],10), wn=parseInt(wp[1],10);
+    var jan1=new Date(wy,0,1);
+    var ini=new Date(jan1.getTime()+((wn-1)*7-jan1.getDay()+1)*86400000);
+    var fim=new Date(ini.getTime()+6*86400000);
+    var f=function(d){ return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); };
+    return {ini:f(ini), fim:f(fim)};
+  }
+  if(mes){
+    var mp=mes.split('-');
+    return {ini:mes+'-01', fim:mes+'-'+String(GER.ultimoDiaMes(+mp[0], +mp[1])).padStart(2,'0')};
+  }
+  return {ini:base.dataMin, fim:base.dataMax};
+}
+
+// ---------- tela ----------
+function gerCard(titulo, sub, idCorpo){
+  return '<section class="ger-card"><div class="ger-card-topo"><h2>'+gerEsc(titulo)+'</h2></div>'+
+    '<div class="ger-sub">'+gerEsc(sub)+'</div><div id="'+idCorpo+'"></div></section>';
+}
+
+function gerSerieDeLocais(lista){
+  return {ton:lista.map(function(x){return x.ton}), m3:lista.map(function(x){return x.m3}),
+          ent:lista.map(function(x){return x.entregas}), labels:lista.map(function(x){return x.local})};
+}
+
+// Entrada da visao: recebe as linhas ja filtradas pela aba (todos os filtros MENOS periodo —
+// o calculo precisa do periodo anterior, que esta fora do intervalo escolhido).
+function buildProdGerencial(linhasFiltradas, unidade){
+  var host=document.getElementById('prodGerencial');
+  if(!host) return;
+  gerLimparGraficos();
+  gerEstado.unidade = unidade || 'ambos';
+
+  var base=GER.montarDoCadastro(linhasFiltradas, BASE.clientesM3);
+  if(!base.linhas.length){
+    gerUltimo=null;
+    host.innerHTML='<div class="ger-card"><div class="ger-vazio">Nenhum lançamento para os filtros aplicados.</div></div>';
+    return;
+  }
+  var p=gerPeriodoDosFiltros(base);
+  var res=GER.calcular(base, p.ini, p.fim);
+  gerUltimo=res;
+
+  if(!res.kpis.entregas){
+    host.innerHTML='<div class="ger-card"><div class="ger-vazio">Nenhuma entrega no período selecionado.<br>'+
+      'Escolha outro período na barra de filtros acima.</div></div>';
+    return;
+  }
+
+  var topoDesc=GER.topN(res.descarga, 10).itens;
+  var topoCarga=GER.topN(res.carga, 10).itens;
+  host.innerHTML =
+    '<div class="ger-faixa-periodo"><b>'+gerEsc(res.periodo.rotulo)+'</b>'+
+      (res.anterior?'<span>comparado com '+gerEsc(res.anterior.rotulo)+'</span>':'<span>sem período anterior para comparar</span>')+
+      (lastProdFiltros?'<span>'+gerEsc(lastProdFiltros)+'</span>':'')+'</div>'+
+    gerBlocoKpis(res, false)+
+    gerCard('Evolução no período', (res.evolucao.granularidade==='dia'
+        ? 'Volume por dia e nº de entregas por dia'
+        : 'Volume por mês e nº de entregas por mês')+
+        ' — em dois quadros, que num só os valores não cabem', 'gerEvol')+
+    gerCard('Por local de descarga', topoDesc.length<res.descarga.length
+        ? 'Os 10 maiores destinos; o restante está somado em "Outros" e detalhado na tabela'
+        : 'Todos os destinos do período', 'gerDesc')+
+    '<section class="ger-card"><div class="ger-card-topo"><h2>Destinos em detalhe</h2></div><div class="ger-sub">'+
+      res.descarga.length+' locais de descarga no período</div>'+gerTabelaLocais(res.descarga,'Local de descarga',res.kpis)+'</section>'+
+    gerCard('Por local de carga', topoCarga.length<res.carga.length
+        ? 'As 10 maiores origens; o restante está somado em "Outros"'
+        : 'Todas as origens do período', 'gerCarga')+
+    '<section class="ger-card"><div class="ger-card-topo"><h2>Origens em detalhe</h2></div><div class="ger-sub">'+
+      res.carga.length+' locais de carga no período</div>'+gerTabelaLocais(res.carga,'Local de carga',res.kpis)+'</section>'+
+    gerCard('Produção por motorista', res.motoristas.length+' motoristas com entrega no período, do maior para o menor', 'gerMot')+
+    '<section class="ger-card"><div class="ger-card-topo"><h2>Motoristas em detalhe</h2></div>'+
+      '<div class="ger-sub">km/L pelo método tanque-a-tanque, o mesmo da aba Consumo</div>'+
+      gerTabelaMotoristas(res.motoristas, res.kpis)+'</section>'+
+    '<div class="ger-notas">'+gerNotasHtml(res)+'</div>';
+
+  var ev=res.evolucao.pontos;
+  gerBlocoGrafico(document.getElementById('gerEvol'), 'cGerEvol', ev.map(function(x){return x.rotulo}),
+    {ton:ev.map(function(x){return x.ton}), m3:ev.map(function(x){return x.m3}), ent:ev.map(function(x){return x.entregas})},
+    false, 'alto', true);
+  var sd=gerSerieDeLocais(topoDesc); gerBlocoGrafico(document.getElementById('gerDesc'), 'cGerDesc', sd.labels, sd, false);
+  var sc=gerSerieDeLocais(topoCarga); gerBlocoGrafico(document.getElementById('gerCarga'), 'cGerCarga', sc.labels, sc, false);
+  gerGraficoMotoristas(document.getElementById('gerMot'), 'cGerMot', res.motoristas, false);
+}
+
+function gerNotasHtml(res){
+  var n=[
+    'Entrega = lançamento com <b>local de descarga preenchido e quantidade maior que zero</b> — a mesma regra da aba Relatório.',
+    '<b>TON e m³ nunca são somados.</b> A unidade vem do local de descarga (ADM PF e ADM LEM são sempre m³).',
+    'O período anterior é comparável: mês fechado volta um mês, intervalo livre volta o mesmo número de dias ('+
+      (res.anterior?gerEsc(res.anterior.rotulo):'—')+').',
+    'km/L pelo método tanque-a-tanque por placa, igual à aba Consumo: motorista sem abastecimento fechado no período aparece com —.'
+  ];
+  return '<b>Como os números são calculados</b><ul><li>'+n.join('</li><li>')+'</li></ul>';
+}
+
+// ---------- folhas A4 (PDF) ----------
+// CSS das folhas: uma fonte so, usada tanto no palco fora da tela (onde os graficos sao
+// desenhados pra virar PNG) quanto na janela de impressao. As medidas em mm sao as mesmas
+// nos dois lugares, senao o grafico sairia esticado no papel.
+function gerCssFolha(){
+  return '*{margin:0;padding:0;box-sizing:border-box}'+
+    'body{font-family:"Barlow",sans-serif;background:#fff;color:#111;font-size:11px;line-height:1.45}'+
+    'h1,h2,h3{font-family:"Barlow Condensed",sans-serif;margin:0;font-weight:600}'+
+    'table{border-collapse:collapse;width:100%}'+
+    '.num{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}'+
+    '.ger-folha{width:100%;background:#fff;color:#111;padding:13mm 12mm 10mm;font-size:11px}'+
+    '.ger-folha-topo{display:flex;align-items:center;justify-content:space-between;gap:12px;'+
+      'padding-bottom:9px;border-bottom:2px solid #0d692c;margin-bottom:13px}'+
+    '.ger-marca{display:flex;align-items:center;gap:10px}'+
+    '.ger-marca img{height:38px;width:auto;object-fit:contain}'+
+    '.ger-marca-nome{font-family:"Barlow Condensed",sans-serif;font-size:15px;font-weight:700;letter-spacing:.6px;color:#0d692c;line-height:1.1}'+
+    '.ger-marca-sub{font-size:9.5px;color:#55606b}'+
+    '.ger-folha-tit{text-align:right}'+
+    '.ger-folha-tit h3{font-size:13px;color:#111}'+
+    '.ger-folha-tit div{font-size:9px;color:#55606b;margin-top:1px}'+
+    '.ger-folha h2{font-size:12.5px;color:#111;margin:0 0 2px}'+
+    '.ger-folha .ger-sub{font-size:9.5px;color:#55606b;margin-bottom:7px}'+
+    '.ger-folha .ger-leg{display:flex;gap:12px;flex-wrap:wrap;color:#55606b;font-size:9.5px;margin-bottom:6px}'+
+    '.ger-folha .ger-leg span{display:inline-flex;align-items:center;gap:5px}'+
+    '.ger-folha .ger-chave{width:11px;height:11px;border-radius:3px;flex:none}'+
+    '.ger-folha .ger-chave.linha{height:3px;border-radius:2px;width:15px}'+
+    '.ger-bloco{margin-bottom:15px;break-inside:avoid;page-break-inside:avoid}'+
+    '.ger-folha .ger-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px}'+
+    '.ger-folha .ger-kpi{background:#f6f8fa;border:1px solid #d8dde3;border-radius:6px;padding:8px 10px}'+
+    '.ger-folha .ger-kpi-rot{font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:#55606b;font-weight:600}'+
+    '.ger-folha .ger-kpi-val{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:700;color:#111;line-height:1.05;'+
+      'margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}'+
+    '.ger-folha .ger-kpi-val .un{font-size:11px;font-weight:600;color:#55606b;margin-left:3px}'+
+    '.ger-folha .ger-kpi-pe{display:flex;align-items:center;gap:5px;font-size:9px;color:#55606b;margin-top:2px;min-height:13px}'+
+    '.ger-delta{display:inline-flex;align-items:center;gap:3px;font-weight:600;font-family:"JetBrains Mono",monospace;font-size:9px}'+
+    '.ger-delta.sobe{color:#1a7f37}.ger-delta.desce{color:#cf222e}.ger-delta.igual{color:#55606b}'+
+    '.ger-folha table.ger-tab{font-size:9.5px}'+
+    '.ger-folha table.ger-tab th{text-align:right;font-size:8px;text-transform:uppercase;letter-spacing:.6px;color:#55606b;'+
+      'font-weight:600;padding:4px 6px;border-bottom:1px solid #d8dde3;white-space:nowrap}'+
+    '.ger-folha table.ger-tab th:first-child{text-align:left}'+
+    '.ger-folha table.ger-tab td{padding:2.5px 6px;border-bottom:1px solid #eceff2;text-align:right;color:#111;line-height:1.3;white-space:nowrap}'+
+    '.ger-folha table.ger-tab td:first-child{text-align:left;font-weight:500}'+
+    '.ger-folha table.ger-tab tfoot td{border-top:1.5px solid #c5ccd3;border-bottom:none;font-weight:700;padding-top:5px}'+
+    '.ger-pos{display:inline-block;width:17px;color:#8894a0;font-family:"JetBrains Mono",monospace;font-size:8.5px}'+
+    '.ger-rodape{margin-top:14px;padding-top:7px;border-top:1px solid #d8dde3;display:flex;justify-content:space-between;'+
+      'font-size:8.5px;color:#55606b}'+
+    '.ger-graf-folha{position:relative;height:175px}'+
+    '.ger-graf-folha.alto{height:235px}'+
+    '.ger-par{display:grid;gap:8px}';
+}
+
+function gerFolhaTopo(res, filtros){
+  return '<div class="ger-folha-topo">'+
+    '<div class="ger-marca">'+(typeof PDF_LOGO!=='undefined'?'<img src="'+PDF_LOGO+'" alt="Biomassa Chaparini">':'')+
+    '<div><div class="ger-marca-nome">BIOMASSA CHAPARINI</div>'+
+    '<div class="ger-marca-sub">Sistema de Gestão de Frota</div></div></div>'+
+    '<div class="ger-folha-tit"><h3>Relatório Gerencial de Produção</h3>'+
+    '<div><b>Período:</b> '+gerEsc(res.periodo.rotulo)+'</div>'+
+    (filtros?'<div><b>Filtros:</b> '+gerEsc(filtros)+'</div>':'')+
+    '<div>Gerado em '+new Date().toLocaleDateString('pt-BR')+'</div></div></div>';
+}
+function gerFolhaRodape(res, secao){
+  return '<div class="ger-rodape">'+
+    '<span>Biomassa Chaparini · Relatório Gerencial · '+gerEsc(res.periodo.rotulo)+'</span>'+
+    '<span>'+gerEsc(secao)+'</span></div>';
+}
+
+// As 4 folhas, na ordem: resumo+evolucao+descarga / carga+tabelas / motoristas / motoristas em detalhe.
+function gerFolhasHtml(res, filtros){
+  var topoDesc=GER.topN(res.descarga, 10).itens;
+  var topoCarga=GER.topN(res.carga, 10).itens;
+  return '<div class="ger-folha">'+gerFolhaTopo(res, filtros)+
+      gerBlocoKpis(res, true)+
+      '<div class="ger-bloco"><h2>Evolução no período</h2><div class="ger-sub">'+
+        (res.evolucao.granularidade==='dia'?'Volume por dia e nº de entregas por dia':'Volume por mês e nº de entregas por mês')+
+        '</div><div id="pGerEvol"></div></div>'+
+      '<div class="ger-bloco"><h2>Volume e entregas por local de descarga</h2><div class="ger-sub">'+
+        (topoDesc.length<res.descarga.length?'10 maiores destinos; o restante somado em "Outros"':'Todos os destinos do período')+
+        '</div><div id="pGerDesc"></div></div>'+
+      gerFolhaRodape(res,'Resumo e destinos')+'</div>'+
+
+    '<div class="ger-folha">'+gerFolhaTopo(res, filtros)+
+      '<div class="ger-bloco"><h2>Volume e entregas por local de carga</h2><div class="ger-sub">'+
+        (topoCarga.length<res.carga.length?'10 maiores origens; o restante somado em "Outros"':'Todas as origens do período')+
+        '</div><div id="pGerCarga"></div></div>'+
+      '<div class="ger-bloco"><h2>Destinos em detalhe</h2>'+gerTabelaLocais(res.descarga,'Local de descarga',res.kpis)+'</div>'+
+      '<div class="ger-bloco"><h2>Origens em detalhe</h2>'+gerTabelaLocais(res.carga,'Local de carga',res.kpis)+'</div>'+
+      gerFolhaRodape(res,'Origens e detalhamento')+'</div>'+
+
+    '<div class="ger-folha">'+gerFolhaTopo(res, filtros)+
+      '<div class="ger-bloco"><h2>Produção por motorista</h2><div class="ger-sub">'+
+        res.motoristas.length+' motoristas com entrega no período, do maior para o menor</div>'+
+        '<div id="pGerMot"></div></div>'+
+      gerFolhaRodape(res,'Motoristas')+'</div>'+
+
+    '<div class="ger-folha">'+gerFolhaTopo(res, filtros)+
+      '<div class="ger-bloco"><h2>Motoristas em detalhe</h2><div class="ger-sub">'+
+        'km/L pelo método tanque-a-tanque, o mesmo da aba Consumo</div>'+
+        gerTabelaMotoristas(res.motoristas,res.kpis)+'</div>'+
+      gerFolhaRodape(res,'Motoristas em detalhe')+'</div>';
+}
+
+function gerFolhasGraficos(res, raiz){
+  var ev=res.evolucao.pontos;
+  gerBlocoGrafico(raiz.querySelector('#pGerEvol'), 'cGerPEvol', ev.map(function(x){return x.rotulo}),
+    {ton:ev.map(function(x){return x.ton}), m3:ev.map(function(x){return x.m3}), ent:ev.map(function(x){return x.entregas})},
+    true, 'alto', true);
+  var sd=gerSerieDeLocais(GER.topN(res.descarga,10).itens);
+  gerBlocoGrafico(raiz.querySelector('#pGerDesc'), 'cGerPDesc', sd.labels, sd, true);
+  var sc=gerSerieDeLocais(GER.topN(res.carga,10).itens);
+  gerBlocoGrafico(raiz.querySelector('#pGerCarga'), 'cGerPCarga', sc.labels, sc, true, 'alto');
+  gerGraficoMotoristas(raiz.querySelector('#pGerMot'), 'cGerPMot', res.motoristas, true);
+}
+
+// Monta as folhas num palco FORA DA TELA (nao display:none — o Chart.js precisa de largura
+// real, senao desenha num canvas de 0px), troca cada canvas pelo PNG dele e manda o HTML
+// pronto pra janela de impressao. Mesmo padrao do exportPagePDF do js/utils.js.
+function exportProdGerencialPDF(){
+  var win=window.open('','_blank');
+  if(!win){showToast('Seu navegador bloqueou a janela do PDF. Permita pop-ups para este site.',true);return;}
+  var palco=null;
+  try{
+    var res=gerUltimo;
+    if(!res || !res.kpis.entregas){
+      win.close();
+      showToast('Nada para imprimir: nenhuma entrega no período filtrado.',true);
+      return;
+    }
+    var filtros=lastProdFiltros||'';
+    palco=document.createElement('div');
+    // 794px = a largura de uma A4 retrato em pixel de CSS (210mm), a mesma do papel
+    palco.style.cssText='position:fixed;left:-20000px;top:0;width:794px;background:#fff;z-index:-1';
+    palco.innerHTML='<style>'+gerCssFolha()+'</style>'+gerFolhasHtml(res, filtros);
+    document.body.appendChild(palco);
+    gerFolhasGraficos(res, palco);
+
+    palco.querySelectorAll('canvas').forEach(function(cv){
+      var img=document.createElement('img');
+      try{ img.src=cv.toDataURL('image/png'); }catch(e){ img.alt='gráfico'; }
+      img.style.width='100%'; img.style.height='100%'; img.style.objectFit='contain';
+      cv.parentNode.replaceChild(img,cv);
+      destroyChart(cv.id);
+    });
+
+    var html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+      '<title>Relatório Gerencial de Produção - Biomassa Chaparini</title>'+
+      '<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">'+
+      '<style>'+gerCssFolha()+
+      '@page{size:A4 portrait;margin:0}'+
+      '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      // sem altura fixa: com muitos motoristas a tabela segue pra pagina seguinte em vez de
+      // estourar a folha e deixar uma pagina quase vazia no fim
+      '.ger-folha{break-after:page;page-break-after:always}'+
+      '.ger-folha:last-of-type{break-after:auto;page-break-after:auto}'+
+      '.ger-folha tr{break-inside:avoid;page-break-inside:avoid}'+
+      '.ger-folha thead{display:table-header-group}'+
+      'img{max-width:100%}'+
+      '</style></head><body>'+palco.innerHTML+
+      '<script>window.onload=function(){setTimeout(function(){window.print()},400)}<'+'/script>'+
+      '</body></html>';
+    win.document.write(html);
+    win.document.close();
+  }catch(e){
+    try{ win.close(); }catch(e2){}
+    showToast('Erro ao gerar o relatório: '+e.message,true);
+  }finally{
+    if(palco && palco.parentNode) palco.parentNode.removeChild(palco);
+  }
+}
 </script>
 <script>
 // ==================== FINANCEIRO ====================

@@ -3,6 +3,31 @@ var prodMotModo='Ativos'; // filtro Ativos/Inativos/Todos do dropdown de motoris
 var lastProdKpi=null; // último snapshot dos totais, usado pelo exportPagePDF para montar os KPIs do PDF
 var lastProdFiltros=''; // resumo legível dos filtros ativos, usado no cabeçalho do PDF
 var prodPdfMode=false; // true só durante a geração do PDF — liga os rótulos de valor nos gráficos
+var prodVista='operacional'; // 'operacional' (dia a dia) ou 'gerencial' (relatório da diretoria)
+
+// Alterna as duas visões da aba. A barra de filtros é a mesma para as duas; o que troca são os
+// KPIs, os gráficos e a tabela — e os botões de impressão, que seguem a visão: na Diretoria quem
+// imprime é o botão próprio (4 folhas A4), e o "Exportar PDF" genérico nem é criado na barra.
+function showProdView(v){
+  prodVista = v==='gerencial' ? 'gerencial' : 'operacional';
+  var ger = prodVista==='gerencial';
+  ['kpiProd','chartsProd','tblProd','prodNotaBar'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.style.display = ger?'none':'';
+  });
+  var host=document.getElementById('prodGerencial');
+  if(host){
+    host.style.display = ger?'':'none';
+    // Saindo da visão: esvazia. Senão os canvas dela ficam escondidos na página e entram no
+    // clone do exportPagePDF, que varre todos os canvas de #pageProducao.
+    if(!ger){ if(typeof gerLimparGraficos==='function') gerLimparGraficos(); host.innerHTML=''; }
+  }
+  var btn=document.getElementById('prodBtnGerPDF');
+  if(btn) btn.style.display = ger?'':'none';
+  var t1=document.getElementById('prodTabBtnOperacional'); if(t1) t1.classList.toggle('active', !ger);
+  var t2=document.getElementById('prodTabBtnGerencial'); if(t2) t2.classList.toggle('active', ger);
+  buildProducao();
+}
 
 // Rótulo de valor "scriptable": fica embutido no gráfico desde a criação (desligado por padrão)
 // e só liga quando prodPdfMode=true. Nunca mexe na configuração depois de o gráfico já existir —
@@ -42,7 +67,7 @@ function buildProducao(){
     {id:'fpSemana',label:'Semana',options:uSemP,optionLabels:uSemP.map(getWeekDisplay),onChange:buildProducao,linkedMonthId:'fpMes',allWeeks:uSemP},
     {id:'fpUnid',label:'Unidade',options:['TON','M³'],onChange:buildProducao},
     {type:'dateRange',idIni:'fpDtIni',idFim:'fpDtFim',onChange:buildProducao}
-  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); });
+  ], motoristaModoSelectHtml('prodMotModo', prodMotModo, 'buildProducao'), function(){ clearFilters(['fpMot','fpPlaca','fpCarga','fpDescarga','fpMes','fpDia','fpSemana','fpUnid','fpDtIni','fpDtFim','fpNota'],buildProducao); }, prodVista==='gerencial');
 
   var fNota=document.getElementById('fpNota')?document.getElementById('fpNota').value.trim():'';
   var fM=document.getElementById('fpMot')?document.getElementById('fpMot').value:'';
@@ -73,6 +98,14 @@ function buildProducao(){
   if(fD) filtrosList.push('Local Descarga: '+fD);
   if(fUnid) filtrosList.push('Unidade: '+fUnid);
   lastProdFiltros=filtrosList.join(' · ');
+
+  // Visão Diretoria: o relatório gerencial toma o lugar dos KPIs, gráficos e tabela daqui.
+  // Recebe as linhas filtradas SEM o período — o cálculo busca o período anterior, que por
+  // definição está fora do intervalo escolhido, e o período ele lê dos mesmos filtros.
+  if(prodVista==='gerencial'){
+    buildProdGerencial(_filtrarLinhasSemPeriodo(), fUnid||'ambos');
+    return;
+  }
 
   var data=DB.cadastro.filter(function(r){
     if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
@@ -113,11 +146,12 @@ function buildProducao(){
 
   lastProdKpi={totalViagens:totalViagens,totalTON:totalTON,totalM3:totalM3,camAtivosCount:Object.keys(camAtivos).length,mediaTonPlaca:mediaTonPlaca,mediaM3Placa:mediaM3Placa};
 
-  // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência
-  // e no gráfico dos últimos 15 dias — assim ambos respeitam Placa/Motorista/Local/Unidade/Nota.
-  function _filtrarEntregasSemPeriodo(){
+  // Filtro comum (sem restrição de data/mês/semana) usado no comparativo de tendência, no
+  // gráfico dos últimos 15 dias e na visão Diretoria — todos respeitam Placa/Motorista/Local/
+  // Unidade/Nota. A versão em LINHAS inclui lançamento que não é entrega (abastecimento solto),
+  // que é o que o cálculo de km/L precisa; a de ENTREGAS é a de sempre.
+  function _filtrarLinhasSemPeriodo(){
     return DB.cadastro.filter(function(r){
-      if(!(r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0)) return false;
       if(fNota&&String(r.NOTA||'').indexOf(fNota)===-1) return false;
       if(fM&&r.MOTORISTA!==fM) return false;
       if(fP&&r.PLACA!==fP) return false;
@@ -130,6 +164,9 @@ function buildProducao(){
       }
       return true;
     });
+  }
+  function _filtrarEntregasSemPeriodo(){
+    return _filtrarLinhasSemPeriodo().filter(function(r){ return r.ENTREGA && r.QUANTIDADE && r.QUANTIDADE>0; });
   }
 
   // Calculate month-over-month trends (respeitando os filtros ativos, exceto período)

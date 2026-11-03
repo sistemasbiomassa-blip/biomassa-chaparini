@@ -3,11 +3,15 @@
   --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --border:#30363d;
   --text:#e6edf3; --text2:#8b949e; --accent:#00b4d8; --accent2:#0077b6;
   --green:#2ea043; --yellow:#d29922; --red:#f85149; --orange:#db6d28; --purple:#a371f7; --brand:#FFD700;
+  --ton:#3987e5; --m3:#d95926; --ent:#199e70;   /* series do Relatorio Gerencial */
+  --grid:rgba(255,255,255,0.07);
   --radius:12px; --shadow:0 4px 24px rgba(0,0,0,0.4);
 }
 .light {
   --bg:#f0f4f8; --surface:#ffffff; --surface2:#e8eef4; --border:#d0d7de;
   --text:#1f2937; --text2:#57606a; --accent:#0077b6; --accent2:#00b4d8; --brand:#085425;
+  --ton:#2a78d6; --m3:#eb6834; --ent:#1baf7a;
+  --grid:rgba(0,0,0,0.07);
   --shadow:0 4px 24px rgba(0,0,0,0.08);
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -185,10 +189,10 @@ tbody tr:hover{background:var(--surface2)}
 .status-ok{background:rgba(46,160,67,0.15);color:var(--green)}
 
 /* MANUT V2 MOCKUP STYLE */
-.manut-view-tabs{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;margin-bottom:16px}
-.manut-view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
-.manut-view-tab.active{background:var(--surface2);color:var(--text)}
-.manut-view-tab:hover:not(.active){color:var(--text)}
+.manut-view-tabs,.view-tabs{display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;margin-bottom:16px}
+.manut-view-tab,.view-tab{padding:9px 18px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
+.manut-view-tab.active,.view-tab.active{background:var(--surface2);color:var(--text)}
+.manut-view-tab:hover:not(.active),.view-tab:hover:not(.active){color:var(--text)}
 .manut-filter-bar{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;flex-wrap:wrap;width:fit-content;max-width:100%}
 .manut-filter-bar .filter-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;margin-right:4px}
 .manut-filter-bar .filter-sep{width:1px;height:24px;background:var(--border);margin:0 6px}
@@ -338,7 +342,7 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .manut-km-sel-fixo{font-size:12px;color:var(--text);font-weight:600}
 
 /* Subtítulo das abas: cada uma responde a uma pergunta */
-.manut-view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
+.manut-view-tab small,.view-tab small{display:block;font-weight:400;font-size:10px;color:var(--text2);margin-top:1px}
 
 .manut-km-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
 .manut-km-fill{height:100%;border-radius:2px}
@@ -620,3 +624,60 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 .pneu-tl-tag.out{background:rgba(248,81,73,0.12);color:var(--red)}
 .pneu-tl-desc{font-size:12.5px}
 .pneu-tl-desc b{color:var(--accent)}
+
+/* ==================== RELATORIO GERENCIAL (visao Diretoria da aba Producao) ====================
+   Uma coluna so, na mesma ordem que vai pro papel. O layout das folhas A4 nao esta aqui: ele e
+   gerado em js/prod-gerencial.js (gerCssFolha), que serve ao palco de impressao e a janela de PDF. */
+.ger-faixa-periodo{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px;
+  padding:9px 14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;font-size:12px;color:var(--text2)}
+.ger-faixa-periodo b{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.3px}
+
+.ger-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-bottom:18px}
+.ger-kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px;min-width:0}
+.ger-kpi-rot{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);font-weight:600}
+.ger-kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:29px;font-weight:700;line-height:1.05;margin-top:3px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ger-kpi-val .un{font-size:14px;font-weight:600;color:var(--text2);margin-left:3px}
+.ger-kpi-pe{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--text2);min-height:17px}
+.ger-delta{display:inline-flex;align-items:center;gap:3px;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px}
+.ger-delta.sobe{color:var(--green)}
+.ger-delta.desce{color:var(--red)}
+.ger-delta.igual{color:var(--text2)}
+
+.ger-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px 18px;margin-bottom:14px;min-width:0}
+.ger-card-topo{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+.ger-card h2{font-size:17px;letter-spacing:.3px}
+.ger-sub{font-size:11.5px;color:var(--text2);margin-bottom:11px}
+.ger-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--text2);margin-bottom:9px}
+.ger-leg span{display:inline-flex;align-items:center;gap:5px}
+.ger-chave{width:11px;height:11px;border-radius:3px;flex:none}
+.ger-chave.linha{height:3px;border-radius:2px;width:15px}
+.ger-graf{position:relative;height:300px}
+.ger-graf.alto{height:380px}
+.ger-par{display:grid;gap:10px}
+
+.ger-rolo{overflow-x:auto;margin:0 -18px;padding:0 18px}
+table.ger-tab{font-size:12.5px;min-width:560px;border-collapse:collapse;width:100%}
+table.ger-tab th{text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);
+  font-weight:600;padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.ger-tab th:first-child{text-align:left}
+table.ger-tab td{padding:6px 9px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+table.ger-tab td:first-child{text-align:left;font-weight:500}
+table.ger-tab tbody tr:last-child td{border-bottom:none}
+table.ger-tab tfoot td{border-top:2px solid var(--border);border-bottom:none;font-weight:700;padding-top:8px}
+table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.ger-pos{display:inline-block;width:19px;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px}
+
+.ger-notas{margin-top:4px;padding-top:12px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text2)}
+.ger-notas b{color:var(--text)}
+.ger-notas ul{margin:6px 0 0;padding-left:17px}
+.ger-notas li{margin-bottom:3px}
+.ger-vazio{padding:38px 16px;text-align:center;color:var(--text2);font-size:13px}
+
+@media (max-width:640px){
+  .ger-graf{height:260px}
+  .ger-graf.alto{height:330px}
+  .ger-kpi-val{font-size:25px}
+  .ger-rolo{margin:0 -14px;padding:0 14px}
+}

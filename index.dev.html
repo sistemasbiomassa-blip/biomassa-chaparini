@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -771,15 +772,30 @@
       <div class="page" id="pageProducao">
         <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <h1 class="page-title">📊 Produção</h1>
-          <button class="btn btn-secondary admin-only" style="display:none;font-size:12px" onclick="exportProdAnaliticoPDF()">📋 Relatório Analítico</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary admin-only" style="display:none;font-size:12px" onclick="exportProdAnaliticoPDF()">📋 Relatório Analítico</button>
+            <!-- Só na visao Diretoria: imprime as 4 folhas A4 do relatório gerencial. Na visao
+                 Operacional quem imprime é o "📄 Exportar PDF" da barra de filtros, e na Diretoria
+                 esse genérico sai de cena (ver noPdfBtn no createFilters do js/producao.js). -->
+            <button class="btn btn-secondary" id="prodBtnGerPDF" style="display:none;font-size:12px" onclick="exportProdGerencialPDF()">🖨️ Imprimir relatório</button>
+          </div>
         </div>
-        <div style="display:flex;gap:10px;margin-bottom:10px">
+
+        <!-- Duas visoes dos mesmos lancamentos: Operacional (dia a dia) e Diretoria (relatório
+             para apresentar). A barra de filtros é a mesma para as duas. -->
+        <div class="view-tabs">
+          <button class="view-tab active" id="prodTabBtnOperacional" onclick="showProdView('operacional')">📊 Operacional<small>acompanhar o dia a dia</small></button>
+          <button class="view-tab" id="prodTabBtnGerencial" onclick="showProdView('gerencial')">📈 Diretoria<small>relatório para apresentar</small></button>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:10px" id="prodNotaBar">
           <input type="text" inputmode="numeric" id="fpNota" class="filter-select" placeholder="🔍 Buscar por Nota Fiscal" style="min-width:220px" oninput="buildProducao()">
         </div>
         <div class="filters" id="filtersProd"></div>
         <div class="kpi-row" id="kpiProd"></div>
         <div class="charts-grid" id="chartsProd"></div>
         <div class="table-container" id="tblProd"></div>
+        <div id="prodGerencial" style="display:none"></div>
       </div>
 
       <!-- FINANCEIRO PAGE -->
@@ -1311,6 +1327,8 @@
 <script src="js/pneus.js"></script>
 <script src="js/filters-common.js"></script>
 <script src="js/producao.js"></script>
+<script src="js/prod-gerencial-calc.js"></script>
+<script src="js/prod-gerencial.js"></script>
 <script src="js/financeiro.js"></script>
 <script src="js/manutencao.js"></script>
 <script src="js/manut-custos.js"></script>
