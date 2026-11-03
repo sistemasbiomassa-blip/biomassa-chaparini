@@ -785,7 +785,7 @@
              para apresentar). A barra de filtros é a mesma para as duas. -->
         <div class="view-tabs">
           <button class="view-tab active" id="prodTabBtnOperacional" onclick="showProdView('operacional')">📊 Operacional<small>acompanhar o dia a dia</small></button>
-          <button class="view-tab" id="prodTabBtnGerencial" onclick="showProdView('gerencial')">📈 Diretoria<small>relatório para apresentar</small></button>
+          <span class="admin-only" style="display:none"><button class="view-tab" id="prodTabBtnGerencial" onclick="showProdView('gerencial')">📈 Diretoria<small>relatório para apresentar</small></button></span>
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:10px" id="prodNotaBar">

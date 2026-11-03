@@ -5,10 +5,16 @@ var lastProdFiltros=''; // resumo legível dos filtros ativos, usado no cabeçal
 var prodPdfMode=false; // true só durante a geração do PDF — liga os rótulos de valor nos gráficos
 var prodVista='operacional'; // 'operacional' (dia a dia) ou 'gerencial' (relatório da diretoria)
 
+// Por enquanto só ADMIN enxerga a visão Diretoria (pedido dele em 2026-11-03). A aba some pelo
+// span.admin-only do index.dev.html; esta função é a tranca de verdade — troca de usuário na mesma
+// janela deixaria prodVista='gerencial' de quem saiu.
+function podeVerProdGerencial(){ return !!(currentUserData && currentUserData.perfil==='ADMIN'); }
+
 // Alterna as duas visões da aba. A barra de filtros é a mesma para as duas; o que troca são os
 // KPIs, os gráficos e a tabela — e os botões de impressão, que seguem a visão: na Diretoria quem
 // imprime é o botão próprio (4 folhas A4), e o "Exportar PDF" genérico nem é criado na barra.
 function showProdView(v){
+  if(v==='gerencial' && !podeVerProdGerencial()) v='operacional';
   prodVista = v==='gerencial' ? 'gerencial' : 'operacional';
   var ger = prodVista==='gerencial';
   ['kpiProd','chartsProd','tblProd','prodNotaBar'].forEach(function(id){
@@ -103,6 +109,7 @@ function buildProducao(){
   // Recebe as linhas filtradas SEM o período — o cálculo busca o período anterior, que por
   // definição está fora do intervalo escolhido, e o período ele lê dos mesmos filtros.
   if(prodVista==='gerencial'){
+    if(!podeVerProdGerencial()){ showProdView('operacional'); return; }
     buildProdGerencial(_filtrarLinhasSemPeriodo(), fUnid||'ambos');
     return;
   }
