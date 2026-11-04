@@ -191,7 +191,15 @@ select{width:100%;padding:9px 32px 9px 10px;border-radius:10px;border:1px solid 
   background-image:linear-gradient(45deg,transparent 50%,var(--text2) 50%),linear-gradient(135deg,var(--text2) 50%,transparent 50%);
   background-position:calc(100% - 17px) calc(50% + 1px),calc(100% - 12px) calc(50% + 1px);
   background-size:5px 5px;background-repeat:no-repeat}
-.fclear{align-self:flex-start;font-size:12px;color:var(--accent);font-weight:600;padding:8px 0 2px}
+.fclear{align-self:flex-start;font-size:12px;color:var(--accent);font-weight:600;margin-top:11px;
+  padding:8px 15px;border:1px solid var(--border);border-radius:999px;background:var(--surface2)}
+/* marca do filtro ativo: fica no topo de qualquer aba, porque o filtro mexe nas tres */
+.fativo{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;
+  background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:6px 6px 6px 14px}
+.fa-txt{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.fa-txt b{color:var(--text);font-weight:600}
+.fa-x{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--accent);padding:5px 12px;
+  border-radius:999px;background:var(--surface);border:1px solid var(--border)}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;
   border-radius:999px;background:var(--surface2);color:var(--text2);white-space:nowrap}
 .trucks{display:flex;flex-direction:column;margin-top:6px}
@@ -277,6 +285,9 @@ footer b{color:var(--text);font-weight:600}
 <div class="faixa" id="faixa" hidden></div>
 
 <main>
+  <!-- o filtro vale para as tres abas, entao a marca dele fica fora delas -->
+  <div class="fativo" id="filtroAtivo" hidden></div>
+
   <section id="v-resumo">
     <div class="card">
       <div class="ctitle">Entregas <span class="pill" id="resPeriodo">—</span></div>
@@ -440,10 +451,12 @@ var MES_CURTO=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov'
 var MES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function el(id){ return document.getElementById(id); }
 function nBR(v,dec){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0}); }
-function compacto(v){
-  if(Math.abs(v)>=1000) return nBR(v/1000,1).replace(',0','')+' mil';
-  return nBR(v, v%1?1:0);
-}
+/* Mesmas casas decimais do sistema, para o numero do celular bater com o da tela
+   grande: volume sempre com 2 (js/producao.js), litros e km inteiros
+   (js/financeiro.js), media por entrega com 1, km/L com 2. */
+function vol(v){ return nBR(v,2); }
+function litros(v){ return nBR(v,0); }
+function km(v){ return nBR(v,0); }
 function rotuloMes(ym){ var p=ym.split('-'); return MES_LONGO[+p[1]-1]+' de '+p[0]; }
 function diasNoMes(ym){ var p=ym.split('-'); return new Date(Date.UTC(+p[0],+p[1],0)).getUTCDate(); }
 function mesAnterior(ym){
@@ -670,7 +683,7 @@ function rankHTML(itens, cor){
   var max=itens[0].ent||1;
   return itens.map(function(i){
     return '<div class="rk"><div class="rk-top"><span class="rk-name">'+esc(i.nome)+'</span>'+
-      '<span class="rk-val"><b>'+nBR(i.ent)+'</b> entr. · '+compacto(i.vol)+' '+(i.m3?'m³':'t')+'</span></div>'+
+      '<span class="rk-val"><b>'+nBR(i.ent)+'</b> entr. · '+vol(i.vol)+' '+(i.m3?'m³':'t')+'</span></div>'+
       '<div class="rk-track"><span class="rk-fill" style="width:'+(i.ent/max*100).toFixed(1)+'%;background:'+cor+'"></span></div></div>';
   }).join('');
 }
@@ -729,11 +742,11 @@ function render(){
   el('heroSub').textContent=r.nPlacas+' caminhões · '+r.nMots+' motoristas';
   el('heroDelta').outerHTML=deltaHTML(r.ent, rAnt.ent).replace('class="delta', 'id="heroDelta" class="delta');
 
-  el('kTon').innerHTML=compacto(r.ton)+'<small>t</small>';
+  el('kTon').innerHTML=vol(r.ton)+'<small>t</small>';
   el('kTonFoot').textContent=r.entTon+' entregas em tonelada';
-  el('kM3').innerHTML=compacto(r.m3)+'<small>m³</small>';
+  el('kM3').innerHTML=vol(r.m3)+'<small>m³</small>';
   el('kM3Foot').textContent=r.entM3+' entregas em m³';
-  el('kLit').innerHTML=compacto(r.lit)+'<small>L</small>';
+  el('kLit').innerHTML=litros(r.lit)+'<small>L</small>';
   el('kLitFoot').textContent=r.abast+' abastecimentos';
 
   var placas=consumoPorPlaca(linhasDasPlacasDoFiltro(ym));
@@ -746,8 +759,8 @@ function render(){
     : rotuloMes(ym)+' contra '+rotuloMes(ant);
   el('cmp').innerHTML=
     barraCmp('Entregas','var(--ent)', r.ent, rAnt.ent, 0)+
-    barraCmp('Volume em tonelada','var(--ton)', r.ton, rAnt.ton, 0, ' t')+
-    barraCmp('Volume em m³','var(--m3)', r.m3, rAnt.m3, 0, ' m³')+
+    barraCmp('Volume em tonelada','var(--ton)', r.ton, rAnt.ton, 2, ' t')+
+    barraCmp('Volume em m³','var(--m3)', r.m3, rAnt.m3, 2, ' m³')+
     barraCmp('Diesel','var(--accent)', r.lit, rAnt.lit, 0, ' L');
 
   var serieA=acumulado(porDia(linhas, nDias));
@@ -766,6 +779,7 @@ function render(){
   renderEntregas(linhas, nDias, ym, r);
   renderCaminhoes(placas);
   el('fClear').hidden=!temFiltro();
+  pintaFiltroAtivo();
   pintaMeses();
 }
 function semDados(){
@@ -778,8 +792,8 @@ function renderEntregas(linhas, nDias, ym, r){
   el('eEnt').textContent=nBR(r.ent);
   el('eEntFoot').textContent=temFiltro()?'no filtro atual':'no mês inteiro';
   el('eVol').innerHTML=umaUnidade
-    ? compacto(ton||m3)+'<small>'+(ton?'t':'m³')+'</small>'
-    : compacto(ton)+'<small>t</small> + '+compacto(m3)+'<small>m³</small>';
+    ? vol(ton||m3)+'<small>'+(ton?'t':'m³')+'</small>'
+    : vol(ton)+'<small>t</small> + '+vol(m3)+'<small>m³</small>';
   el('eVolFoot').textContent=umaUnidade?'volume entregue':'tonelada e m³ não se somam';
   var medT=r.entTon?ton/r.entTon:0, medM=r.entM3?m3/r.entM3:0;
   el('eMed').innerHTML=umaUnidade
@@ -792,7 +806,7 @@ function renderEntregas(linhas, nDias, ym, r){
   el('tbDesc').innerHTML=tops.length
     ? '<table class="tb"><thead><tr><th>Destino</th><th class="r">Entregas</th><th class="r">Volume</th></tr></thead><tbody>'+
       tops.map(function(i){ return '<tr><td class="nm" title="'+esc(i.nome)+'">'+esc(i.nome)+'</td><td class="r num">'+
-        nBR(i.ent)+'</td><td class="r num">'+nBR(i.vol,1)+' '+(i.m3?'m³':'t')+'</td></tr>'; }).join('')+
+        nBR(i.ent)+'</td><td class="r num">'+vol(i.vol)+' '+(i.m3?'m³':'t')+'</td></tr>'; }).join('')+
       '</tbody></table>'
     : '<div class="empty">Nenhuma entrega com esse filtro.</div>';
 
@@ -813,9 +827,9 @@ function renderCaminhoes(placas){
   ativas.forEach(function(p){ totKm+=p.kmRodado; totLit+=p.lit; totAb+=p.nAb; });
   var med=mediaFrota(placas);
   var comKm=ativas.filter(function(p){ return p.kmRodado>0; }).length;
-  el('cKm').innerHTML=compacto(totKm)+'<small>km</small>';
+  el('cKm').innerHTML=km(totKm)+'<small>km</small>';
   el('cKmFoot').textContent=comKm+(comKm===1?' placa com km':' placas com km')+' · '+ativas.length+' na rua';
-  el('cLit').innerHTML=compacto(totLit)+'<small>L</small>';
+  el('cLit').innerHTML=litros(totLit)+'<small>L</small>';
   el('cKml').innerHTML=(med?nBR(med,2):'—')+'<small>km/L</small>';
   el('cAb').textContent=nBR(totAb);
 
@@ -848,7 +862,7 @@ function renderCaminhoes(placas){
         '<span>Km nos trechos fechados<br><b>'+nBR(p.kmSeg)+' km</b></span>'+
         '<span>Litros desses trechos<br><b>'+nBR(p.litSeg,1)+' L</b></span>'+
         '<span>Abastecimentos<br><b>'+p.nAb+'</b></span>'+
-        '<span>Entregas / volume<br><b>'+p.viagens+' · '+nBR(p.vol,1)+' '+(p.m3?'m³':'t')+'</b></span>'+
+        '<span>Entregas / volume<br><b>'+p.viagens+' · '+vol(p.vol)+' '+(p.m3?'m³':'t')+'</b></span>'+
       '</div>';
   }).join('') : '<div class="empty">Nenhum caminhão com km ou litro no mês.</div>';
 }
@@ -870,6 +884,22 @@ function ligaLinha(serieA, serieB, nDias, ym, ant){
   }
   hit.addEventListener('pointerdown', function(e){ mostra(e); e.preventDefault(); });
   hit.addEventListener('pointermove', function(e){ if(e.buttons || e.pointerType==='touch') mostra(e); });
+}
+function limparFiltros(){
+  estado.carga=''; estado.desc=''; estado.mot='';
+  el('fCarga').value=''; el('fDesc').value=''; el('fMot').value='';
+  render();
+}
+function pintaFiltroAtivo(){
+  var box=el('filtroAtivo');
+  var partes=[];
+  if(estado.carga) partes.push('Carga: <b>'+esc(estado.carga)+'</b>');
+  if(estado.desc) partes.push('Destino: <b>'+esc(estado.desc)+'</b>');
+  if(estado.mot) partes.push('Motorista: <b>'+esc(estado.mot)+'</b>');
+  if(!partes.length){ box.hidden=true; box.innerHTML=''; return; }
+  box.innerHTML='<span class="fa-txt">'+partes.join(' · ')+'</span>'+
+    '<button class="fa-x" id="btnLimpar">Limpar ✕</button>';
+  box.hidden=false;
 }
 function pintaMeses(){
   document.querySelectorAll('.mchip').forEach(function(c){
@@ -925,10 +955,10 @@ el('ordem').addEventListener('change', function(e){ estado.ordem=e.target.value;
 el('fCarga').addEventListener('change', function(e){ estado.carga=e.target.value; render(); });
 el('fDesc').addEventListener('change', function(e){ estado.desc=e.target.value; render(); });
 el('fMot').addEventListener('change', function(e){ estado.mot=e.target.value; render(); });
-el('fClear').addEventListener('click', function(){
-  estado.carga=''; estado.desc=''; estado.mot='';
-  el('fCarga').value=''; el('fDesc').value=''; el('fMot').value='';
-  render();
+el('fClear').addEventListener('click', limparFiltros);
+/* o botao de limpar nasce junto com a marca do filtro, entao escuta no pai */
+el('filtroAtivo').addEventListener('click', function(e){
+  if(e.target.closest('#btnLimpar')) limparFiltros();
 });
 document.querySelectorAll('.tab').forEach(function(t){
   t.addEventListener('click', function(){
