@@ -111,7 +111,9 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:va
 .brand span{color:var(--accent)}
 .hacoes{display:flex;align-items:center;gap:4px}
 .hbtn{padding:6px 8px;font-size:15px;line-height:1;border-radius:8px;color:var(--text2)}
-.hnote{font-size:11px;color:var(--text2);white-space:nowrap;padding-top:2px}
+.hnote{font-size:11px;color:var(--text2);white-space:nowrap;display:inline-flex;align-items:center;
+  gap:4px;padding:5px 8px;border-radius:999px;background:var(--surface2);border:1px solid var(--border)}
+.hnote[disabled]{opacity:.55}
 .meses{display:flex;gap:6px;overflow-x:auto;padding:10px 0 9px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .meses::-webkit-scrollbar{display:none}
 .mchip{flex:0 0 auto;padding:5px 12px;border-radius:999px;border:1px solid var(--border);
@@ -263,7 +265,8 @@ footer b{color:var(--text);font-weight:600}
     <div class="htop">
       <div class="brand">Biomassa <span>Chaparini</span></div>
       <div class="hacoes">
-        <span class="hnote" id="hnote"></span>
+        <button class="hnote" id="btnAtualizar" title="Buscar os lançamentos novos agora">
+          <span id="hnote">—</span><span aria-hidden="true">↻</span></button>
         <button class="hbtn" id="btnTema" title="Alternar tema" aria-label="Alternar tema">◐</button>
         <button class="hbtn" id="btnSair" title="Sair" aria-label="Sair">⏻</button>
       </div>
@@ -966,7 +969,11 @@ function faixa(texto){
 function marcarAtualizado(){
   if(!D) return;
   var d=new Date(D.atualizado);
-  el('hnote').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  var hora=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  /* dado de outro dia nao pode aparecer so como hora: "08:12" passaria por
+     recem-buscado quando na verdade e de ontem */
+  var deHoje=d.toDateString()===new Date().toDateString();
+  el('hnote').textContent=deHoje ? hora : (('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2));
   el('fAtualizado').textContent='Dados buscados em '+d.toLocaleString('pt-BR')+'.';
 }
 function abrirApp(){
@@ -988,10 +995,16 @@ function pedirLoginDeNovo(){
   mostrarTela('telaLogin');
   el('erroLogin').textContent='Sua sessão expirou. Entre de novo.';
 }
+var ULTIMA_CARGA=0;   /* quando o banco foi lido pela ultima vez */
+var BUSCANDO=false;
 function atualizar(primeira){
+  if(BUSCANDO) return Promise.resolve();
+  BUSCANDO=true;
+  el('btnAtualizar').disabled=true;
   if(primeira) el('statusCarga').textContent='Buscando os lançamentos…';
   else faixa('Atualizando…');
   return carregarDados().then(function(novo){
+    ULTIMA_CARGA=Date.now();
     usarD(novo);
     faixa('');
     if(primeira) abrirApp();
@@ -1006,8 +1019,22 @@ function atualizar(primeira){
       faixa('Sem internet — mostrando os dados guardados no celular.');
     }
     if(window.console) console.error(err);
+  }).then(function(){
+    BUSCANDO=false;
+    el('btnAtualizar').disabled=false;
   });
 }
+/* Lancamento feito no sistema aparece aqui na proxima leitura do banco — nao ha
+   aviso automatico vindo do servidor. Entao o app relê sozinho toda vez que
+   volta para a frente (trocou de app, desbloqueou o celular), e o horario no
+   cabecalho e um botao para forcar na hora. */
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState!=='visible') return;
+  if(el('app').hidden) return;
+  if(Date.now()-ULTIMA_CARGA < 120000) return;   /* buscou agora ha pouco: nao repete */
+  atualizar(false);
+});
+el('btnAtualizar').addEventListener('click', function(){ atualizar(false); });
 function entrarComSessao(){
   /* abre na hora com o que estiver guardado e busca o atual por trás */
   var cache=lerCache();
