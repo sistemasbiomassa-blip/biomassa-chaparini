@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Frota Chaparini</title>
+<!-- =====================================================================
+     VERSAO DE CELULAR — SO CONSULTA (sem lancamento, sem edicao).
+
+     ATENCAO: este NAO e o index.html do sistema. O sistema continua sendo o
+     index.html da RAIZ, gerado por build.sh a partir de index.dev.html +
+     css/ + js/. Este aqui e o aplicativo de celular e vive sozinho dentro de
+     app/ — arquivo unico, editado direto, sem passar pelo build.
+
+     Por que a pasta app/ separada: o service worker so manda no diretorio em
+     que ele esta. Com sw.js na raiz, ele passaria a interceptar tambem o
+     sistema (index.html, css/, js/) e serviria versao velha do cache depois
+     de um deploy. Dentro de app/, o alcance dele acaba aqui.
+
+     Instalavel como aplicativo (PWA): manifest.webmanifest + sw.js + icons/.
+     Mesmo login e mesmo banco do sistema; quem nao pode ver dado operacional
+     (perfil RH) recebe tudo vazio pelo RLS, igual no sistema grande.
+     ===================================================================== -->
+<meta name="theme-color" content="#161b22" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Frota">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0d1117; --surface:#161b22; --surface2:#1c2333; --border:#30363d;
+  --text:#e6edf3; --text2:#8b949e; --accent:#00b4d8;
+  --ton:#3987e5; --m3:#d95926; --ent:#199e70; --prev:#55606e;
+  --up:#2ea043; --down:#f85149; --warn:#d29922;
+  --grid:rgba(255,255,255,.08);
+  --card-shadow:0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.35);
+  --radius:14px;
+  --font:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --cond:'Barlow Condensed','Barlow',var(--font);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#eef2f7; --surface:#ffffff; --surface2:#e6ecf3; --border:#d0d7de;
+    --text:#161b22; --text2:#5a6672; --accent:#0077b6;
+    --ton:#2a78d6; --m3:#d4561f; --ent:#128a5e; --prev:#9aa5b1;
+    --up:#167c33; --down:#c7372f; --warn:#a4710f;
+    --grid:rgba(0,0,0,.08);
+    --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 20px rgba(16,24,40,.08);
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#eef2f7; --surface:#ffffff; --surface2:#e6ecf3; --border:#d0d7de;
+  --text:#161b22; --text2:#5a6672; --accent:#0077b6;
+  --ton:#2a78d6; --m3:#d4561f; --ent:#128a5e; --prev:#9aa5b1;
+  --up:#167c33; --down:#c7372f; --warn:#a4710f;
+  --grid:rgba(0,0,0,.08);
+  --card-shadow:0 1px 2px rgba(16,24,40,.06), 0 8px 20px rgba(16,24,40,.08);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;
+  -webkit-text-size-adjust:100%;padding-top:env(safe-area-inset-top,0px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);
+  z-index:30;background:var(--surface)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+/* ---------- login / carregando ---------- */
+#telaLogin,#telaCarregando{min-height:70vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;text-align:center;
+  padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));
+  padding-block:40px}
+.logo{width:92px;height:92px;border-radius:20px;object-fit:cover;border:1px solid var(--border)}
+.login-tit{font-family:var(--cond);font-weight:700;font-size:24px;text-transform:uppercase;letter-spacing:.5px;line-height:1.1}
+.login-sub{font-size:13px;color:var(--text2);margin-top:-8px}
+.login-form{width:100%;max-width:330px;display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.campo{display:flex;flex-direction:column;gap:5px;text-align:left}
+.campo label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-size:16px}
+.btn{padding:13px;border-radius:10px;background:var(--accent);color:#04121a;font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;font-size:14px}
+:root[data-theme="light"] .btn{color:#fff}
+@media (prefers-color-scheme:light){ :root:not([data-theme="dark"]) .btn{color:#fff} }
+.erro{font-size:13px;color:var(--down);min-height:18px}
+.spin{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){ .spin{animation-duration:2s} }
+
+/* ---------- cabecalho ---------- */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);
+  border-bottom:1px solid var(--border)}
+.hwrap{max-width:520px;margin:0 auto;padding-block:10px 0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.htop{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.brand{font-family:var(--cond);font-weight:700;font-size:21px;letter-spacing:.2px;text-transform:uppercase}
+.brand span{color:var(--accent)}
+.hacoes{display:flex;align-items:center;gap:4px}
+.hbtn{padding:6px 8px;font-size:15px;line-height:1;border-radius:8px;color:var(--text2)}
+.hnote{font-size:11px;color:var(--text2);white-space:nowrap;padding-top:2px}
+.meses{display:flex;gap:6px;overflow-x:auto;padding:10px 0 9px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.meses::-webkit-scrollbar{display:none}
+.mchip{flex:0 0 auto;padding:5px 12px;border-radius:999px;border:1px solid var(--border);
+  background:var(--surface2);font-size:13px;font-weight:600;color:var(--text2);text-transform:capitalize}
+.mchip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#04121a}
+:root[data-theme="light"] .mchip[aria-pressed="true"]{color:#fff}
+@media (prefers-color-scheme:light){ :root:not([data-theme="dark"]) .mchip[aria-pressed="true"]{color:#fff} }
+.faixa{font-size:11px;padding:5px max(16px,env(safe-area-inset-left,0px));text-align:center;
+  background:var(--surface2);color:var(--text2);border-bottom:1px solid var(--border)}
+
+/* ---------- corpo ---------- */
+main{max-width:520px;margin:0 auto;padding-block:14px 96px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;box-shadow:var(--card-shadow);min-width:0}
+.ctitle{font-family:var(--cond);font-weight:600;font-size:16px;text-transform:uppercase;
+  letter-spacing:.4px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.csub{font-size:12px;color:var(--text2);margin-top:2px}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:6px}
+.hero-val{font-family:var(--cond);font-weight:700;font-size:54px;line-height:.92;letter-spacing:-.5px}
+.hero-unit{font-size:13px;color:var(--text2);margin-bottom:6px}
+.delta{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;
+  padding:3px 9px;border-radius:999px;background:var(--surface2);white-space:nowrap}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)} .delta.flat{color:var(--text2)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px;
+  box-shadow:var(--card-shadow);min-width:0}
+.kpi-lab{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;
+  display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.kpi-val{font-family:var(--cond);font-weight:700;font-size:28px;line-height:1.1;margin-top:3px}
+.kpi-val small{font-family:var(--font);font-size:12px;font-weight:600;color:var(--text2);margin-left:3px}
+.kpi-foot{font-size:11px;color:var(--text2);margin-top:1px}
+.cmp{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.cmp-row{display:flex;flex-direction:column;gap:5px}
+.cmp-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.cmp-name{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+.cmp-bars{display:flex;flex-direction:column;gap:3px}
+.cmp-bar{display:flex;align-items:center;gap:7px}
+.cmp-track{flex:1;height:14px;background:var(--surface2);border-radius:4px;overflow:hidden;min-width:0}
+.cmp-fill{display:block;height:100%;border-radius:0 4px 4px 0}
+.cmp-tag{font-size:10px;color:var(--text2);width:30px;flex:0 0 auto;text-transform:uppercase;letter-spacing:.4px}
+.cmp-num{font-size:12px;font-weight:600;width:76px;flex:0 0 auto;text-align:right}
+.cmp-num.prev{color:var(--text2);font-weight:500}
+.linechart{margin-top:10px}
+.linechart svg{display:block;width:100%;height:auto;max-width:100%;touch-action:none}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px;font-size:12px;color:var(--text2)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--prev) 0 4px,transparent 4px 7px)}
+.readout{font-size:12px;color:var(--text2);margin-top:6px;min-height:17px}
+.readout b{color:var(--text);font-weight:600}
+.bars{display:flex;align-items:flex-end;gap:5px;height:118px;margin-top:14px}
+.bcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;
+  height:100%;min-width:0;padding:0}
+.bval{font-size:9px;color:var(--text2);font-variant-numeric:tabular-nums;line-height:1}
+.bfill{display:block;width:100%;max-width:26px;background:var(--prev);border-radius:4px 4px 0 0;min-height:3px}
+.bcol[aria-pressed="true"] .bfill{background:var(--ent)}
+.bcol[aria-pressed="true"] .bval{color:var(--text);font-weight:700}
+.blab{font-size:10px;color:var(--text2);text-transform:capitalize;line-height:1}
+.bcol[aria-pressed="true"] .blab{color:var(--text);font-weight:700}
+.rank{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.rk{display:flex;flex-direction:column;gap:4px}
+.rk-top{display:flex;justify-content:space-between;gap:8px;font-size:13px;align-items:baseline}
+.rk-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rk-val{flex:0 0 auto;font-size:12px;color:var(--text2);font-weight:600}
+.rk-val b{color:var(--text)}
+.rk-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.rk-fill{display:block;height:100%;border-radius:0 4px 4px 0}
+.filtros{display:grid;grid-template-columns:1fr;gap:9px;margin-top:11px}
+.fgroup{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fgroup label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+select{width:100%;padding:9px 32px 9px 10px;border-radius:10px;border:1px solid var(--border);
+  background-color:var(--surface2);color:var(--text);font-size:14px;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--text2) 50%),linear-gradient(135deg,var(--text2) 50%,transparent 50%);
+  background-position:calc(100% - 17px) calc(50% + 1px),calc(100% - 12px) calc(50% + 1px);
+  background-size:5px 5px;background-repeat:no-repeat}
+.fclear{align-self:flex-start;font-size:12px;color:var(--accent);font-weight:600;padding:8px 0 2px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;
+  border-radius:999px;background:var(--surface2);color:var(--text2);white-space:nowrap}
+.trucks{display:flex;flex-direction:column;margin-top:6px}
+.trow{width:100%;text-align:left;padding:11px 2px;display:flex;flex-direction:column;gap:6px;
+  border-bottom:1px solid var(--border)}
+.trow-top{display:flex;align-items:center;gap:9px}
+.plate{font-family:var(--cond);font-weight:700;font-size:17px;letter-spacing:.6px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1px 7px;flex:0 0 auto}
+.tmeta{font-size:12px;color:var(--text2);flex:1;min-width:0}
+.kml{font-family:var(--cond);font-weight:700;font-size:20px;text-align:right;flex:0 0 auto;line-height:1.1}
+.kml small{font-family:var(--font);font-size:10px;font-weight:600;color:var(--text2);display:block;line-height:1}
+.tbar{display:block;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.tbar i{display:block;height:100%;background:var(--accent);border-radius:0 3px 3px 0}
+.tdet{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;padding:10px;font-size:12px;
+  color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2);border-radius:0 0 8px 8px}
+.tdet b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.flag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--surface2);
+  color:var(--warn);white-space:nowrap}
+.tb{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}
+.tb th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);
+  font-weight:600;padding:0 0 6px;border-bottom:1px solid var(--border)}
+.tb th.r,.tb td.r{text-align:right}
+.tb td{padding:8px 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+.tb tr:last-child td{border-bottom:0}
+.tb td.nm{font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{font-size:13px;color:var(--text2);padding:14px 0;text-align:center}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);
+  border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.nwrap{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{padding:9px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.3px}
+.tab svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-selected="true"]{color:var(--accent)}
+footer{font-size:11px;color:var(--text2);line-height:1.6;padding:2px 0 6px}
+footer b{color:var(--text);font-weight:600}
+@media (prefers-reduced-motion:no-preference){
+  .cmp-fill,.rk-fill,.bfill,.tbar i{transition:width .25s ease,height .25s ease}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="telaLogin" hidden>
+  <img class="logo" id="logoLogin" alt="Biomassa Chaparini">
+  <div>
+    <div class="login-tit">Frota Chaparini</div>
+    <div class="login-sub">consulta rápida</div>
+  </div>
+  <form class="login-form" id="formLogin">
+    <div class="campo"><label for="email">E-mail</label>
+      <input type="email" id="email" autocomplete="username" inputmode="email" required></div>
+    <div class="campo"><label for="senha">Senha</label>
+      <input type="password" id="senha" autocomplete="current-password" required></div>
+    <button class="btn" type="submit" id="btnEntrar">Entrar</button>
+    <div class="erro" id="erroLogin"></div>
+  </form>
+</div>
+
+<!-- ============ CARREGANDO ============ -->
+<div id="telaCarregando" hidden>
+  <div class="spin" role="status" aria-label="Carregando"></div>
+  <div class="login-sub" id="statusCarga">Buscando os lançamentos…</div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+<header>
+  <div class="hwrap">
+    <div class="htop">
+      <div class="brand">Frota <span>Chaparini</span></div>
+      <div class="hacoes">
+        <span class="hnote" id="hnote"></span>
+        <button class="hbtn" id="btnTema" title="Alternar tema" aria-label="Alternar tema">◐</button>
+        <button class="hbtn" id="btnSair" title="Sair" aria-label="Sair">⏻</button>
+      </div>
+    </div>
+    <div class="meses" id="meses" role="group" aria-label="Mês"></div>
+  </div>
+</header>
+<div class="faixa" id="faixa" hidden></div>
+
+<main>
+  <section id="v-resumo">
+    <div class="card">
+      <div class="ctitle">Entregas <span class="pill" id="resPeriodo">—</span></div>
+      <div class="hero">
+        <div>
+          <div class="hero-val num" id="heroEnt">—</div>
+          <div class="hero-unit" id="heroSub">descargas registradas</div>
+        </div>
+        <span class="delta flat" id="heroDelta">—</span>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-lab"><i class="dot" style="background:var(--ton)"></i>Volume ton</div>
+        <div class="kpi-val num" id="kTon">—</div><div class="kpi-foot" id="kTonFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab"><i class="dot" style="background:var(--m3)"></i>Volume m³</div>
+        <div class="kpi-val num" id="kM3">—</div><div class="kpi-foot" id="kM3Foot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Diesel</div>
+        <div class="kpi-val num" id="kLit">—</div><div class="kpi-foot" id="kLitFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Média da frota</div>
+        <div class="kpi-val num" id="kKml">—</div><div class="kpi-foot" id="kKmlFoot">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Mês atual × anterior</div>
+      <div class="csub" id="cmpSub">—</div>
+      <div class="cmp" id="cmp"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Entregas acumuladas no mês</div>
+      <div class="csub">Arraste o dedo no gráfico para ler o dia</div>
+      <div class="linechart" id="line"></div>
+      <div class="legend">
+        <span><i style="background:var(--ent)"></i><span id="legA">mês</span></span>
+        <span><i class="dash"></i><span id="legB">anterior</span></span>
+      </div>
+      <div class="readout" id="lineRead">—</div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Entregas por mês</div>
+      <div class="csub">Toque na barra para trocar o mês</div>
+      <div class="bars" id="bars" role="group" aria-label="Entregas por mês"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Para onde foi <span class="pill">top 5 descarga</span></div>
+      <div class="rank" id="rkDesc"></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">De onde saiu <span class="pill">top 5 carga</span></div>
+      <div class="rank" id="rkCarga"></div>
+    </div>
+  </section>
+
+  <section id="v-entregas" hidden>
+    <div class="card">
+      <div class="ctitle">Filtrar entregas</div>
+      <div class="filtros">
+        <div class="fgroup"><label for="fCarga">Local de carga</label><select id="fCarga"></select></div>
+        <div class="fgroup"><label for="fDesc">Local de descarga</label><select id="fDesc"></select></div>
+        <div class="fgroup"><label for="fMot">Motorista</label><select id="fMot"></select></div>
+      </div>
+      <button class="fclear" id="fClear" hidden>Limpar filtros</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-lab">Descargas</div><div class="kpi-val num" id="eEnt">—</div>
+        <div class="kpi-foot" id="eEntFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Volume</div><div class="kpi-val num" id="eVol">—</div>
+        <div class="kpi-foot" id="eVolFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Média por entrega</div><div class="kpi-val num" id="eMed">—</div>
+        <div class="kpi-foot" id="eMedFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Caminhões</div><div class="kpi-val num" id="eCam">—</div>
+        <div class="kpi-foot">placas com entrega</div></div>
+    </div>
+
+    <div class="card"><div class="ctitle">Por destino</div><div id="tbDesc"></div></div>
+
+    <div class="card">
+      <div class="ctitle">Por dia</div>
+      <div class="csub" id="diaSub">—</div>
+      <div class="bars" id="barsDia" role="group" aria-label="Entregas por dia"></div>
+      <div class="readout" id="diaRead">—</div>
+    </div>
+  </section>
+
+  <section id="v-caminhoes" hidden>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-lab">Km rodados</div><div class="kpi-val num" id="cKm">—</div>
+        <div class="kpi-foot" id="cKmFoot">—</div></div>
+      <div class="kpi"><div class="kpi-lab">Diesel</div><div class="kpi-val num" id="cLit">—</div>
+        <div class="kpi-foot">litros abastecidos</div></div>
+      <div class="kpi"><div class="kpi-lab">Média da frota</div><div class="kpi-val num" id="cKml">—</div>
+        <div class="kpi-foot">km/L tanque a tanque</div></div>
+      <div class="kpi"><div class="kpi-lab">Abastecimentos</div><div class="kpi-val num" id="cAb">—</div>
+        <div class="kpi-foot">lançamentos com litro</div></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Por placa
+        <select id="ordem" aria-label="Ordenar por" style="width:auto;font-size:12px;padding:5px 28px 5px 9px">
+          <option value="kml">Melhor média</option>
+          <option value="km">Mais km</option>
+          <option value="lit">Mais diesel</option>
+          <option value="placa">Placa (A-Z)</option>
+        </select>
+      </div>
+      <div class="csub">Toque na placa para abrir os números</div>
+      <div class="trucks" id="trucks"></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>Só consulta.</b> Lançamento e edição continuam no sistema completo, no computador.
+    <b>Entrega</b> = lançamento com local de descarga e quantidade maior que zero.
+    <b>ton × m³</b>: ADM PF e ADM LEM contam sempre em m³; os demais destinos seguem a unidade do cadastro de locais.
+    <b>Média km/L</b> = tanque a tanque (km entre dois abastecimentos ÷ litros do segundo), o mesmo cálculo da aba Consumo.
+    <b>Km rodado</b> = maior menos menor km lançado da placa no mês.
+    Mês em curso se compara com o mesmo trecho do mês anterior.
+    <span id="fAtualizado"></span>
+  </footer>
+</main>
+
+<nav>
+  <div class="nwrap" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-view="resumo">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M6 20V10M12 20V4M18 20v-7"/></svg>Resumo</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="entregas">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/><path d="M17 15l2.5 2.5L22 15"/></svg>Entregas</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="caminhoes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16V6h11v10M14 10h4l3 3.5V16h-2M5.5 19a1.8 1.8 0 100-3.6 1.8 1.8 0 000 3.6zM17.5 19a1.8 1.8 0 100-3.6 1.8 1.8 0 000 3.6zM9 17h6"/></svg>Caminhões</button>
+  </div>
+</nav>
+</div><!-- /app -->
+
+<script>
+/* ==================== BANCO ====================
+   Mesmo projeto e mesma chave anon do sistema (pública por design — quem protege
+   o dado é o RLS no banco, não essa chave). */
+var SUPABASE_URL='https://lmkmntkqdlsrajdnyclr.supabase.co';
+var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxta21udGtxZGxzcmFqZG55Y2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODUwOTcsImV4cCI6MjEwMTM2MTA5N30.62lKEay_4qr0rMoZBXwUnbi06oxm4ICNARtrhvrtJ3E';
+var sb=supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var MESES_CARGA=12;           /* quantos meses o app traz (o grafico do ano vive disso) */
+var CHAVE_CACHE='frota-mobile-dados-v1';
+
+/* ==================== UTILIDADES ==================== */
+var MES_CURTO=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+var MES_LONGO=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function el(id){ return document.getElementById(id); }
+function nBR(v,dec){ return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0}); }
+function compacto(v){
+  if(Math.abs(v)>=1000) return nBR(v/1000,1).replace(',0','')+' mil';
+  return nBR(v, v%1?1:0);
+}
+function rotuloMes(ym){ var p=ym.split('-'); return MES_LONGO[+p[1]-1]+' de '+p[0]; }
+function diasNoMes(ym){ var p=ym.split('-'); return new Date(Date.UTC(+p[0],+p[1],0)).getUTCDate(); }
+function mesAnterior(ym){
+  var p=ym.split('-'), m=+p[1]-1, a=+p[0];
+  if(m===0){ m=12; a--; }
+  return a+'-'+String(m).padStart(2,'0');
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]}); }
+function hojeISO(){ var d=new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); }
+
+/* ==================== DADOS ====================
+   D guarda os lançamentos já compactados: cada linha é um vetor e os textos
+   (placa, motorista, locais) viram índice, para o app ocupar pouca memória e
+   caber no cache do celular. */
+var C={D:0,PLACA:1,MOT:2,CARGA:3,DESC:4,QTD:5,KM:6,LIT:7};
+var D=null, M3={}, MESES=[], ULTIMO='', ULTIMO_DIA='';
+var estado={ mes:'', carga:'', desc:'', mot:'', view:'resumo', ordem:'kml' };
+
+function montarD(cad, locais){
+  var m3=['ADM PF','ADM LEM'];                       /* exceção do sistema: sempre m³ */
+  (locais||[]).forEach(function(l){
+    if(l.unidade==='M3' && m3.indexOf(l.nome)<0) m3.push(l.nome);
+  });
+  var placas=[], mots=[], cargas=[], descs=[], ip={}, im={}, ic={}, idd={};
+  function idx(arr,map,v){
+    if(v===null || v===undefined || v==='') return -1;
+    var k=String(v);
+    if(map[k]===undefined){ map[k]=arr.length; arr.push(k); }
+    return map[k];
+  }
+  var rows=(cad||[]).map(function(r){
+    return [String(r.data).slice(0,10),
+            idx(placas,ip,(r.placa||'').replace(/\s+/g,'')),
+            idx(mots,im,r.motorista),
+            idx(cargas,ic,r.local_carga),
+            idx(descs,idd,r.local_descarga),
+            +(r.quantidade||0), +(r.km||0), +(r.qtdade_litros||0)];
+  });
+  rows.sort(function(a,b){ return a[0]<b[0]?-1:(a[0]>b[0]?1:0); });
+  return {atualizado:new Date().toISOString(), m3:m3, placas:placas, mots:mots, cargas:cargas, descs:descs, rows:rows};
+}
+function usarD(novo){
+  D=novo;
+  M3={}; D.m3.forEach(function(n){ M3[n]=1; });
+  var set={};
+  D.rows.forEach(function(r){ set[r[C.D].slice(0,7)]=1; });
+  MESES=Object.keys(set).sort();
+  ULTIMO=MESES[MESES.length-1]||'';
+  ULTIMO_DIA=D.rows.reduce(function(a,r){ return r[C.D]>a?r[C.D]:a; },'');
+  if(!estado.mes || MESES.indexOf(estado.mes)<0) estado.mes=ULTIMO;
+}
+/* busca paginada: o Supabase devolve no máximo 1000 linhas por resposta */
+function buscarTudo(tabela, cols, aplicarFiltro){
+  var PAGE=1000, from=0, all=[];
+  function passo(){
+    var q=sb.from(tabela).select(cols);
+    if(aplicarFiltro) q=aplicarFiltro(q);
+    return q.order('id',{ascending:true}).range(from, from+PAGE-1).then(function(res){
+      if(res.error) throw res.error;
+      all=all.concat(res.data||[]);
+      if((res.data||[]).length<PAGE) return all;
+      from+=PAGE;
+      return passo();
+    });
+  }
+  return passo();
+}
+function inicioDoPeriodo(){
+  var d=new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth()-(MESES_CARGA-1));
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), '01'].join('-');
+}
+function carregarDados(){
+  var desde=inicioDoPeriodo();
+  return Promise.all([
+    buscarTudo('cadastro','id,data,placa,motorista,local_carga,local_descarga,quantidade,km,qtdade_litros',
+      function(q){ return q.gte('data', desde); }),
+    sb.from('locais').select('nome,tipo,unidade').then(function(res){
+      if(res.error) throw res.error;
+      return res.data||[];
+    })
+  ]).then(function(r){
+    var novo=montarD(r[0], r[1]);
+    guardarCache(novo);
+    return novo;
+  });
+}
+function guardarCache(d){
+  try{ localStorage.setItem(CHAVE_CACHE, JSON.stringify(d)); }catch(e){ /* cheio ou bloqueado: segue sem cache */ }
+}
+function lerCache(){
+  try{
+    var s=localStorage.getItem(CHAVE_CACHE);
+    return s?JSON.parse(s):null;
+  }catch(e){ return null; }
+}
+
+/* ==================== RECORTES ==================== */
+function ehM3(di){ return di>=0 && !!M3[D.descs[di]]; }
+function ehEntrega(r){ return r[C.DESC]>=0 && r[C.QTD]>0; }
+function linhasMes(ym, ateDia){
+  return D.rows.filter(function(r){
+    if(r[C.D].slice(0,7)!==ym) return false;
+    if(ateDia && +r[C.D].slice(8,10)>ateDia) return false;
+    return true;
+  });
+}
+function temFiltro(){ return !!(estado.carga||estado.desc||estado.mot); }
+function aplicaFiltro(linhas){
+  if(!temFiltro()) return linhas;
+  return linhas.filter(function(r){
+    if(estado.carga && D.cargas[r[C.CARGA]]!==estado.carga) return false;
+    if(estado.desc && D.descs[r[C.DESC]]!==estado.desc) return false;
+    if(estado.mot && D.mots[r[C.MOT]]!==estado.mot) return false;
+    return true;
+  });
+}
+function resumo(linhas){
+  var o={ent:0, ton:0, m3:0, entTon:0, entM3:0, lit:0, abast:0, placas:{}, mots:{}};
+  linhas.forEach(function(r){
+    if(ehEntrega(r)){
+      o.ent++;
+      if(ehM3(r[C.DESC])){ o.m3+=r[C.QTD]; o.entM3++; } else { o.ton+=r[C.QTD]; o.entTon++; }
+      if(r[C.PLACA]>=0) o.placas[D.placas[r[C.PLACA]]]=1;
+      if(r[C.MOT]>=0) o.mots[D.mots[r[C.MOT]]]=1;
+    }
+    if(r[C.LIT]>0){ o.lit+=r[C.LIT]; o.abast++; }
+  });
+  o.nPlacas=Object.keys(o.placas).length;
+  o.nMots=Object.keys(o.mots).length;
+  return o;
+}
+/* km/L tanque a tanque: por placa, ordena os abastecimentos por km e soma os trechos.
+   Cada trecho é fechado pelo abastecimento seguinte — o primeiro litro do período não
+   entra, porque não se sabe quantos km ele cobriu. Mesmo método da aba Consumo. */
+function consumoPorPlaca(linhas){
+  var porPlaca={};
+  linhas.forEach(function(r){
+    if(r[C.PLACA]<0) return;
+    var p=D.placas[r[C.PLACA]];
+    var o=porPlaca[p]||(porPlaca[p]={ab:[], kmMin:Infinity, kmMax:-Infinity, lit:0, nAb:0, viagens:0, vol:0, m3:false});
+    if(r[C.KM]>0){ if(r[C.KM]<o.kmMin)o.kmMin=r[C.KM]; if(r[C.KM]>o.kmMax)o.kmMax=r[C.KM]; }
+    if(r[C.LIT]>0){ o.lit+=r[C.LIT]; o.nAb++; if(r[C.KM]>0) o.ab.push({km:r[C.KM], lit:r[C.LIT]}); }
+    if(ehEntrega(r)){ o.viagens++; o.vol+=r[C.QTD]; if(ehM3(r[C.DESC])) o.m3=true; }
+  });
+  return Object.keys(porPlaca).map(function(p){
+    var o=porPlaca[p];
+    o.ab.sort(function(a,b){ return a.km-b.km; });
+    var kmSeg=0, litSeg=0;
+    for(var i=1;i<o.ab.length;i++){
+      var dk=o.ab[i].km-o.ab[i-1].km, dl=o.ab[i].lit;
+      if(dk<=0 || dl<=0) continue;
+      kmSeg+=dk; litSeg+=dl;
+    }
+    return {placa:p, kmRodado:(o.kmMax>o.kmMin)?(o.kmMax-o.kmMin):0, kmSeg:kmSeg, litSeg:litSeg,
+            kmL:(kmSeg>0&&litSeg>0)?kmSeg/litSeg:null, lit:o.lit, nAb:o.nAb,
+            viagens:o.viagens, vol:o.vol, m3:o.m3};
+  });
+}
+function mediaFrota(placas){
+  var km=0, lit=0;
+  placas.forEach(function(p){ if(p.kmL){ km+=p.kmSeg; lit+=p.litSeg; } });
+  return lit>0 ? km/lit : null;
+}
+/* faixas iguais às do sistema: caminhão carregado faz de 1,5 a 2,5 km/L */
+function statusKmL(v){
+  if(v==null) return {cor:'var(--text2)', nota:''};
+  if(v>10) return {cor:'var(--down)', nota:'km suspeito'};
+  if(v>2.5) return {cor:'var(--warn)', nota:'acima do normal'};
+  if(v>=1.5) return {cor:'var(--ent)', nota:''};
+  return {cor:'var(--warn)', nota:'abaixo do normal'};
+}
+function topN(linhas, campo, n){
+  var acc={};
+  linhas.forEach(function(r){
+    if(!ehEntrega(r)) return;
+    var i=r[campo]; if(i<0) return;
+    var nome=(campo===C.DESC?D.descs:D.cargas)[i];
+    var o=acc[nome]||(acc[nome]={nome:nome, ent:0, vol:0, m3:ehM3(r[C.DESC])});
+    o.ent++; o.vol+=r[C.QTD];
+  });
+  return Object.keys(acc).map(function(k){return acc[k]})
+    .sort(function(a,b){ return b.ent-a.ent; }).slice(0, n||5);
+}
+function porDia(linhas, nDias){
+  var v=[]; for(var i=0;i<nDias;i++) v.push(0);
+  linhas.forEach(function(r){ if(ehEntrega(r)){ var d=+r[C.D].slice(8,10)-1; if(d<nDias) v[d]++; } });
+  return v;
+}
+function acumulado(v){ var s=0; return v.map(function(x){ s+=x; return s; }); }
+/* o km/L precisa da sequência inteira de abastecimentos da placa: com filtro ativo,
+   escolhe as placas pelo filtro, mas usa todas as linhas delas no mês */
+function linhasDasPlacasDoFiltro(ym){
+  if(!temFiltro()) return linhasMes(ym);
+  var alvo={};
+  aplicaFiltro(linhasMes(ym)).forEach(function(r){ if(r[C.PLACA]>=0) alvo[r[C.PLACA]]=1; });
+  return linhasMes(ym).filter(function(r){ return alvo[r[C.PLACA]]; });
+}
+
+/* ==================== DESENHO ==================== */
+function deltaHTML(atual, anterior){
+  if(!anterior) return '<span class="delta flat">sem base</span>';
+  var p=(atual-anterior)/anterior*100;
+  var cls=Math.abs(p)<1?'flat':(p>0?'up':'down');
+  var seta=Math.abs(p)<1?'→':(p>0?'▲':'▼');
+  return '<span class="delta '+cls+'">'+seta+' '+nBR(Math.abs(p), Math.abs(p)<10?1:0)+'%</span>';
+}
+function barraCmp(nome, cor, atual, anterior, dec, suf){
+  var max=Math.max(atual, anterior, 1);
+  return '<div class="cmp-row"><div class="cmp-head"><span class="cmp-name">'+
+    (cor?'<i class="dot" style="background:'+cor+'"></i>':'')+esc(nome)+'</span>'+deltaHTML(atual,anterior)+'</div>'+
+    '<div class="cmp-bars">'+
+    '<div class="cmp-bar"><span class="cmp-tag">atual</span><span class="cmp-track">'+
+      '<span class="cmp-fill" style="width:'+(atual/max*100).toFixed(1)+'%;background:'+(cor||'var(--accent)')+'"></span></span>'+
+      '<span class="cmp-num num">'+nBR(atual,dec)+(suf||'')+'</span></div>'+
+    '<div class="cmp-bar"><span class="cmp-tag">ant.</span><span class="cmp-track">'+
+      '<span class="cmp-fill" style="width:'+(anterior/max*100).toFixed(1)+'%;background:var(--prev)"></span></span>'+
+      '<span class="cmp-num prev num">'+nBR(anterior,dec)+(suf||'')+'</span></div>'+
+    '</div></div>';
+}
+function rankHTML(itens, cor){
+  if(!itens.length) return '<div class="empty">Nenhuma entrega no período.</div>';
+  var max=itens[0].ent||1;
+  return itens.map(function(i){
+    return '<div class="rk"><div class="rk-top"><span class="rk-name">'+esc(i.nome)+'</span>'+
+      '<span class="rk-val"><b>'+nBR(i.ent)+'</b> entr. · '+compacto(i.vol)+' '+(i.m3?'m³':'t')+'</span></div>'+
+      '<div class="rk-track"><span class="rk-fill" style="width:'+(i.ent/max*100).toFixed(1)+'%;background:'+cor+'"></span></div></div>';
+  }).join('');
+}
+function linhaSVG(serieA, serieB, nDias){
+  var W=320, H=130, PL=30, PR=8, PT=10, PB=20;
+  var max=Math.max.apply(null, serieA.concat(serieB).concat([1]));
+  var pot=Math.pow(10, Math.floor(Math.log(max)/Math.LN10));
+  var passo=pot*(max/pot>5?2:1);
+  var x=function(i){ return PL+(nDias>1? i*(W-PL-PR)/(nDias-1) : 0); };
+  var y=function(v){ return H-PB-(v/max)*(H-PT-PB); };
+  var caminho=function(s){ return s.map(function(v,i){ return (i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1); }).join(' '); };
+  var g='';
+  for(var t=0; t<=max+.001; t+=passo){
+    g+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y(t).toFixed(1)+'" y2="'+y(t).toFixed(1)+'" stroke="var(--grid)" stroke-width="1"/>'+
+       '<text x="'+(PL-5)+'" y="'+(y(t)+3.5).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--text2)">'+nBR(t)+'</text>';
+  }
+  var ticks='';
+  [1, Math.ceil(nDias/2), nDias].forEach(function(d){
+    ticks+='<text x="'+x(d-1).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="var(--text2)">'+d+'</text>';
+  });
+  var fim=serieA.length-1;
+  return '<svg viewBox="0 0 '+W+' '+H+'" id="svgLinha" role="img" aria-label="Entregas acumuladas por dia, mês atual contra o anterior">'+
+    g+ticks+
+    '<path d="'+caminho(serieB)+'" fill="none" stroke="var(--prev)" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"/>'+
+    '<path d="'+caminho(serieA)+'" fill="none" stroke="var(--ent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="'+x(fim).toFixed(1)+'" cy="'+y(serieA[fim]).toFixed(1)+'" r="4" fill="var(--ent)" stroke="var(--surface)" stroke-width="2"/>'+
+    '<line id="svgCur" x1="0" x2="0" y1="'+PT+'" y2="'+(H-PB)+'" stroke="var(--accent)" stroke-width="1" opacity="0"/>'+
+    '<rect id="svgHit" x="'+PL+'" y="0" width="'+(W-PL-PR)+'" height="'+H+'" fill="transparent"/>'+
+    '</svg>';
+}
+function barrasMesHTML(){
+  var porMes=MESES.map(function(ym){ return {ym:ym, ent:resumo(aplicaFiltro(linhasMes(ym))).ent}; });
+  var max=Math.max.apply(null, porMes.map(function(m){return m.ent}).concat([1]));
+  return porMes.map(function(m){
+    var sel=m.ym===estado.mes;
+    return '<button class="bcol" aria-pressed="'+sel+'" data-mes="'+m.ym+'" title="'+rotuloMes(m.ym)+': '+nBR(m.ent)+' entregas">'+
+      '<span class="bval">'+(sel?nBR(m.ent):'')+'</span>'+
+      '<span class="bfill" style="height:'+Math.max(3, m.ent/max*78).toFixed(1)+'%"></span>'+
+      '<span class="blab">'+MES_CURTO[+m.ym.slice(5,7)-1]+'</span></button>';
+  }).join('');
+}
+
+/* ==================== RENDER ==================== */
+function render(){
+  if(!D || !D.rows.length){ semDados(); return; }
+  var ym=estado.mes, ant=mesAnterior(ym);
+  var parcial=(ym===ULTIMO)? +ULTIMO_DIA.slice(8,10) : 0;
+  var nDias=parcial || diasNoMes(ym);
+
+  var linhas=aplicaFiltro(linhasMes(ym));
+  var linhasAnt=aplicaFiltro(linhasMes(ant, parcial));
+  var r=resumo(linhas), rAnt=resumo(linhasAnt);
+
+  el('resPeriodo').textContent=rotuloMes(ym)+(parcial?' · até dia '+parcial:'');
+  el('heroEnt').textContent=nBR(r.ent);
+  el('heroSub').textContent=r.nPlacas+' caminhões · '+r.nMots+' motoristas';
+  el('heroDelta').outerHTML=deltaHTML(r.ent, rAnt.ent).replace('class="delta', 'id="heroDelta" class="delta');
+
+  el('kTon').innerHTML=compacto(r.ton)+'<small>t</small>';
+  el('kTonFoot').textContent=r.entTon+' entregas em tonelada';
+  el('kM3').innerHTML=compacto(r.m3)+'<small>m³</small>';
+  el('kM3Foot').textContent=r.entM3+' entregas em m³';
+  el('kLit').innerHTML=compacto(r.lit)+'<small>L</small>';
+  el('kLitFoot').textContent=r.abast+' abastecimentos';
+
+  var placas=consumoPorPlaca(linhasDasPlacasDoFiltro(ym));
+  var med=mediaFrota(placas), comMedia=placas.filter(function(p){return p.kmL}).length;
+  el('kKml').innerHTML=(med?nBR(med,2):'—')+'<small>km/L</small>';
+  el('kKmlFoot').textContent=med?('tanque a tanque · '+comMedia+' placas'):'sem trecho fechado';
+
+  el('cmpSub').textContent=parcial
+    ? rotuloMes(ym)+' até dia '+parcial+', contra o mesmo trecho de '+rotuloMes(ant)
+    : rotuloMes(ym)+' contra '+rotuloMes(ant);
+  el('cmp').innerHTML=
+    barraCmp('Entregas','var(--ent)', r.ent, rAnt.ent, 0)+
+    barraCmp('Volume em tonelada','var(--ton)', r.ton, rAnt.ton, 0, ' t')+
+    barraCmp('Volume em m³','var(--m3)', r.m3, rAnt.m3, 0, ' m³')+
+    barraCmp('Diesel','var(--accent)', r.lit, rAnt.lit, 0, ' L');
+
+  var serieA=acumulado(porDia(linhas, nDias));
+  var serieB=acumulado(porDia(linhasAnt, nDias));
+  el('line').innerHTML=linhaSVG(serieA, serieB, nDias);
+  el('legA').textContent=MES_CURTO[+ym.slice(5,7)-1]+' · '+nBR(serieA[serieA.length-1])+' entregas';
+  el('legB').textContent=MES_CURTO[+ant.slice(5,7)-1]+' · '+nBR(serieB[serieB.length-1])+' no mesmo trecho';
+  el('lineRead').innerHTML='No fim do trecho: <b>'+nBR(serieA[serieA.length-1])+'</b> contra <b>'+
+    nBR(serieB[serieB.length-1])+'</b> entregas.';
+  ligaLinha(serieA, serieB, nDias, ym, ant);
+
+  el('bars').innerHTML=barrasMesHTML();
+  el('rkDesc').innerHTML=rankHTML(topN(linhas, C.DESC, 5), 'var(--ton)');
+  el('rkCarga').innerHTML=rankHTML(topN(linhas, C.CARGA, 5), 'var(--ent)');
+
+  renderEntregas(linhas, nDias, ym, r);
+  renderCaminhoes(placas);
+  el('fClear').hidden=!temFiltro();
+  pintaMeses();
+}
+function semDados(){
+  el('heroEnt').textContent='0';
+  el('heroSub').textContent='Nenhum lançamento visível para o seu perfil.';
+  el('resPeriodo').textContent='—';
+}
+function renderEntregas(linhas, nDias, ym, r){
+  var ton=r.ton, m3=r.m3, umaUnidade=((ton>0)!==(m3>0));
+  el('eEnt').textContent=nBR(r.ent);
+  el('eEntFoot').textContent=temFiltro()?'no filtro atual':'no mês inteiro';
+  el('eVol').innerHTML=umaUnidade
+    ? compacto(ton||m3)+'<small>'+(ton?'t':'m³')+'</small>'
+    : compacto(ton)+'<small>t</small> + '+compacto(m3)+'<small>m³</small>';
+  el('eVolFoot').textContent=umaUnidade?'volume entregue':'tonelada e m³ não se somam';
+  var medT=r.entTon?ton/r.entTon:0, medM=r.entM3?m3/r.entM3:0;
+  el('eMed').innerHTML=umaUnidade
+    ? nBR(ton?medT:medM,1)+'<small>'+(ton?'t':'m³')+'</small>'
+    : nBR(medT,1)+'<small>t</small> / '+nBR(medM,1)+'<small>m³</small>';
+  el('eMedFoot').textContent='por descarga';
+  el('eCam').textContent=r.nPlacas;
+
+  var tops=topN(linhas, C.DESC, 50);
+  el('tbDesc').innerHTML=tops.length
+    ? '<table class="tb"><thead><tr><th>Destino</th><th class="r">Entregas</th><th class="r">Volume</th></tr></thead><tbody>'+
+      tops.map(function(i){ return '<tr><td class="nm" title="'+esc(i.nome)+'">'+esc(i.nome)+'</td><td class="r num">'+
+        nBR(i.ent)+'</td><td class="r num">'+nBR(i.vol,1)+' '+(i.m3?'m³':'t')+'</td></tr>'; }).join('')+
+      '</tbody></table>'
+    : '<div class="empty">Nenhuma entrega com esse filtro.</div>';
+
+  var dia=porDia(linhas, nDias);
+  var maxD=Math.max.apply(null, dia.concat([1]));
+  el('diaSub').textContent=rotuloMes(ym)+' · pico de '+maxD+' entregas num dia';
+  el('barsDia').innerHTML=dia.map(function(v,i){
+    var d=i+1;
+    return '<button class="bcol" aria-pressed="'+(v===maxD)+'" data-dia="'+d+'" data-v="'+v+'" title="dia '+d+': '+v+' entregas">'+
+      '<span class="bval"></span><span class="bfill" style="height:'+Math.max(2, v/maxD*86).toFixed(1)+'%"></span>'+
+      '<span class="blab">'+((d===1||d%5===0)?d:'')+'</span></button>';
+  }).join('');
+  el('diaRead').textContent='Toque numa barra para ver o dia.';
+}
+function renderCaminhoes(placas){
+  var ativas=placas.filter(function(p){ return p.kmRodado>0 || p.lit>0; });
+  var totKm=0, totLit=0, totAb=0;
+  ativas.forEach(function(p){ totKm+=p.kmRodado; totLit+=p.lit; totAb+=p.nAb; });
+  var med=mediaFrota(placas);
+  var comKm=ativas.filter(function(p){ return p.kmRodado>0; }).length;
+  el('cKm').innerHTML=compacto(totKm)+'<small>km</small>';
+  el('cKmFoot').textContent=comKm+(comKm===1?' placa com km':' placas com km')+' · '+ativas.length+' na rua';
+  el('cLit').innerHTML=compacto(totLit)+'<small>L</small>';
+  el('cKml').innerHTML=(med?nBR(med,2):'—')+'<small>km/L</small>';
+  el('cAb').textContent=nBR(totAb);
+
+  var ord=estado.ordem;
+  var lista=ativas.slice().sort(function(a,b){
+    if(ord==='placa') return a.placa.localeCompare(b.placa,'pt-BR');
+    if(ord==='km') return b.kmRodado-a.kmRodado;
+    if(ord==='lit') return b.lit-a.lit;
+    var av=(a.kmL==null?-1:a.kmL), bv=(b.kmL==null?-1:b.kmL);
+    return bv-av;
+  });
+  var maxKm=Math.max.apply(null, lista.map(function(p){return p.kmRodado}).concat([1]));
+  el('trucks').innerHTML=lista.length ? lista.map(function(p,i){
+    var st=statusKmL(p.kmL);
+    /* km rodado nasce de maior menos menor km do mês: com um lançamento só de km
+       a conta daria zero, e "0 km" passaria por caminhão parado — melhor dizer que
+       ainda não dá para calcular */
+    var kmTxt=p.kmRodado>0 ? nBR(p.kmRodado)+' km' : 'km a apurar';
+    var entTxt=p.viagens ? ' · '+p.viagens+(p.viagens>1?' entregas':' entrega') : '';
+    return '<button class="trow" aria-expanded="false" aria-controls="det-'+i+'">'+
+      '<span class="trow-top"><span class="plate">'+esc(p.placa)+'</span>'+
+      '<span class="tmeta">'+kmTxt+' · '+nBR(p.lit)+' L'+entTxt+
+      (st.nota?' <span class="flag">'+st.nota+'</span>':'')+'</span>'+
+      '<span class="kml" style="color:'+st.cor+'">'+(p.kmL?nBR(p.kmL,2):'—')+'<small>km/L</small></span></span>'+
+      '<span class="tbar"><i style="width:'+(p.kmRodado/maxKm*100).toFixed(1)+'%"></i></span></button>'+
+      '<div class="tdet" id="det-'+i+'" hidden>'+
+        '<span>Km rodado no mês<br><b>'+(p.kmRodado>0?nBR(p.kmRodado)+' km':'—')+'</b>'+
+          (p.kmRodado>0?'':'<br>precisa de dois lançamentos com km')+'</span>'+
+        '<span>Diesel<br><b>'+nBR(p.lit,1)+' L</b></span>'+
+        '<span>Km nos trechos fechados<br><b>'+nBR(p.kmSeg)+' km</b></span>'+
+        '<span>Litros desses trechos<br><b>'+nBR(p.litSeg,1)+' L</b></span>'+
+        '<span>Abastecimentos<br><b>'+p.nAb+'</b></span>'+
+        '<span>Entregas / volume<br><b>'+p.viagens+' · '+nBR(p.vol,1)+' '+(p.m3?'m³':'t')+'</b></span>'+
+      '</div>';
+  }).join('') : '<div class="empty">Nenhum caminhão com km ou litro no mês.</div>';
+}
+
+/* ==================== INTERAÇÃO ==================== */
+function ligaLinha(serieA, serieB, nDias, ym, ant){
+  var svg=el('svgLinha'); if(!svg) return;
+  var cur=el('svgCur'), hit=el('svgHit');
+  var W=320, PL=30, PR=8;
+  function mostra(ev){
+    var box=svg.getBoundingClientRect();
+    var vx=(ev.clientX-box.left)/box.width*W;
+    var passo=(W-PL-PR)/Math.max(1, nDias-1);
+    var i=Math.max(0, Math.min(nDias-1, Math.round((vx-PL)/passo)));
+    var px=(PL+i*passo).toFixed(1);
+    cur.setAttribute('x1',px); cur.setAttribute('x2',px); cur.setAttribute('opacity','1');
+    el('lineRead').innerHTML='Dia '+(i+1)+': <b>'+nBR(serieA[i])+'</b> entregas acumuladas em '+
+      MES_CURTO[+ym.slice(5,7)-1]+', <b>'+nBR(serieB[i])+'</b> em '+MES_CURTO[+ant.slice(5,7)-1]+'.';
+  }
+  hit.addEventListener('pointerdown', function(e){ mostra(e); e.preventDefault(); });
+  hit.addEventListener('pointermove', function(e){ if(e.buttons || e.pointerType==='touch') mostra(e); });
+}
+function pintaMeses(){
+  document.querySelectorAll('.mchip').forEach(function(c){
+    c.setAttribute('aria-pressed', String(c.dataset.mes===estado.mes));
+  });
+}
+function montarMeses(){
+  el('meses').innerHTML=MESES.map(function(ym){
+    return '<button class="mchip" data-mes="'+ym+'" aria-pressed="'+(ym===estado.mes)+'">'+
+      MES_CURTO[+ym.slice(5,7)-1]+'</button>';
+  }).join('');
+  var sel=document.querySelector('.mchip[aria-pressed="true"]');
+  if(sel && sel.scrollIntoView) sel.scrollIntoView({block:'nearest', inline:'center'});
+}
+function montarFiltros(){
+  var usados={carga:{}, desc:{}, mot:{}};
+  D.rows.forEach(function(r){
+    if(r[C.CARGA]>=0) usados.carga[D.cargas[r[C.CARGA]]]=1;
+    if(r[C.DESC]>=0) usados.desc[D.descs[r[C.DESC]]]=1;
+    if(r[C.MOT]>=0) usados.mot[D.mots[r[C.MOT]]]=1;
+  });
+  function opcoes(obj, rotulo){
+    return '<option value="">'+rotulo+'</option>'+
+      Object.keys(obj).sort(function(a,b){return a.localeCompare(b,'pt-BR')})
+        .map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join('');
+  }
+  el('fCarga').innerHTML=opcoes(usados.carga, 'Todas as origens');
+  el('fDesc').innerHTML=opcoes(usados.desc, 'Todos os destinos');
+  el('fMot').innerHTML=opcoes(usados.mot, 'Todos os motoristas');
+  el('fCarga').value=estado.carga; el('fDesc').value=estado.desc; el('fMot').value=estado.mot;
+}
+el('meses').addEventListener('click', function(e){
+  var b=e.target.closest('.mchip'); if(!b) return;
+  estado.mes=b.dataset.mes; render();
+});
+el('bars').addEventListener('click', function(e){
+  var b=e.target.closest('.bcol'); if(!b) return;
+  estado.mes=b.dataset.mes; render();
+});
+el('barsDia').addEventListener('click', function(e){
+  var b=e.target.closest('.bcol'); if(!b) return;
+  el('diaRead').innerHTML='Dia '+b.dataset.dia+': <b>'+b.dataset.v+'</b> entregas.';
+});
+el('trucks').addEventListener('click', function(e){
+  var b=e.target.closest('.trow'); if(!b) return;
+  var det=b.nextElementSibling;
+  if(det && det.classList.contains('tdet')){
+    det.hidden=!det.hidden;
+    b.setAttribute('aria-expanded', det.hidden?'false':'true');
+  }
+});
+el('ordem').addEventListener('change', function(e){ estado.ordem=e.target.value; render(); });
+el('fCarga').addEventListener('change', function(e){ estado.carga=e.target.value; render(); });
+el('fDesc').addEventListener('change', function(e){ estado.desc=e.target.value; render(); });
+el('fMot').addEventListener('change', function(e){ estado.mot=e.target.value; render(); });
+el('fClear').addEventListener('click', function(){
+  estado.carga=''; estado.desc=''; estado.mot='';
+  el('fCarga').value=''; el('fDesc').value=''; el('fMot').value='';
+  render();
+});
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    estado.view=t.dataset.view;
+    document.querySelectorAll('.tab').forEach(function(x){ x.setAttribute('aria-selected', String(x===t)); });
+    ['resumo','entregas','caminhoes'].forEach(function(v){
+      el('v-'+v).hidden=(v!==estado.view);
+    });
+    window.scrollTo({top:0});
+  });
+});
+el('btnTema').addEventListener('click', function(){
+  var atual=document.documentElement.getAttribute('data-theme');
+  var escuro=atual ? atual==='dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var novo=escuro?'light':'dark';
+  document.documentElement.setAttribute('data-theme', novo);
+  try{ localStorage.setItem('frota-tema', novo); }catch(e){}
+});
+el('btnSair').addEventListener('click', function(){
+  sb.auth.signOut().then(function(){
+    try{ localStorage.removeItem(CHAVE_CACHE); }catch(e){}
+    location.reload();
+  });
+});
+
+/* ==================== PARTIDA ==================== */
+function mostrarTela(qual){
+  ['telaLogin','telaCarregando','app'].forEach(function(id){ el(id).hidden=(id!==qual); });
+}
+function faixa(texto){
+  var f=el('faixa');
+  if(!texto){ f.hidden=true; return; }
+  f.textContent=texto; f.hidden=false;
+}
+function marcarAtualizado(){
+  if(!D) return;
+  var d=new Date(D.atualizado);
+  el('hnote').textContent=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  el('fAtualizado').textContent='Dados buscados em '+d.toLocaleString('pt-BR')+'.';
+}
+function abrirApp(){
+  mostrarTela('app');
+  montarMeses(); montarFiltros(); render(); marcarAtualizado();
+}
+function atualizar(primeira){
+  if(primeira) el('statusCarga').textContent='Buscando os lançamentos…';
+  else faixa('Atualizando…');
+  return carregarDados().then(function(novo){
+    usarD(novo);
+    faixa('');
+    if(primeira) abrirApp();
+    else { montarMeses(); montarFiltros(); render(); marcarAtualizado(); }
+  }).catch(function(err){
+    if(primeira){
+      var cache=lerCache();
+      if(cache){ usarD(cache); abrirApp(); faixa('Sem internet — mostrando os dados guardados no celular.'); }
+      else { el('statusCarga').textContent='Não consegui buscar os dados. Verifique a internet e tente de novo.'; }
+    } else {
+      faixa('Sem internet — mostrando os dados guardados no celular.');
+    }
+    if(window.console) console.error(err);
+  });
+}
+function entrarComSessao(){
+  /* abre na hora com o que estiver guardado e busca o atual por trás */
+  var cache=lerCache();
+  if(cache && cache.rows && cache.rows.length){
+    usarD(cache); abrirApp(); atualizar(false);
+  } else {
+    mostrarTela('telaCarregando'); atualizar(true);
+  }
+}
+el('formLogin').addEventListener('submit', function(e){
+  e.preventDefault();
+  var email=el('email').value.trim(), senha=el('senha').value;
+  if(!email || !senha){ el('erroLogin').textContent='Preencha e-mail e senha.'; return; }
+  el('erroLogin').textContent='';
+  el('btnEntrar').disabled=true; el('btnEntrar').textContent='Entrando…';
+  sb.auth.signInWithPassword({email:email, password:senha}).then(function(res){
+    el('btnEntrar').disabled=false; el('btnEntrar').textContent='Entrar';
+    if(res.error){ el('erroLogin').textContent='E-mail ou senha incorretos.'; return; }
+    mostrarTela('telaCarregando'); atualizar(true);
+  }).catch(function(){
+    el('btnEntrar').disabled=false; el('btnEntrar').textContent='Entrar';
+    el('erroLogin').textContent='Não consegui falar com o servidor. Verifique a internet.';
+  });
+});
+
+(function init(){
+  try{
+    var t=localStorage.getItem('frota-tema');
+    if(t) document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+  el('logoLogin').src='icons/icon-192.png';
+  mostrarTela('telaCarregando');
+  sb.auth.getSession().then(function(res){
+    var s=res.data && res.data.session;
+    if(s && s.user) entrarComSessao();
+    else mostrarTela('telaLogin');
+  }).catch(function(){ mostrarTela('telaLogin'); });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){ /* sem service worker, o app ainda funciona */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
