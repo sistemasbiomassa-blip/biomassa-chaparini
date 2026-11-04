@@ -418,7 +418,17 @@ footer b{color:var(--text);font-weight:600}
    o dado é o RLS no banco, não essa chave). */
 var SUPABASE_URL='https://lmkmntkqdlsrajdnyclr.supabase.co';
 var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxta21udGtxZGxzcmFqZG55Y2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODUwOTcsImV4cCI6MjEwMTM2MTA5N30.62lKEay_4qr0rMoZBXwUnbi06oxm4ICNARtrhvrtJ3E';
-var sb=supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var sb=supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth:{
+    persistSession:true,        /* continua logado depois de fechar o app */
+    autoRefreshToken:true,      /* renova o acesso sozinho, sem pedir senha de novo */
+    detectSessionInUrl:false,
+    /* chave propria: o sistema web guarda a sessao dele com outro nome, entao
+       entrar ou sair aqui nao mexe com quem esta usando o sistema no mesmo
+       navegador — e o contrario tambem nao */
+    storageKey:'frota-app-auth'
+  }
+});
 var MESES_CARGA=12;           /* quantos meses o app traz (o grafico do ano vive disso) */
 var CHAVE_CACHE='frota-mobile-dados-v1';
 
@@ -935,6 +945,9 @@ el('btnTema').addEventListener('click', function(){
   try{ localStorage.setItem('frota-tema', novo); }catch(e){}
 });
 el('btnSair').addEventListener('click', function(){
+  /* sair significa digitar a senha de novo na proxima vez, e o botao fica a um
+     toque do cabecalho — melhor perguntar antes */
+  if(!window.confirm('Sair do aplicativo? Na próxima vez você vai precisar digitar o e-mail e a senha outra vez.')) return;
   sb.auth.signOut().then(function(){
     try{ localStorage.removeItem(CHAVE_CACHE); }catch(e){}
     location.reload();
@@ -959,6 +972,21 @@ function marcarAtualizado(){
 function abrirApp(){
   mostrarTela('app');
   montarMeses(); montarFiltros(); render(); marcarAtualizado();
+  /* pede ao celular para nao descartar o que o app guardou quando a memoria
+     apertar — e o que mantem o login e os ultimos numeros no lugar */
+  if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){});
+}
+/* erro de sessao nao e falta de internet: avisar certo, senao o app fica
+   mostrando "sem internet" para quem so precisa entrar de novo */
+function ehErroDeSessao(err){
+  if(!err) return false;
+  if(err.status===401 || err.status===403) return true;
+  return /jwt|token|session|not authenticated|refresh/i.test(String(err.message||''));
+}
+function pedirLoginDeNovo(){
+  faixa('');
+  mostrarTela('telaLogin');
+  el('erroLogin').textContent='Sua sessão expirou. Entre de novo.';
 }
 function atualizar(primeira){
   if(primeira) el('statusCarga').textContent='Buscando os lançamentos…';
@@ -969,6 +997,7 @@ function atualizar(primeira){
     if(primeira) abrirApp();
     else { montarMeses(); montarFiltros(); render(); marcarAtualizado(); }
   }).catch(function(err){
+    if(ehErroDeSessao(err)){ pedirLoginDeNovo(); return; }
     if(primeira){
       var cache=lerCache();
       if(cache){ usarD(cache); abrirApp(); faixa('Sem internet — mostrando os dados guardados no celular.'); }
