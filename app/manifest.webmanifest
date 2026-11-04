@@ -1,6 +1,6 @@
 {
-  "name": "Frota Chaparini",
-  "short_name": "Frota",
+  "name": "Biomassa Chaparini",
+  "short_name": "Biomassa",
   "description": "Consulta rápida da frota: entregas, volume, km e consumo.",
   "start_url": "./",
   "scope": "./",

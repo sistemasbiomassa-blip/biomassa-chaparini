@@ -13,7 +13,7 @@
 //
 // Trocou o app/index.html? Suba o numero da versao abaixo, senao o celular de
 // quem ja instalou continua abrindo a pagina antiga.
-var VERSAO = 'frota-v2';
+var VERSAO = 'frota-v3';
 
 var CASCA = [
   './',
