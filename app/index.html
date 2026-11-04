@@ -262,8 +262,9 @@ footer b{color:var(--text);font-weight:600}
 
 <!-- ============ CARREGANDO ============ -->
 <div id="telaCarregando" hidden>
-  <div class="spin" role="status" aria-label="Carregando"></div>
+  <div class="spin" id="spin" role="status" aria-label="Carregando"></div>
   <div class="login-sub" id="statusCarga">Buscando os lançamentos…</div>
+  <button class="btn" id="btnTentarDeNovo" hidden style="width:200px">Tentar de novo</button>
 </div>
 
 <!-- ============ APP ============ -->
@@ -1013,17 +1014,56 @@ function abrirApp(){
      apertar — e o que mantem o login e os ultimos numeros no lugar */
   if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function(){});
 }
-/* erro de sessao nao e falta de internet: avisar certo, senao o app fica
-   mostrando "sem internet" para quem so precisa entrar de novo */
-function ehErroDeSessao(err){
+/* Falta de sinal NAO e sessao perdida. O acesso do Supabase vale 1 hora; depois
+   disso o app troca o "refresh token" guardado por um acesso novo, sozinho. Se
+   essa troca falhar por rede (celular acabou de acordar, wi-fi reconectando),
+   quem esta logado continua logado — so nao deu para confirmar agora. Pedir a
+   senha nesse caso e o erro classico, e era o que este app fazia.
+   Entao so expulsa quando o servidor nega o refresh token de verdade. */
+function ehSessaoInvalida(err){
   if(!err) return false;
-  if(err.status===401 || err.status===403) return true;
-  return /jwt|token|session|not authenticated|refresh/i.test(String(err.message||''));
+  var msg=String(err.message||'');
+  if(err.name==='AuthRetryableFetchError') return false;
+  if(/failed to fetch|networkerror|load failed|timeout|offline/i.test(msg)) return false;
+  if(/refresh_token_not_found|invalid refresh token|already used|revoked|session_not_found|user not found|user_not_found/i.test(msg)) return true;
+  return (err.status===401 || err.status===403);
+}
+/* acesso vencido e diferente de login perdido: o acesso dura 1 hora e se
+   renova com o refresh token. Com o app em segundo plano a renovacao
+   automatica fica congelada, entao a primeira busca ao voltar pode sair com o
+   acesso velho e levar 401. Isso se resolve renovando, nao pedindo senha. */
+function ehAcessoVencido(err){
+  if(!err) return false;
+  return err.status===401 || /jwt expired|invalid jwt|token is expired/i.test(String(err.message||''));
+}
+/* tem login guardado neste celular? (o supabase-js grava a sessao nesta chave) */
+function temSessaoGuardada(){
+  try{
+    var bruto=localStorage.getItem('frota-app-auth');
+    return !!(bruto && bruto.indexOf('refresh_token')>=0);
+  }catch(e){ return false; }
 }
 function pedirLoginDeNovo(){
   faixa('');
   mostrarTela('telaLogin');
+  /* so falta a senha: o e-mail ja vem preenchido */
+  try{
+    var ult=localStorage.getItem('frota-ultimo-email');
+    if(ult && !el('email').value) el('email').value=ult;
+  }catch(e){}
+  el('senha').value='';
   el('erroLogin').textContent='Sua sessão expirou. Entre de novo.';
+}
+/* Busca os dados; se o acesso tiver vencido, renova uma vez e tenta de novo
+   antes de desistir. So depois disso uma falha vira pedido de senha. */
+function carregarComRenovacao(){
+  return carregarDados().catch(function(err){
+    if(!ehAcessoVencido(err) || !temSessaoGuardada()) throw err;
+    return sb.auth.refreshSession().then(function(r){
+      if(r.error) throw r.error;
+      return carregarDados();
+    });
+  });
 }
 var ULTIMA_CARGA=0;   /* quando o banco foi lido pela ultima vez */
 var BUSCANDO=false;
@@ -1033,18 +1073,24 @@ function atualizar(primeira){
   el('btnAtualizar').disabled=true;
   if(primeira) el('statusCarga').textContent='Buscando os lançamentos…';
   else faixa('Atualizando…');
-  return carregarDados().then(function(novo){
+  return carregarComRenovacao().then(function(novo){
     ULTIMA_CARGA=Date.now();
     usarD(novo);
     faixa('');
     if(primeira) abrirApp();
     else { montarMeses(); montarFiltros(); render(); marcarAtualizado(); }
   }).catch(function(err){
-    if(ehErroDeSessao(err)){ pedirLoginDeNovo(); return; }
+    if(ehSessaoInvalida(err)){ pedirLoginDeNovo(); return; }
     if(primeira){
       var cache=lerCache();
       if(cache){ usarD(cache); abrirApp(); faixa('Sem internet — mostrando os dados guardados no celular.'); }
-      else { el('statusCarga').textContent='Não consegui buscar os dados. Verifique a internet e tente de novo.'; }
+      else {
+        /* primeira abertura, sem nada guardado e sem rede: fica uma tela parada
+           se nao houver como tentar outra vez sem fechar o app */
+        el('statusCarga').textContent='Não consegui buscar os dados. Verifique a internet.';
+        el('spin').hidden=true;
+        el('btnTentarDeNovo').hidden=false;
+      }
     } else {
       faixa('Sem internet — mostrando os dados guardados no celular.');
     }
@@ -1059,12 +1105,25 @@ function atualizar(primeira){
    volta para a frente (trocou de app, desbloqueou o celular), e o horario no
    cabecalho e um botao para forcar na hora. */
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState!=='visible') return;
+  /* com o app em segundo plano o navegador congela os temporizadores, e a
+     renovacao automatica do acesso para junto. Religar na volta e o que
+     mantem o login de pe em quem usa o app de vez em quando. */
+  if(document.visibilityState!=='visible'){
+    if(sb.auth.stopAutoRefresh) sb.auth.stopAutoRefresh();
+    return;
+  }
+  if(sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
   if(el('app').hidden) return;
   if(Date.now()-ULTIMA_CARGA < 120000) return;   /* buscou agora ha pouco: nao repete */
   atualizar(false);
 });
 el('btnAtualizar').addEventListener('click', function(){ atualizar(false); });
+el('btnTentarDeNovo').addEventListener('click', function(){
+  el('btnTentarDeNovo').hidden=true;
+  el('spin').hidden=false;
+  el('statusCarga').textContent='Buscando os lançamentos…';
+  atualizar(true);
+});
 function entrarComSessao(){
   /* abre na hora com o que estiver guardado e busca o atual por trás */
   var cache=lerCache();
@@ -1082,7 +1141,17 @@ el('formLogin').addEventListener('submit', function(e){
   el('btnEntrar').disabled=true; el('btnEntrar').textContent='Entrando…';
   sb.auth.signInWithPassword({email:email, password:senha}).then(function(res){
     el('btnEntrar').disabled=false; el('btnEntrar').textContent='Entrar';
-    if(res.error){ el('erroLogin').textContent='E-mail ou senha incorretos.'; return; }
+    if(res.error){
+      /* senha errada e celular sem sinal sao problemas diferentes: dizer
+         "senha incorreta" para quem esta sem rede manda a pessoa procurar
+         erro onde nao tem */
+      var m=String(res.error.message||'');
+      el('erroLogin').textContent=/failed to fetch|networkerror|load failed|timeout/i.test(m)
+        ? 'Não consegui falar com o servidor. Verifique a internet.'
+        : 'E-mail ou senha incorretos.';
+      return;
+    }
+    try{ localStorage.setItem('frota-ultimo-email', email); }catch(e){}
     mostrarTela('telaCarregando'); atualizar(true);
   }).catch(function(){
     el('btnEntrar').disabled=false; el('btnEntrar').textContent='Entrar';
@@ -1097,11 +1166,18 @@ el('formLogin').addEventListener('submit', function(e){
   }catch(e){}
   el('logoLogin').src='icons/icon-192.png';
   mostrarTela('telaCarregando');
+  /* getSession tenta renovar o acesso e devolve vazio quando nao consegue falar
+     com o servidor. Vazio aqui nao quer dizer deslogado: se ha login guardado
+     no celular, entra assim mesmo e deixa a propria busca dizer se a sessao
+     ainda vale — assim sinal ruim nao vira pedido de senha. */
   sb.auth.getSession().then(function(res){
     var s=res.data && res.data.session;
-    if(s && s.user) entrarComSessao();
+    if((s && s.user) || temSessaoGuardada()) entrarComSessao();
     else mostrarTela('telaLogin');
-  }).catch(function(){ mostrarTela('telaLogin'); });
+  }).catch(function(){
+    if(temSessaoGuardada()) entrarComSessao();
+    else mostrarTela('telaLogin');
+  });
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
