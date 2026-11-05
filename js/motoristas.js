@@ -1,5 +1,104 @@
 // ==================== MOTORISTAS ====================
 
+// Quantos dias antes do vencimento a CNH já vira aviso. 60 = os "2 meses antes"
+// pedidos: tempo de marcar exame e renovar sem o motorista parar de rodar.
+var CNH_AVISO_DIAS=60;
+function _motEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+// Dias daqui até a validade (negativo = já venceu; null = sem data ou data estranha).
+// Comparado em data local, sem hora, para não errar um dia por causa de fuso.
+function _cnhDiasPara(validade){
+  var s=String(validade||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  var p=s.split('-');
+  var alvo=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  var ag=new Date();
+  var hoje=new Date(ag.getFullYear(),ag.getMonth(),ag.getDate());
+  return Math.round((alvo-hoje)/86400000);
+}
+function _cnhDias(n){ return n+(n===1?' dia':' dias'); }
+function _cnhDataBR(v){ return String(v||'').slice(0,10).split('-').reverse().join('/'); }
+
+// Quem precisa de aviso, em duas listas já ordenadas por urgência. Uma função só,
+// usada pelo bloco dentro da aba e pelo aviso na tela — a regra de quem entra no
+// aviso não pode ser diferente nos dois lugares.
+// Só motorista ATIVO: cobrar a CNH de quem já foi desligado é ruído.
+function _cnhListas(){
+  var vencidas=[], proximas=[];
+  (MOTORISTAS_DATA||[]).forEach(function(r){
+    if(motoristaInativo(r)) return;
+    var d=_cnhDiasPara(r.VALIDADE_CNH);
+    if(d===null) return; // sem validade cadastrada não dá para avisar nada
+    var item={nome:r.NOME, dias:d, val:r.VALIDADE_CNH, cnh:r.CNH};
+    if(d<0) vencidas.push(item);
+    else if(d<=CNH_AVISO_DIAS) proximas.push(item);
+  });
+  vencidas.sort(function(a,b){ return a.dias-b.dias; });   // venceu há mais tempo primeiro
+  proximas.sort(function(a,b){ return a.dias-b.dias; });   // vence mais cedo primeiro
+  return {vencidas:vencidas, proximas:proximas};
+}
+function _cnhTxtVenc(x){ return 'venceu em '+_cnhDataBR(x.val)+' — há '+_cnhDias(Math.abs(x.dias)); }
+function _cnhTxtProx(x){ return x.dias===0?('vence HOJE, '+_cnhDataBR(x.val)):('vence em '+_cnhDataBR(x.val)+' — faltam '+_cnhDias(x.dias)); }
+
+// ---------- Aviso na tela, ao entrar no sistema ----------
+// Mesmo comportamento do aviso de diesel baixo do Comboio: aparece no login, o OK
+// esconde até o próximo login (não grava nada), e volta a aparecer enquanto houver
+// CNH vencida ou a vencer. É o lembrete para cobrar o motorista antes de vencer.
+var _cnhAlertDismissed=false;
+function checkCnhAlert(){
+  var ov=document.getElementById('cnhAlertOverlay');
+  if(!ov) return;
+  if(_cnhAlertDismissed){ ov.classList.remove('show'); return; }
+  // Um aviso por vez: se o de diesel baixo está na tela, este espera o OK dele
+  // (dismissComboioAlert chama de volta aqui) em vez de aparecer empilhado em cima.
+  var cb=document.getElementById('comboioAlertOverlay');
+  if(cb && cb.classList.contains('show')) return;
+  var L=_cnhListas();
+  if(!L.vencidas.length && !L.proximas.length){ ov.classList.remove('show'); return; }
+  var qtd=L.vencidas.length+L.proximas.length;
+  var h='<div style="font-size:38px;text-align:center;margin-bottom:6px">🪪</div>';
+  h+='<h2 style="text-align:center;color:var(--'+(L.vencidas.length?'red':'yellow')+');margin-bottom:4px">CNH '+(L.vencidas.length?'vencida':'perto de vencer')+'</h2>';
+  h+='<p style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:14px">'+qtd+(qtd===1?' motorista precisa':' motoristas precisam')+' renovar a CNH:</p>';
+  h+='<div style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto">';
+  function cartao(x,venc){
+    var cor=venc?'var(--red)':'var(--yellow)';
+    return '<div style="border:1px solid '+cor+';border-left:5px solid '+cor+';border-radius:10px;padding:10px 12px">'+
+      '<div style="font-weight:700">'+(venc?'🔴':'🟡')+' '+_motEsc(x.nome||'-')+'</div>'+
+      '<div style="font-size:12px;color:var(--text2)"><strong style="color:'+cor+'">'+(venc?_cnhTxtVenc(x):_cnhTxtProx(x))+'</strong>'+
+      (x.cnh?(' · CNH '+_motEsc(x.cnh)):'')+'</div></div>';
+  }
+  L.vencidas.forEach(function(x){ h+=cartao(x,true); });
+  L.proximas.forEach(function(x){ h+=cartao(x,false); });
+  h+='</div>';
+  document.getElementById('cnhAlertBody').innerHTML=h;
+  ov.classList.add('show');
+}
+function dismissCnhAlert(){
+  _cnhAlertDismissed=true;
+  var ov=document.getElementById('cnhAlertOverlay'); if(ov) ov.classList.remove('show');
+}
+
+// ---------- Bloco dentro da aba Motoristas ----------
+// Fica onde se resolve o problema (a ficha do motorista), e continua na tela depois
+// de dar OK no aviso.
+function renderCnhAvisos(){
+  var el=document.getElementById('motCnhAviso'); if(!el) return;
+  var L=_cnhListas(), vencidas=L.vencidas, proximas=L.proximas;
+  if(!vencidas.length && !proximas.length){ el.innerHTML=''; el.style.display='none'; return; }
+  function linha(x,venc){
+    var txt=venc?_cnhTxtVenc(x):_cnhTxtProx(x);
+    return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px">'+
+      '<span>'+(venc?'🔴':'🟡')+'</span><span><strong>'+_motEsc(x.nome||'-')+'</strong> — '+txt+'</span></div>';
+  }
+  var cor=vencidas.length?'var(--red)':'var(--yellow)';
+  var h='<div style="background:var(--surface);border:1px solid '+cor+';border-left:5px solid '+cor+';border-radius:10px;padding:12px 14px;margin-bottom:14px">';
+  h+='<div style="font-weight:700;font-size:13px;margin-bottom:6px">🪪 CNH — atenção ao vencimento</div>';
+  if(vencidas.length) h+='<div style="margin-bottom:'+(proximas.length?'8px':'0')+'"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Vencida'+(vencidas.length>1?'s':'')+' ('+vencidas.length+')</div>'+vencidas.map(function(x){return linha(x,true);}).join('')+'</div>';
+  if(proximas.length) h+='<div><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Vence'+(proximas.length>1?'m':'')+' nos próximos '+CNH_AVISO_DIAS+' dias ('+proximas.length+')</div>'+proximas.map(function(x){return linha(x,false);}).join('')+'</div>';
+  h+='</div>';
+  el.innerHTML=h;
+  el.style.display='block';
+}
+
 function motoristaInativo(r){
   return !!(r && String(r.DATA_DESLIGAMENTO||'').trim());
 }
@@ -42,12 +141,14 @@ function renderMotoristasTable(){
   });
   listaOrdenada.forEach(function(r){
     var valCNH=r.VALIDADE_CNH||'';
-    var vencida=false;
-    if(valCNH){
-      var hoje=new Date().toISOString().slice(0,10);
-      vencida=valCNH<hoje;
-    }
-    var valStyle=vencida?'color:var(--red);font-weight:600':'';
+    var dias=_cnhDiasPara(valCNH);
+    var vencida=(dias!==null && dias<0);
+    var vencendo=(dias!==null && dias>=0 && dias<=CNH_AVISO_DIAS);
+    var valStyle=vencida?'color:var(--red);font-weight:600':(vencendo?'color:var(--yellow);font-weight:600':'');
+    // Selo na própria célula da validade, que é onde se olha a CNH.
+    var selo=vencida
+      ? ' ⚠️ Vencida há '+_cnhDias(Math.abs(dias))
+      : (vencendo?(dias===0?' ⏳ Vence hoje':' ⏳ Vence em '+_cnhDias(dias)):'');
     var inativo=motoristaInativo(r);
     var dtDeslig=String(r.DATA_DESLIGAMENTO||'').trim();
     var statusCol=inativo
@@ -60,10 +161,11 @@ function renderMotoristasTable(){
         ? '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="reativarMotorista(\''+nomeEsc+'\')">↩️ Reativar</button></td>'
         : '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="desligarMotorista(\''+nomeEsc+'\')">🔴 Desligar</button></td>';
     }
-    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?valCNH.split('-').reverse().join('/')+(vencida?' ⚠️ Vencida':''):'-')+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
+    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?_cnhDataBR(valCNH)+selo:'-')+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblMotoristasContainer').innerHTML=h;
+  renderCnhAvisos(); // junto com a tabela: todo caminho que redesenha uma redesenha o outro
 }
 
 function salvarMotorista(){

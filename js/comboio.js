@@ -188,6 +188,8 @@ function checkComboioAlert(){
 function dismissComboioAlert(){
   _comboioAlertDismissed=true;
   var ov=document.getElementById('comboioAlertOverlay'); if(ov) ov.classList.remove('show');
+  // O aviso de CNH espera a vez dele para não aparecer empilhado em cima deste.
+  if(typeof checkCnhAlert==='function') checkCnhAlert();
 }
 
 // Bloco de saldo de um combustível, dentro do card do Posto. `destacado` põe
@@ -237,6 +239,37 @@ function renderComboioSaldos(){
   h+='</div>';
   cont.innerHTML=h;
 }
+// ---------- Cards de total das listas (Entradas e Saidas) ----------
+// Mesmos números do rodapé da tabela, só no topo: o rodapé só aparece depois de
+// rolar a lista inteira.
+function _cbKpi(ic,val,lab,tit){
+  return '<div class="kpi-card"'+(tit?' title="'+_cbEsc(tit)+'"':'')+'><div class="kpi-icon">'+ic+'</div>'+
+    '<div class="kpi-value">'+val+'</div><div class="kpi-label">'+lab+'</div></div>';
+}
+// Preço médio = total / litros do filtro (não a média dos R$/L lançados): uma compra
+// grande tem de pesar mais que uma pequena.
+function _cbEnKpis(lit,val){
+  var el=document.getElementById('cbEnKpis'); if(!el) return;
+  var medio=lit?(val/lit):0;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _cbKpi('🪣',fmt(lit,2)+' L','Litros comprados')+
+    _cbKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro')+
+    _cbKpi('📊',fmtR(Math.round(medio*100)/100),'Preço médio / litro')+
+    '</div>';
+}
+// Em saída o R$ vem do próprio abastecimento (litros x valor unitário lançado). Quem
+// lançou litros sem valor unitário entra nos litros e não no R$ — por isso o card diz
+// quantas saídas ficaram de fora, em vez de fingir que o total está fechado.
+function _cbSaKpis(lit,val,sem){
+  var el=document.getElementById('cbSaKpis'); if(!el) return;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _cbKpi('🪣',fmt(lit,2)+' L','Litros que saíram')+
+    _cbKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro'+(sem?' · '+sem+' sem R$':''),
+      sem?(sem+' saída(s) sem valor unitário no lançamento: os litros contam, o R$ não.')
+         :'Soma dos abastecimentos que saíram dos tanques no filtro')+
+    '</div>';
+}
+
 function renderComboioEntradas(){
   var cont=document.getElementById('cbEnTableContainer');
   if(!cont) return;
@@ -254,6 +287,7 @@ function renderComboioEntradas(){
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
   var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
+  var fNF=(document.getElementById('cbEnNF')||{}).value||'';
   var admin=comboioIsAdmin();
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
@@ -261,15 +295,20 @@ function renderComboioEntradas(){
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
     if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
+    // Nota fiscal: pedaço do número serve (digitar 123 acha 0123 e 1234), porque a
+    // nota é anotada à mão e nem sempre com os zeros da frente.
+    if(fNF && _cbNorm(r.NOTA_FISCAL).indexOf(_cbNorm(fNF))<0) return false;
     return true;
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('cbEnCount').textContent=rows.length+(rows.length===1?' registro':' registros');
-  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fC||fF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
+  // Totais ANTES do desenho da tabela, para os cards aparecerem também com lista vazia.
   var totLit=0, totVal=0;
+  rows.forEach(function(r){ totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL); });
+  _cbEnKpis(totLit,totVal);
+  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fC||fF||fNF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Litros</th><th>R$/L</th><th>Total</th><th>Fornecedor</th><th>Nota fiscal</th><th>Cadastro</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
   rows.forEach(function(r){
-    totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||_cbEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openEntradaModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openEntradaDelete(\''+r.ID+'\')">🗑️</span>';
@@ -282,7 +321,7 @@ function renderComboioEntradas(){
 }
 
 function clearComboioEntradasFiltro(){
-  ['cbEnIni','cbEnFim','cbEnPosto','cbEnComb','cbEnForn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['cbEnIni','cbEnFim','cbEnPosto','cbEnComb','cbEnForn','cbEnNF'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   renderComboioEntradas();
 }
 
@@ -409,12 +448,14 @@ function exportEntradasPDF(){
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
   var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
+  var fNF=(document.getElementById('cbEnNF')||{}).value||'';
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
     if(df && String(r.DATA||'')>df) return false;
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
     if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
+    if(fNF && _cbNorm(r.NOTA_FISCAL).indexOf(_cbNorm(fNF))<0) return false;
     return true;
   }).sort(function(a,b){ return String(a.DATA||'').localeCompare(String(b.DATA||'')); });
   var extra=[];
@@ -423,6 +464,7 @@ function exportEntradasPDF(){
   if(fP) extra.push('Posto: '+fP);
   if(fC) extra.push('Combustível: '+fC);
   if(fF) extra.push('Fornecedor: '+fF);
+  if(fNF) extra.push('Nota fiscal com: '+fNF);
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var totLit=0, totVal=0;
   var win=window.open('','_blank');
@@ -462,14 +504,14 @@ function _cbSaidasLista(){
     var t=tanquePorPosto[_cbNorm(r.TANQUE_POSTO)]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r.LITROS); if(!lit) return;
-    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, combustivel:bucket, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, combustivel:bucket, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit, valor:_cbNum(r.VALOR_TOTAL)});
   });
   (DB.cadastro||[]).forEach(function(r){
     var t=tanquePorPosto[_cbNorm(r['LOCAL ABASTECIMENTO'])]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r['QTDADE LITROS']); if(!lit) return;
     var ident=[r.PLACA,r.MOTORISTA].filter(Boolean).join(' · ')||'-';
-    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], combustivel:'Diesel', origem:'Caminhão', ident:ident, litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], combustivel:'Diesel', origem:'Caminhão', ident:ident, litros:lit, valor:_cbNum(r['VALOR TOTAL'])});
   });
   return out;
 }
@@ -491,18 +533,21 @@ function renderComboioSaidas(){
   });
   rows.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
   document.getElementById('cbSaCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela, para os cards aparecerem também com lista vazia.
+  var totLitSa=0, totValSa=0, semValor=0;
+  rows.forEach(function(r){ totLitSa+=r.litros; totValSa+=(r.valor||0); if(!r.valor) semValor++; });
+  _cbSaKpis(totLitSa,totValSa,semValor);
   if(!rows.length){
     cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma saída'+((di||df||fP||fO)?' no filtro.':'.')+'<br><span style="font-size:11px">As saídas de máquina passam a contar após o ajuste do campo Tanque/Posto no abastecimento.</span></div>';
     return;
   }
-  var tot=0;
-  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th>Litros</th></tr></thead><tbody>';
+  // Coluna de valor para o card de R$ do topo poder ser conferido linha por linha.
+  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th>Litros</th><th>Valor</th></tr></thead><tbody>';
   rows.forEach(function(r){
-    tot+=r.litros;
     var badge=r.origem==='Máquina'?'🌲':'🚚';
-    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+_cbEsc(r.combustivel||'Diesel')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+_cbEsc(r.combustivel||'Diesel')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td><td class="maq-mono">'+(r.valor?fmtR(r.valor):'<span style="color:var(--text2)" title="Lançamento sem valor unitário">—</span>')+'</td></tr>';
   });
-  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(totLitSa*100)/100,2)+' L</td><td class="maq-mono">'+fmtR(Math.round(totValSa*100)/100)+'</td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
 }
@@ -530,7 +575,7 @@ function exportSaidasPDF(){
   if(fP) extra.push('Posto: '+fP);
   if(fO) extra.push('Origem: '+fO);
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
-  var tot=0;
+  var tot=0, totV=0;
   var win=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Saídas — Comboio</title><style>';
   html+='*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
@@ -544,12 +589,12 @@ function exportSaidasPDF(){
   html+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Saídas de Combustível — Comboio</div>'+(extra.length?'<div class="sub"><b>Filtros:</b> '+extra.join(' · ')+'</div>':'')+'<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div></div></div>';
   if(!rows.length){ html+='<p style="padding:20px;text-align:center;color:#888">Nenhuma saída para os filtros aplicados.</p>'; }
   else {
-    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th><th class="num">Valor</th></tr></thead><tbody>';
     rows.forEach(function(r){
-      tot+=r.litros;
-      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+(r.combustivel||'Diesel')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td></tr>';
+      tot+=r.litros; totV+=(r.valor||0);
+      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+(r.combustivel||'Diesel')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td><td class="num">'+(r.valor?fmtR(r.valor):'-')+'</td></tr>';
     });
-    html+='</tbody><tfoot><tr><td colspan="5" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+    html+='</tbody><tfoot><tr><td colspan="5" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td><td class="num">'+fmtR(Math.round(totV*100)/100)+'</td></tr></tfoot>';
     html+='</table><div class="foot">'+rows.length+' saída(s)</div>';
   }
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';

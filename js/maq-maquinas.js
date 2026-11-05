@@ -33,11 +33,26 @@ function _maqAuditTxt(row){
 }
 
 function buildMaquinarios(){
+  // Listas dos filtros em ordem alfabética: MAQ_TIPOS está na ordem em que foi escrito
+  // e BASE.localCarga na ordem do cadastro, e nenhuma das duas ajuda a achar um item.
   var ft=document.getElementById('maqFiltroTipo');
-  if(ft && ft.options.length<=1){ MAQ_TIPOS.forEach(function(t){ var o=document.createElement('option'); o.textContent=t; ft.appendChild(o); }); }
+  if(ft && ft.options.length<=1){ _maqOrdAlfa(MAQ_TIPOS).forEach(function(t){ var o=document.createElement('option'); o.textContent=t; ft.appendChild(o); }); }
   var ff=document.getElementById('maqFiltroFloresta');
-  if(ff && ff.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; ff.appendChild(o); }); }
+  if(ff && ff.options.length<=1){ _maqOrdAlfa(BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; ff.appendChild(o); }); }
   renderMaquinasTable();
+}
+
+// Filtro de máquina da própria aba Máquinas. Redesenhado a cada render (e não só uma
+// vez como os outros) porque máquina nova é cadastrada aqui mesmo: sem isso ela só
+// apareceria no filtro depois de recarregar a página. Mantém o que estava escolhido.
+function _maqPopFiltroMaq(){
+  var fm=document.getElementById('maqFiltroMaq'); if(!fm) return;
+  var atual=fm.value;
+  var h='<option value="">Todas as máquinas</option>';
+  DB.maquinas.slice().sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'}); })
+    .forEach(function(m){ h+='<option value="'+m.ID+'">'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  fm.innerHTML=h;
+  fm.value=atual; // máquina que deixou de existir volta sozinha para "Todas"
 }
 
 function renderMaquinasTable(){
@@ -46,10 +61,13 @@ function renderMaquinasTable(){
   var admin=maqIsAdmin();
   var addBtn=document.getElementById('maqAddBtn');
   if(addBtn) addBtn.style.display = admin ? 'inline-flex' : 'none';
+  _maqPopFiltroMaq();
   var fTipo=(document.getElementById('maqFiltroTipo')||{}).value||'';
   var fStatus=(document.getElementById('maqFiltroStatus')||{}).value||'';
   var fFloresta=(document.getElementById('maqFiltroFloresta')||{}).value||'';
+  var fMaq=(document.getElementById('maqFiltroMaq')||{}).value||'';
   var lista=DB.maquinas.filter(function(m){
+    if(fMaq && String(m.ID)!==fMaq) return false;
     if(fTipo && (m.TIPO||'')!==fTipo) return false;
     if(fStatus && (m.STATUS||'')!==fStatus) return false;
     if(fFloresta && maqFlorestaAtual(m.ID)!==fFloresta) return false;
@@ -58,7 +76,7 @@ function renderMaquinasTable(){
   lista.sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'}); });
   document.getElementById('maqCount').textContent=lista.length+(lista.length===1?' máquina':' máquinas');
   if(!lista.length){
-    cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma máquina'+((fTipo||fStatus)?' no filtro.':' cadastrada.'+(admin?' Clique em “Nova máquina”.':''))+'</div>';
+    cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma máquina'+((fTipo||fStatus||fFloresta||fMaq)?' no filtro.':' cadastrada.'+(admin?' Clique em “Nova máquina”.':''))+'</div>';
     return;
   }
   function chip(s){ var c=s==='Ativa'?'maq-chip-g':(s==='Manutenção'?'maq-chip-y':'maq-chip-gray'); return '<span class="maq-chip '+c+'">'+_maqEsc(s||'-')+'</span>'; }
@@ -88,7 +106,8 @@ function openMaqModal(id){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+'><label>'+f.label+'</label>';
     if(f.type==='select'){
       html+='<select id="'+fid+'"><option value="">—</option>';
-      f.opts.forEach(function(o){ html+='<option'+(String(val)===o?' selected':'')+'>'+o+'</option>'; });
+      // Tipo em ordem alfabética aqui também: é a mesma lista do filtro da aba.
+      (f.key==='TIPO'?_maqOrdAlfa(f.opts):f.opts).forEach(function(o){ html+='<option'+(String(val)===o?' selected':'')+'>'+o+'</option>'; });
       html+='</select>';
     } else if(f.type==='textarea'){
       html+='<textarea id="'+fid+'" rows="2">'+_maqEsc(val)+'</textarea>';
@@ -144,13 +163,15 @@ function exportMaquinasPDF(){
   var fTipo=(document.getElementById('maqFiltroTipo')||{}).value||'';
   var fStatus=(document.getElementById('maqFiltroStatus')||{}).value||'';
   var fFloresta=(document.getElementById('maqFiltroFloresta')||{}).value||'';
+  var fMaq=(document.getElementById('maqFiltroMaq')||{}).value||'';
   var lista=DB.maquinas.filter(function(m){
+    if(fMaq && String(m.ID)!==fMaq) return false;
     if(fTipo && (m.TIPO||'')!==fTipo) return false;
     if(fStatus && (m.STATUS||'')!==fStatus) return false;
     if(fFloresta && maqFlorestaAtual(m.ID)!==fFloresta) return false;
     return true;
   }).sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||'')); });
-  var extra=[]; if(fTipo) extra.push('Tipo: '+fTipo); if(fStatus) extra.push('Status: '+fStatus); if(fFloresta) extra.push('Floresta: '+fFloresta);
+  var extra=[]; if(fTipo) extra.push('Tipo: '+fTipo); if(fStatus) extra.push('Status: '+fStatus); if(fFloresta) extra.push('Floresta: '+fFloresta); if(fMaq) extra.push('Máquina: '+maqNome(fMaq));
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var win=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lista de Maquinários</title><style>';

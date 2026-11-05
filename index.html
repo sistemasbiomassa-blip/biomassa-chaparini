@@ -384,6 +384,14 @@ details[open]>.manut-matriz-sum::before{content:'▾'}
 #kpiManut .kpi-icon,#kpiManutGar .kpi-icon,[id^="kpiNfRel"] .kpi-icon{font-size:15px;margin-bottom:3px}
 #kpiManut .kpi-value,#kpiManutGar .kpi-value,[id^="kpiNfRel"] .kpi-value{font-size:20px}
 
+/* Cards de total das listas (Maquinários > Abastecimento e Manutenção, Comboio >
+   Entradas e Saídas): o mesmo .kpi-card, menor, porque ali ele é o resumo de uma
+   tabela e não o conteúdo da tela. */
+.kpi-row-mini{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi-row-mini .kpi-card{padding:10px 14px;border-radius:12px}
+.kpi-row-mini .kpi-icon{font-size:15px;margin-bottom:3px}
+.kpi-row-mini .kpi-value{font-size:20px}
+
 .manut-consumo-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .manut-consumo-item:last-child{border-bottom:none}
 .manut-consumo-placa{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--accent);min-width:82px;text-align:center;flex-shrink:0}
@@ -1160,6 +1168,18 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
   </div>
 </div>
 
+<!-- ===== ALERTA CNH PERTO DE VENCER (Motoristas) ===== -->
+<!-- Mesma estrutura do alerta de diesel baixo logo acima: aparece ao entrar no
+     sistema e o OK esconde até o próximo login. -->
+<div class="modal-overlay" id="cnhAlertOverlay">
+  <div class="modal" style="max-width:520px">
+    <div id="cnhAlertBody"></div>
+    <div style="display:flex;justify-content:center;margin-top:18px">
+      <button class="btn btn-primary" onclick="dismissCnhAlert()" style="min-width:120px">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL NOVO ALERTA ===== -->
 <div class="modal-overlay" id="alModalOverlay" onclick="if(event.target===this)closeNovoAlertaModal()">
   <div class="modal">
@@ -1408,6 +1428,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             </div>
             <div id="motSyncInfo" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
           </div>
+          <div id="motCnhAviso" style="display:none"></div>
           <div class="table-container"><div class="table-header"><h3>Motoristas Cadastrados</h3></div><div class="table-scroll" id="tblMotoristasContainer"></div></div>
         </div>
 
@@ -1761,6 +1782,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             <select id="maqFiltroTipo" onchange="renderMaquinasTable()"><option value="">Todos os tipos</option></select>
             <select id="maqFiltroStatus" onchange="renderMaquinasTable()"><option value="">Todos os status</option><option>Ativa</option><option>Manutenção</option><option>Inativa</option></select>
             <select id="maqFiltroFloresta" onchange="renderMaquinasTable()"><option value="">Todas as florestas</option></select>
+            <select id="maqFiltroMaq" onchange="renderMaquinasTable()"><option value="">Todas as máquinas</option></select>
             <button class="btn btn-primary btn-sm" id="maqAddBtn" onclick="openMaqModal()" style="display:none">➕ Nova máquina</button>
             <button class="btn btn-secondary" onclick="exportMaquinasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
@@ -1778,6 +1800,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             <select id="maqAbFiltroMaq" onchange="renderMaqAbastTable()"><option value="">Todas as máquinas</option></select>
             <button class="btn btn-primary btn-sm" id="maqAbAddBtn" onclick="openMaqAbastModal()" style="display:none">➕ Novo abastecimento</button>
           </div>
+          <div id="maqAbKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>⛽ Abastecimentos</h3><span class="chart-badge" id="maqAbCount">0 registros</span></div>
             <div class="table-scroll" id="maqAbTableContainer"></div>
@@ -1793,6 +1816,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             <button class="btn btn-secondary btn-sm" id="maqNfeBtn" onclick="openMaqNfeModal()" style="display:none">📄 Importar Nota Fiscal</button>
             <button class="btn btn-primary btn-sm" id="maqMtAddBtn" onclick="openMaqManutModal()" style="display:none">➕ Registrar manutenção</button>
           </div>
+          <div id="maqMtKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>🔧 Manutenções e consertos</h3><span class="chart-badge" id="maqMtCount">0 registros</span></div>
             <div class="table-scroll" id="maqMtTableContainer"></div>
@@ -1869,10 +1893,12 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             <select id="cbEnPosto" onchange="renderComboioEntradas()"><option value="">Todos os postos</option></select>
             <select id="cbEnComb" onchange="renderComboioEntradas()"><option value="">Todos os combustíveis</option><option>Diesel</option><option>Gasolina</option></select>
             <select id="cbEnForn" onchange="renderComboioEntradas()"><option value="">Todos os fornecedores</option></select>
+            <input id="cbEnNF" type="text" oninput="renderComboioEntradas()" placeholder="&#128269; Nota fiscal" title="Buscar pelo número da nota fiscal" style="min-width:150px">
             <button class="btn-secondary btn-sm" onclick="clearComboioEntradasFiltro()">Limpar</button>
             <button class="btn btn-primary btn-sm" id="cbEnAddBtn" onclick="openEntradaModal()" style="display:none">➕ Nova entrada</button>
             <button class="btn btn-secondary" onclick="exportEntradasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
+          <div id="cbEnKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>🛒 Entradas (compras de diesel)</h3><span class="chart-badge" id="cbEnCount">0 registros</span></div>
             <div class="table-scroll" id="cbEnTableContainer"></div>
@@ -1887,6 +1913,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
             <button class="btn-secondary btn-sm" onclick="clearComboioSaidasFiltro()">Limpar</button>
             <button class="btn btn-secondary" onclick="exportSaidasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
+          <div id="cbSaKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>⛽ Saídas (abastecimentos a partir dos tanques)</h3><span class="chart-badge" id="cbSaCount">0 registros</span></div>
             <div class="table-scroll" id="cbSaTableContainer"></div>
@@ -3521,6 +3548,7 @@ function carregarPerfilELogar(user){
 
 function enterApp(){
   _comboioAlertDismissed=false;
+  _cnhAlertDismissed=false;
   _alertasDismissed={};
   _alertasBannerVisible=false;
   document.getElementById('loginPage').style.display='none';
@@ -3562,6 +3590,7 @@ function enterApp(){
   initApp();
   if(!isRh){
     checkComboioAlert();
+    checkCnhAlert();
     renderAlertasBanner();
   }
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
@@ -3692,11 +3721,26 @@ function _maqAuditTxt(row){
 }
 
 function buildMaquinarios(){
+  // Listas dos filtros em ordem alfabética: MAQ_TIPOS está na ordem em que foi escrito
+  // e BASE.localCarga na ordem do cadastro, e nenhuma das duas ajuda a achar um item.
   var ft=document.getElementById('maqFiltroTipo');
-  if(ft && ft.options.length<=1){ MAQ_TIPOS.forEach(function(t){ var o=document.createElement('option'); o.textContent=t; ft.appendChild(o); }); }
+  if(ft && ft.options.length<=1){ _maqOrdAlfa(MAQ_TIPOS).forEach(function(t){ var o=document.createElement('option'); o.textContent=t; ft.appendChild(o); }); }
   var ff=document.getElementById('maqFiltroFloresta');
-  if(ff && ff.options.length<=1){ (BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; ff.appendChild(o); }); }
+  if(ff && ff.options.length<=1){ _maqOrdAlfa(BASE.localCarga||[]).forEach(function(fl){ var o=document.createElement('option'); o.textContent=fl; ff.appendChild(o); }); }
   renderMaquinasTable();
+}
+
+// Filtro de máquina da própria aba Máquinas. Redesenhado a cada render (e não só uma
+// vez como os outros) porque máquina nova é cadastrada aqui mesmo: sem isso ela só
+// apareceria no filtro depois de recarregar a página. Mantém o que estava escolhido.
+function _maqPopFiltroMaq(){
+  var fm=document.getElementById('maqFiltroMaq'); if(!fm) return;
+  var atual=fm.value;
+  var h='<option value="">Todas as máquinas</option>';
+  DB.maquinas.slice().sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'}); })
+    .forEach(function(m){ h+='<option value="'+m.ID+'">'+_maqEsc(m.IDENTIFICACAO||('#'+m.ID))+'</option>'; });
+  fm.innerHTML=h;
+  fm.value=atual; // máquina que deixou de existir volta sozinha para "Todas"
 }
 
 function renderMaquinasTable(){
@@ -3705,10 +3749,13 @@ function renderMaquinasTable(){
   var admin=maqIsAdmin();
   var addBtn=document.getElementById('maqAddBtn');
   if(addBtn) addBtn.style.display = admin ? 'inline-flex' : 'none';
+  _maqPopFiltroMaq();
   var fTipo=(document.getElementById('maqFiltroTipo')||{}).value||'';
   var fStatus=(document.getElementById('maqFiltroStatus')||{}).value||'';
   var fFloresta=(document.getElementById('maqFiltroFloresta')||{}).value||'';
+  var fMaq=(document.getElementById('maqFiltroMaq')||{}).value||'';
   var lista=DB.maquinas.filter(function(m){
+    if(fMaq && String(m.ID)!==fMaq) return false;
     if(fTipo && (m.TIPO||'')!==fTipo) return false;
     if(fStatus && (m.STATUS||'')!==fStatus) return false;
     if(fFloresta && maqFlorestaAtual(m.ID)!==fFloresta) return false;
@@ -3717,7 +3764,7 @@ function renderMaquinasTable(){
   lista.sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||''),'pt-BR',{sensitivity:'base'}); });
   document.getElementById('maqCount').textContent=lista.length+(lista.length===1?' máquina':' máquinas');
   if(!lista.length){
-    cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma máquina'+((fTipo||fStatus)?' no filtro.':' cadastrada.'+(admin?' Clique em “Nova máquina”.':''))+'</div>';
+    cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma máquina'+((fTipo||fStatus||fFloresta||fMaq)?' no filtro.':' cadastrada.'+(admin?' Clique em “Nova máquina”.':''))+'</div>';
     return;
   }
   function chip(s){ var c=s==='Ativa'?'maq-chip-g':(s==='Manutenção'?'maq-chip-y':'maq-chip-gray'); return '<span class="maq-chip '+c+'">'+_maqEsc(s||'-')+'</span>'; }
@@ -3747,7 +3794,8 @@ function openMaqModal(id){
     html+='<div class="form-group"'+(f.type==='textarea'?' style="grid-column:1/-1"':'')+'><label>'+f.label+'</label>';
     if(f.type==='select'){
       html+='<select id="'+fid+'"><option value="">—</option>';
-      f.opts.forEach(function(o){ html+='<option'+(String(val)===o?' selected':'')+'>'+o+'</option>'; });
+      // Tipo em ordem alfabética aqui também: é a mesma lista do filtro da aba.
+      (f.key==='TIPO'?_maqOrdAlfa(f.opts):f.opts).forEach(function(o){ html+='<option'+(String(val)===o?' selected':'')+'>'+o+'</option>'; });
       html+='</select>';
     } else if(f.type==='textarea'){
       html+='<textarea id="'+fid+'" rows="2">'+_maqEsc(val)+'</textarea>';
@@ -3803,13 +3851,15 @@ function exportMaquinasPDF(){
   var fTipo=(document.getElementById('maqFiltroTipo')||{}).value||'';
   var fStatus=(document.getElementById('maqFiltroStatus')||{}).value||'';
   var fFloresta=(document.getElementById('maqFiltroFloresta')||{}).value||'';
+  var fMaq=(document.getElementById('maqFiltroMaq')||{}).value||'';
   var lista=DB.maquinas.filter(function(m){
+    if(fMaq && String(m.ID)!==fMaq) return false;
     if(fTipo && (m.TIPO||'')!==fTipo) return false;
     if(fStatus && (m.STATUS||'')!==fStatus) return false;
     if(fFloresta && maqFlorestaAtual(m.ID)!==fFloresta) return false;
     return true;
   }).sort(function(a,b){ return String(a.IDENTIFICACAO||'').localeCompare(String(b.IDENTIFICACAO||'')); });
-  var extra=[]; if(fTipo) extra.push('Tipo: '+fTipo); if(fStatus) extra.push('Status: '+fStatus); if(fFloresta) extra.push('Floresta: '+fFloresta);
+  var extra=[]; if(fTipo) extra.push('Tipo: '+fTipo); if(fStatus) extra.push('Status: '+fStatus); if(fFloresta) extra.push('Floresta: '+fFloresta); if(fMaq) extra.push('Máquina: '+maqNome(fMaq));
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var win=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lista de Maquinários</title><style>';
@@ -4031,11 +4081,13 @@ function renderMaqAbastTable(){
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('maqAbCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela (ver comentário igual em maq-manutencao.js).
+  var totLit=0, totVal=0;
+  rows.forEach(function(r){ totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL); });
+  _maqAbKpis(totLit,totVal);
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhum abastecimento'+((di||df||fMaq||fFl)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Floresta (auto)</th><th>Leitura</th><th>Litros</th><th>Vlr Unit.</th><th>Total</th><th>Operador</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
-  var totLit=0, totVal=0;
   rows.forEach(function(r){
-    totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqAbastModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqAbastDelete(\''+r.ID+'\')">🗑️</span>';
@@ -4047,6 +4099,18 @@ function renderMaqAbastTable(){
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="4" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmt(totLit,2)+'</td><td></td><td class="maq-mono">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
+}
+
+// Cards de total da aba. O preço médio é total / litros do filtro (não a média dos
+// R$/L lançados), para que um abastecimento grande pese mais que um pequeno.
+function _maqAbKpis(lit,val){
+  var el=document.getElementById('maqAbKpis'); if(!el) return;
+  var medio=lit?(val/lit):0;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _maqKpi('🪣',fmt(lit,2)+' L','Litros no filtro')+
+    _maqKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro')+
+    _maqKpi('📊',fmtR(Math.round(medio*100)/100),'Preço médio / litro')+
+    '</div>';
 }
 
 function _maqAbBuildForm(row){
@@ -4214,11 +4278,14 @@ function renderMaqManutTable(){
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('maqMtCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela: os cards do topo mostram o mesmo que o rodapé
+  // (que só aparece depois de rolar até o fim) e continuam aparecendo com a lista vazia.
+  var totPec=0, totMao=0, totTer=0, totGeral=0;
+  rows.forEach(function(r){ totPec+=num(r.CUSTO_PECAS); totMao+=num(r.CUSTO_MAO_OBRA); totTer+=num(r.CUSTO_TERCEIROS); totGeral+=num(r.CUSTO_TOTAL); });
+  _maqMtKpis(totPec,totMao,totTer,totGeral);
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma manutenção'+((di||df||fMaq||fFl||fTipo)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Tipo</th><th>Serviço</th><th>Floresta (auto)</th><th>Peças</th><th>M. obra</th><th>Terceiros</th><th>Total</th><th>Oficina</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
-  var totPec=0, totMao=0, totTer=0, totGeral=0;
   rows.forEach(function(r){
-    totPec+=num(r.CUSTO_PECAS); totMao+=num(r.CUSTO_MAO_OBRA); totTer+=num(r.CUSTO_TERCEIROS); totGeral+=num(r.CUSTO_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqManutModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqManutDelete(\''+r.ID+'\')">🗑️</span>';
@@ -4230,6 +4297,18 @@ function renderMaqManutTable(){
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
+}
+
+// Cards de total da aba (mesmos números do rodapé da tabela, só no topo).
+function _maqMtKpis(pec,mao,ter,tot){
+  var el=document.getElementById('maqMtKpis'); if(!el) return;
+  function r2(v){ return Math.round(v*100)/100; }
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _maqKpi('🧩',fmtR(r2(pec)),'Peças')+
+    _maqKpi('🔧',fmtR(r2(mao)),'Mão de obra')+
+    _maqKpi('🤝',fmtR(r2(ter)),'Terceiros')+
+    _maqKpi('💰',fmtR(r2(tot)),'Total no filtro')+
+    '</div>';
 }
 
 function _maqMtBuildForm(row){
@@ -6770,7 +6849,11 @@ function locaisFiltrados(lista,modo){
 
 function renderLocaisTable(){
   var isAdmin=(currentUserData && currentUserData.perfil==='ADMIN');
-  var data = LOCAIS_DATA;
+  // Em ordem alfabética: LOCAIS_DATA vem na ordem de cadastro, que não ajuda a achar
+  // um local na lista. Só a cópia da listagem é ordenada, o array original fica como está.
+  var data = (LOCAIS_DATA||[]).slice().sort(function(a,b){
+    return String(a['NOME']||'').localeCompare(String(b['NOME']||''),'pt-BR',{sensitivity:'base'});
+  });
   var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
   data.forEach(function(r){
     var tipo = r['TIPO'] || r.tipo || '-';
@@ -11708,6 +11791,105 @@ function buildHistorico(){
 <script>
 // ==================== MOTORISTAS ====================
 
+// Quantos dias antes do vencimento a CNH já vira aviso. 60 = os "2 meses antes"
+// pedidos: tempo de marcar exame e renovar sem o motorista parar de rodar.
+var CNH_AVISO_DIAS=60;
+function _motEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+// Dias daqui até a validade (negativo = já venceu; null = sem data ou data estranha).
+// Comparado em data local, sem hora, para não errar um dia por causa de fuso.
+function _cnhDiasPara(validade){
+  var s=String(validade||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  var p=s.split('-');
+  var alvo=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]));
+  var ag=new Date();
+  var hoje=new Date(ag.getFullYear(),ag.getMonth(),ag.getDate());
+  return Math.round((alvo-hoje)/86400000);
+}
+function _cnhDias(n){ return n+(n===1?' dia':' dias'); }
+function _cnhDataBR(v){ return String(v||'').slice(0,10).split('-').reverse().join('/'); }
+
+// Quem precisa de aviso, em duas listas já ordenadas por urgência. Uma função só,
+// usada pelo bloco dentro da aba e pelo aviso na tela — a regra de quem entra no
+// aviso não pode ser diferente nos dois lugares.
+// Só motorista ATIVO: cobrar a CNH de quem já foi desligado é ruído.
+function _cnhListas(){
+  var vencidas=[], proximas=[];
+  (MOTORISTAS_DATA||[]).forEach(function(r){
+    if(motoristaInativo(r)) return;
+    var d=_cnhDiasPara(r.VALIDADE_CNH);
+    if(d===null) return; // sem validade cadastrada não dá para avisar nada
+    var item={nome:r.NOME, dias:d, val:r.VALIDADE_CNH, cnh:r.CNH};
+    if(d<0) vencidas.push(item);
+    else if(d<=CNH_AVISO_DIAS) proximas.push(item);
+  });
+  vencidas.sort(function(a,b){ return a.dias-b.dias; });   // venceu há mais tempo primeiro
+  proximas.sort(function(a,b){ return a.dias-b.dias; });   // vence mais cedo primeiro
+  return {vencidas:vencidas, proximas:proximas};
+}
+function _cnhTxtVenc(x){ return 'venceu em '+_cnhDataBR(x.val)+' — há '+_cnhDias(Math.abs(x.dias)); }
+function _cnhTxtProx(x){ return x.dias===0?('vence HOJE, '+_cnhDataBR(x.val)):('vence em '+_cnhDataBR(x.val)+' — faltam '+_cnhDias(x.dias)); }
+
+// ---------- Aviso na tela, ao entrar no sistema ----------
+// Mesmo comportamento do aviso de diesel baixo do Comboio: aparece no login, o OK
+// esconde até o próximo login (não grava nada), e volta a aparecer enquanto houver
+// CNH vencida ou a vencer. É o lembrete para cobrar o motorista antes de vencer.
+var _cnhAlertDismissed=false;
+function checkCnhAlert(){
+  var ov=document.getElementById('cnhAlertOverlay');
+  if(!ov) return;
+  if(_cnhAlertDismissed){ ov.classList.remove('show'); return; }
+  // Um aviso por vez: se o de diesel baixo está na tela, este espera o OK dele
+  // (dismissComboioAlert chama de volta aqui) em vez de aparecer empilhado em cima.
+  var cb=document.getElementById('comboioAlertOverlay');
+  if(cb && cb.classList.contains('show')) return;
+  var L=_cnhListas();
+  if(!L.vencidas.length && !L.proximas.length){ ov.classList.remove('show'); return; }
+  var qtd=L.vencidas.length+L.proximas.length;
+  var h='<div style="font-size:38px;text-align:center;margin-bottom:6px">🪪</div>';
+  h+='<h2 style="text-align:center;color:var(--'+(L.vencidas.length?'red':'yellow')+');margin-bottom:4px">CNH '+(L.vencidas.length?'vencida':'perto de vencer')+'</h2>';
+  h+='<p style="text-align:center;color:var(--text2);font-size:13px;margin-bottom:14px">'+qtd+(qtd===1?' motorista precisa':' motoristas precisam')+' renovar a CNH:</p>';
+  h+='<div style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto">';
+  function cartao(x,venc){
+    var cor=venc?'var(--red)':'var(--yellow)';
+    return '<div style="border:1px solid '+cor+';border-left:5px solid '+cor+';border-radius:10px;padding:10px 12px">'+
+      '<div style="font-weight:700">'+(venc?'🔴':'🟡')+' '+_motEsc(x.nome||'-')+'</div>'+
+      '<div style="font-size:12px;color:var(--text2)"><strong style="color:'+cor+'">'+(venc?_cnhTxtVenc(x):_cnhTxtProx(x))+'</strong>'+
+      (x.cnh?(' · CNH '+_motEsc(x.cnh)):'')+'</div></div>';
+  }
+  L.vencidas.forEach(function(x){ h+=cartao(x,true); });
+  L.proximas.forEach(function(x){ h+=cartao(x,false); });
+  h+='</div>';
+  document.getElementById('cnhAlertBody').innerHTML=h;
+  ov.classList.add('show');
+}
+function dismissCnhAlert(){
+  _cnhAlertDismissed=true;
+  var ov=document.getElementById('cnhAlertOverlay'); if(ov) ov.classList.remove('show');
+}
+
+// ---------- Bloco dentro da aba Motoristas ----------
+// Fica onde se resolve o problema (a ficha do motorista), e continua na tela depois
+// de dar OK no aviso.
+function renderCnhAvisos(){
+  var el=document.getElementById('motCnhAviso'); if(!el) return;
+  var L=_cnhListas(), vencidas=L.vencidas, proximas=L.proximas;
+  if(!vencidas.length && !proximas.length){ el.innerHTML=''; el.style.display='none'; return; }
+  function linha(x,venc){
+    var txt=venc?_cnhTxtVenc(x):_cnhTxtProx(x);
+    return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px">'+
+      '<span>'+(venc?'🔴':'🟡')+'</span><span><strong>'+_motEsc(x.nome||'-')+'</strong> — '+txt+'</span></div>';
+  }
+  var cor=vencidas.length?'var(--red)':'var(--yellow)';
+  var h='<div style="background:var(--surface);border:1px solid '+cor+';border-left:5px solid '+cor+';border-radius:10px;padding:12px 14px;margin-bottom:14px">';
+  h+='<div style="font-weight:700;font-size:13px;margin-bottom:6px">🪪 CNH — atenção ao vencimento</div>';
+  if(vencidas.length) h+='<div style="margin-bottom:'+(proximas.length?'8px':'0')+'"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Vencida'+(vencidas.length>1?'s':'')+' ('+vencidas.length+')</div>'+vencidas.map(function(x){return linha(x,true);}).join('')+'</div>';
+  if(proximas.length) h+='<div><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Vence'+(proximas.length>1?'m':'')+' nos próximos '+CNH_AVISO_DIAS+' dias ('+proximas.length+')</div>'+proximas.map(function(x){return linha(x,false);}).join('')+'</div>';
+  h+='</div>';
+  el.innerHTML=h;
+  el.style.display='block';
+}
+
 function motoristaInativo(r){
   return !!(r && String(r.DATA_DESLIGAMENTO||'').trim());
 }
@@ -11750,12 +11932,14 @@ function renderMotoristasTable(){
   });
   listaOrdenada.forEach(function(r){
     var valCNH=r.VALIDADE_CNH||'';
-    var vencida=false;
-    if(valCNH){
-      var hoje=new Date().toISOString().slice(0,10);
-      vencida=valCNH<hoje;
-    }
-    var valStyle=vencida?'color:var(--red);font-weight:600':'';
+    var dias=_cnhDiasPara(valCNH);
+    var vencida=(dias!==null && dias<0);
+    var vencendo=(dias!==null && dias>=0 && dias<=CNH_AVISO_DIAS);
+    var valStyle=vencida?'color:var(--red);font-weight:600':(vencendo?'color:var(--yellow);font-weight:600':'');
+    // Selo na própria célula da validade, que é onde se olha a CNH.
+    var selo=vencida
+      ? ' ⚠️ Vencida há '+_cnhDias(Math.abs(dias))
+      : (vencendo?(dias===0?' ⏳ Vence hoje':' ⏳ Vence em '+_cnhDias(dias)):'');
     var inativo=motoristaInativo(r);
     var dtDeslig=String(r.DATA_DESLIGAMENTO||'').trim();
     var statusCol=inativo
@@ -11768,10 +11952,11 @@ function renderMotoristasTable(){
         ? '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="reativarMotorista(\''+nomeEsc+'\')">↩️ Reativar</button></td>'
         : '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="desligarMotorista(\''+nomeEsc+'\')">🔴 Desligar</button></td>';
     }
-    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?valCNH.split('-').reverse().join('/')+(vencida?' ⚠️ Vencida':''):'-')+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
+    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?_cnhDataBR(valCNH)+selo:'-')+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblMotoristasContainer').innerHTML=h;
+  renderCnhAvisos(); // junto com a tabela: todo caminho que redesenha uma redesenha o outro
 }
 
 function salvarMotorista(){
@@ -13513,6 +13698,8 @@ function checkComboioAlert(){
 function dismissComboioAlert(){
   _comboioAlertDismissed=true;
   var ov=document.getElementById('comboioAlertOverlay'); if(ov) ov.classList.remove('show');
+  // O aviso de CNH espera a vez dele para não aparecer empilhado em cima deste.
+  if(typeof checkCnhAlert==='function') checkCnhAlert();
 }
 
 // Bloco de saldo de um combustível, dentro do card do Posto. `destacado` põe
@@ -13562,6 +13749,37 @@ function renderComboioSaldos(){
   h+='</div>';
   cont.innerHTML=h;
 }
+// ---------- Cards de total das listas (Entradas e Saidas) ----------
+// Mesmos números do rodapé da tabela, só no topo: o rodapé só aparece depois de
+// rolar a lista inteira.
+function _cbKpi(ic,val,lab,tit){
+  return '<div class="kpi-card"'+(tit?' title="'+_cbEsc(tit)+'"':'')+'><div class="kpi-icon">'+ic+'</div>'+
+    '<div class="kpi-value">'+val+'</div><div class="kpi-label">'+lab+'</div></div>';
+}
+// Preço médio = total / litros do filtro (não a média dos R$/L lançados): uma compra
+// grande tem de pesar mais que uma pequena.
+function _cbEnKpis(lit,val){
+  var el=document.getElementById('cbEnKpis'); if(!el) return;
+  var medio=lit?(val/lit):0;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _cbKpi('🪣',fmt(lit,2)+' L','Litros comprados')+
+    _cbKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro')+
+    _cbKpi('📊',fmtR(Math.round(medio*100)/100),'Preço médio / litro')+
+    '</div>';
+}
+// Em saída o R$ vem do próprio abastecimento (litros x valor unitário lançado). Quem
+// lançou litros sem valor unitário entra nos litros e não no R$ — por isso o card diz
+// quantas saídas ficaram de fora, em vez de fingir que o total está fechado.
+function _cbSaKpis(lit,val,sem){
+  var el=document.getElementById('cbSaKpis'); if(!el) return;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _cbKpi('🪣',fmt(lit,2)+' L','Litros que saíram')+
+    _cbKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro'+(sem?' · '+sem+' sem R$':''),
+      sem?(sem+' saída(s) sem valor unitário no lançamento: os litros contam, o R$ não.')
+         :'Soma dos abastecimentos que saíram dos tanques no filtro')+
+    '</div>';
+}
+
 function renderComboioEntradas(){
   var cont=document.getElementById('cbEnTableContainer');
   if(!cont) return;
@@ -13579,6 +13797,7 @@ function renderComboioEntradas(){
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
   var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
+  var fNF=(document.getElementById('cbEnNF')||{}).value||'';
   var admin=comboioIsAdmin();
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
@@ -13586,15 +13805,20 @@ function renderComboioEntradas(){
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
     if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
+    // Nota fiscal: pedaço do número serve (digitar 123 acha 0123 e 1234), porque a
+    // nota é anotada à mão e nem sempre com os zeros da frente.
+    if(fNF && _cbNorm(r.NOTA_FISCAL).indexOf(_cbNorm(fNF))<0) return false;
     return true;
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('cbEnCount').textContent=rows.length+(rows.length===1?' registro':' registros');
-  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fC||fF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
+  // Totais ANTES do desenho da tabela, para os cards aparecerem também com lista vazia.
   var totLit=0, totVal=0;
+  rows.forEach(function(r){ totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL); });
+  _cbEnKpis(totLit,totVal);
+  if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma entrada'+((di||df||fP||fC||fF||fNF)?' no filtro.':'.'+(comboioCanLancar()?' Clique em “Nova entrada”.':''))+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Litros</th><th>R$/L</th><th>Total</th><th>Fornecedor</th><th>Nota fiscal</th><th>Cadastro</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
   rows.forEach(function(r){
-    totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||_cbEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openEntradaModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openEntradaDelete(\''+r.ID+'\')">🗑️</span>';
@@ -13607,7 +13831,7 @@ function renderComboioEntradas(){
 }
 
 function clearComboioEntradasFiltro(){
-  ['cbEnIni','cbEnFim','cbEnPosto','cbEnComb','cbEnForn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  ['cbEnIni','cbEnFim','cbEnPosto','cbEnComb','cbEnForn','cbEnNF'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   renderComboioEntradas();
 }
 
@@ -13734,12 +13958,14 @@ function exportEntradasPDF(){
   var fP=(document.getElementById('cbEnPosto')||{}).value||'';
   var fC=(document.getElementById('cbEnComb')||{}).value||'';
   var fF=(document.getElementById('cbEnForn')||{}).value||'';
+  var fNF=(document.getElementById('cbEnNF')||{}).value||'';
   var rows=(DB.tanqueEntradas||[]).filter(function(r){
     if(di && String(r.DATA||'')<di) return false;
     if(df && String(r.DATA||'')>df) return false;
     if(fP && _cbNorm(r.LOCAL_ABASTECIMENTO)!==_cbNorm(fP)) return false;
     if(fC && _cbNorm(r.TIPO_COMBUSTIVEL||'Diesel')!==_cbNorm(fC)) return false;
     if(fF && _cbNorm(r.FORNECEDOR)!==_cbNorm(fF)) return false;
+    if(fNF && _cbNorm(r.NOTA_FISCAL).indexOf(_cbNorm(fNF))<0) return false;
     return true;
   }).sort(function(a,b){ return String(a.DATA||'').localeCompare(String(b.DATA||'')); });
   var extra=[];
@@ -13748,6 +13974,7 @@ function exportEntradasPDF(){
   if(fP) extra.push('Posto: '+fP);
   if(fC) extra.push('Combustível: '+fC);
   if(fF) extra.push('Fornecedor: '+fF);
+  if(fNF) extra.push('Nota fiscal com: '+fNF);
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
   var totLit=0, totVal=0;
   var win=window.open('','_blank');
@@ -13787,14 +14014,14 @@ function _cbSaidasLista(){
     var t=tanquePorPosto[_cbNorm(r.TANQUE_POSTO)]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r.LITROS); if(!lit) return;
-    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, combustivel:bucket, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r.TANQUE_POSTO, combustivel:bucket, origem:'Máquina', ident:maqNome(r.ID_MAQUINA), litros:lit, valor:_cbNum(r.VALOR_TOTAL)});
   });
   (DB.cadastro||[]).forEach(function(r){
     var t=tanquePorPosto[_cbNorm(r['LOCAL ABASTECIMENTO'])]; if(!t) return;
     if(_cbDatePart(r.DATA)<_cbDatePart(t.DATA_INICIO||'')) return;
     var lit=_cbNum(r['QTDADE LITROS']); if(!lit) return;
     var ident=[r.PLACA,r.MOTORISTA].filter(Boolean).join(' · ')||'-';
-    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], combustivel:'Diesel', origem:'Caminhão', ident:ident, litros:lit});
+    out.push({data:_cbDatePart(r.DATA), posto:r['LOCAL ABASTECIMENTO'], combustivel:'Diesel', origem:'Caminhão', ident:ident, litros:lit, valor:_cbNum(r['VALOR TOTAL'])});
   });
   return out;
 }
@@ -13816,18 +14043,21 @@ function renderComboioSaidas(){
   });
   rows.sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
   document.getElementById('cbSaCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela, para os cards aparecerem também com lista vazia.
+  var totLitSa=0, totValSa=0, semValor=0;
+  rows.forEach(function(r){ totLitSa+=r.litros; totValSa+=(r.valor||0); if(!r.valor) semValor++; });
+  _cbSaKpis(totLitSa,totValSa,semValor);
   if(!rows.length){
     cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma saída'+((di||df||fP||fO)?' no filtro.':'.')+'<br><span style="font-size:11px">As saídas de máquina passam a contar após o ajuste do campo Tanque/Posto no abastecimento.</span></div>';
     return;
   }
-  var tot=0;
-  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th>Litros</th></tr></thead><tbody>';
+  // Coluna de valor para o card de R$ do topo poder ser conferido linha por linha.
+  var h='<table class="maq-table"><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th>Litros</th><th>Valor</th></tr></thead><tbody>';
   rows.forEach(function(r){
-    tot+=r.litros;
     var badge=r.origem==='Máquina'?'🌲':'🚚';
-    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+_cbEsc(r.combustivel||'Diesel')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td></tr>';
+    h+='<tr><td class="maq-mono">'+_cbEsc(r.data?formatDateBR(r.data):'-')+'</td><td>'+_cbEsc(r.posto||'-')+'</td><td>'+_cbEsc(r.combustivel||'Diesel')+'</td><td>'+badge+' '+_cbEsc(r.origem)+'</td><td>'+_cbEsc(r.ident||'-')+'</td><td class="maq-mono">'+fmt(r.litros,2)+'</td><td class="maq-mono">'+(r.valor?fmtR(r.valor):'<span style="color:var(--text2)" title="Lançamento sem valor unitário">—</span>')+'</td></tr>';
   });
-  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+  h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAL DE SAÍDAS:</td><td class="maq-mono">'+fmt(Math.round(totLitSa*100)/100,2)+' L</td><td class="maq-mono">'+fmtR(Math.round(totValSa*100)/100)+'</td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
 }
@@ -13855,7 +14085,7 @@ function exportSaidasPDF(){
   if(fP) extra.push('Posto: '+fP);
   if(fO) extra.push('Origem: '+fO);
   var logoEl=document.querySelector('.sidebar-logo img'); var logoSrc=logoEl?logoEl.src:'';
-  var tot=0;
+  var tot=0, totV=0;
   var win=window.open('','_blank');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Saídas — Comboio</title><style>';
   html+='*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:14px;color:#222;font-size:10px}';
@@ -13869,12 +14099,12 @@ function exportSaidasPDF(){
   html+='<div class="rep-head">'+(logoSrc?'<img src="'+logoSrc+'">':'')+'<div><h1>BIOMASSA CHAPARINI</h1><div class="sub">Saídas de Combustível — Comboio</div>'+(extra.length?'<div class="sub"><b>Filtros:</b> '+extra.join(' · ')+'</div>':'')+'<div class="gen">Gerado em '+new Date().toLocaleString('pt-BR')+'</div></div></div>';
   if(!rows.length){ html+='<p style="padding:20px;text-align:center;color:#888">Nenhuma saída para os filtros aplicados.</p>'; }
   else {
-    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th></tr></thead><tbody>';
+    html+='<table><thead><tr><th>Data</th><th>Posto</th><th>Combustível</th><th>Origem</th><th>Identificação</th><th class="num">Litros</th><th class="num">Valor</th></tr></thead><tbody>';
     rows.forEach(function(r){
-      tot+=r.litros;
-      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+(r.combustivel||'Diesel')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td></tr>';
+      tot+=r.litros; totV+=(r.valor||0);
+      html+='<tr><td>'+(r.data?formatDateBR(r.data):'-')+'</td><td>'+(r.posto||'-')+'</td><td>'+(r.combustivel||'Diesel')+'</td><td>'+r.origem+'</td><td>'+(r.ident||'-')+'</td><td class="num">'+fmt(r.litros,2)+'</td><td class="num">'+(r.valor?fmtR(r.valor):'-')+'</td></tr>';
     });
-    html+='</tbody><tfoot><tr><td colspan="5" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td></tr></tfoot>';
+    html+='</tbody><tfoot><tr><td colspan="5" class="num">TOTAL DE SAÍDAS:</td><td class="num">'+fmt(Math.round(tot*100)/100,2)+' L</td><td class="num">'+fmtR(Math.round(totV*100)/100)+'</td></tr></tfoot>';
     html+='</table><div class="foot">'+rows.length+' saída(s)</div>';
   }
   html+='<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';

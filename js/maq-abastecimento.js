@@ -55,11 +55,13 @@ function renderMaqAbastTable(){
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('maqAbCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela (ver comentário igual em maq-manutencao.js).
+  var totLit=0, totVal=0;
+  rows.forEach(function(r){ totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL); });
+  _maqAbKpis(totLit,totVal);
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhum abastecimento'+((di||df||fMaq||fFl)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Floresta (auto)</th><th>Leitura</th><th>Litros</th><th>Vlr Unit.</th><th>Total</th><th>Operador</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
-  var totLit=0, totVal=0;
   rows.forEach(function(r){
-    totLit+=num(r.LITROS); totVal+=num(r.VALOR_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqAbastModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqAbastDelete(\''+r.ID+'\')">🗑️</span>';
@@ -71,6 +73,18 @@ function renderMaqAbastTable(){
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="4" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmt(totLit,2)+'</td><td></td><td class="maq-mono">'+fmtR(Math.round(totVal*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
+}
+
+// Cards de total da aba. O preço médio é total / litros do filtro (não a média dos
+// R$/L lançados), para que um abastecimento grande pese mais que um pequeno.
+function _maqAbKpis(lit,val){
+  var el=document.getElementById('maqAbKpis'); if(!el) return;
+  var medio=lit?(val/lit):0;
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _maqKpi('🪣',fmt(lit,2)+' L','Litros no filtro')+
+    _maqKpi('💰',fmtR(Math.round(val*100)/100),'Total no filtro')+
+    _maqKpi('📊',fmtR(Math.round(medio*100)/100),'Preço médio / litro')+
+    '</div>';
 }
 
 function _maqAbBuildForm(row){

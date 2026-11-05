@@ -476,6 +476,18 @@
   </div>
 </div>
 
+<!-- ===== ALERTA CNH PERTO DE VENCER (Motoristas) ===== -->
+<!-- Mesma estrutura do alerta de diesel baixo logo acima: aparece ao entrar no
+     sistema e o OK esconde até o próximo login. -->
+<div class="modal-overlay" id="cnhAlertOverlay">
+  <div class="modal" style="max-width:520px">
+    <div id="cnhAlertBody"></div>
+    <div style="display:flex;justify-content:center;margin-top:18px">
+      <button class="btn btn-primary" onclick="dismissCnhAlert()" style="min-width:120px">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL NOVO ALERTA ===== -->
 <div class="modal-overlay" id="alModalOverlay" onclick="if(event.target===this)closeNovoAlertaModal()">
   <div class="modal">
@@ -724,6 +736,7 @@
             </div>
             <div id="motSyncInfo" style="font-size:12px;color:var(--text2);margin-top:8px"></div>
           </div>
+          <div id="motCnhAviso" style="display:none"></div>
           <div class="table-container"><div class="table-header"><h3>Motoristas Cadastrados</h3></div><div class="table-scroll" id="tblMotoristasContainer"></div></div>
         </div>
 
@@ -1077,6 +1090,7 @@
             <select id="maqFiltroTipo" onchange="renderMaquinasTable()"><option value="">Todos os tipos</option></select>
             <select id="maqFiltroStatus" onchange="renderMaquinasTable()"><option value="">Todos os status</option><option>Ativa</option><option>Manutenção</option><option>Inativa</option></select>
             <select id="maqFiltroFloresta" onchange="renderMaquinasTable()"><option value="">Todas as florestas</option></select>
+            <select id="maqFiltroMaq" onchange="renderMaquinasTable()"><option value="">Todas as máquinas</option></select>
             <button class="btn btn-primary btn-sm" id="maqAddBtn" onclick="openMaqModal()" style="display:none">➕ Nova máquina</button>
             <button class="btn btn-secondary" onclick="exportMaquinasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
@@ -1094,6 +1108,7 @@
             <select id="maqAbFiltroMaq" onchange="renderMaqAbastTable()"><option value="">Todas as máquinas</option></select>
             <button class="btn btn-primary btn-sm" id="maqAbAddBtn" onclick="openMaqAbastModal()" style="display:none">➕ Novo abastecimento</button>
           </div>
+          <div id="maqAbKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>⛽ Abastecimentos</h3><span class="chart-badge" id="maqAbCount">0 registros</span></div>
             <div class="table-scroll" id="maqAbTableContainer"></div>
@@ -1109,6 +1124,7 @@
             <button class="btn btn-secondary btn-sm" id="maqNfeBtn" onclick="openMaqNfeModal()" style="display:none">📄 Importar Nota Fiscal</button>
             <button class="btn btn-primary btn-sm" id="maqMtAddBtn" onclick="openMaqManutModal()" style="display:none">➕ Registrar manutenção</button>
           </div>
+          <div id="maqMtKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>🔧 Manutenções e consertos</h3><span class="chart-badge" id="maqMtCount">0 registros</span></div>
             <div class="table-scroll" id="maqMtTableContainer"></div>
@@ -1185,10 +1201,12 @@
             <select id="cbEnPosto" onchange="renderComboioEntradas()"><option value="">Todos os postos</option></select>
             <select id="cbEnComb" onchange="renderComboioEntradas()"><option value="">Todos os combustíveis</option><option>Diesel</option><option>Gasolina</option></select>
             <select id="cbEnForn" onchange="renderComboioEntradas()"><option value="">Todos os fornecedores</option></select>
+            <input id="cbEnNF" type="text" oninput="renderComboioEntradas()" placeholder="&#128269; Nota fiscal" title="Buscar pelo número da nota fiscal" style="min-width:150px">
             <button class="btn-secondary btn-sm" onclick="clearComboioEntradasFiltro()">Limpar</button>
             <button class="btn btn-primary btn-sm" id="cbEnAddBtn" onclick="openEntradaModal()" style="display:none">➕ Nova entrada</button>
             <button class="btn btn-secondary" onclick="exportEntradasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
+          <div id="cbEnKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>🛒 Entradas (compras de diesel)</h3><span class="chart-badge" id="cbEnCount">0 registros</span></div>
             <div class="table-scroll" id="cbEnTableContainer"></div>
@@ -1203,6 +1221,7 @@
             <button class="btn-secondary btn-sm" onclick="clearComboioSaidasFiltro()">Limpar</button>
             <button class="btn btn-secondary" onclick="exportSaidasPDF()" style="font-size:12px">📄 Exportar PDF</button>
           </div>
+          <div id="cbSaKpis"></div>
           <div class="table-container">
             <div class="table-header"><h3>⛽ Saídas (abastecimentos a partir dos tanques)</h3><span class="chart-badge" id="cbSaCount">0 registros</span></div>
             <div class="table-scroll" id="cbSaTableContainer"></div>

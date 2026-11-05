@@ -394,7 +394,11 @@ function locaisFiltrados(lista,modo){
 
 function renderLocaisTable(){
   var isAdmin=(currentUserData && currentUserData.perfil==='ADMIN');
-  var data = LOCAIS_DATA;
+  // Em ordem alfabética: LOCAIS_DATA vem na ordem de cadastro, que não ajuda a achar
+  // um local na lista. Só a cópia da listagem é ordenada, o array original fica como está.
+  var data = (LOCAIS_DATA||[]).slice().sort(function(a,b){
+    return String(a['NOME']||'').localeCompare(String(b['NOME']||''),'pt-BR',{sensitivity:'base'});
+  });
   var h='<table><thead><tr><th>Nome</th><th>Tipo</th><th>Unidade</th><th>Endereço</th><th>Município</th><th>Estado</th><th>Latitude</th><th>Longitude</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
   data.forEach(function(r){
     var tipo = r['TIPO'] || r.tipo || '-';

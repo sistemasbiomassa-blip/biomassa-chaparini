@@ -41,11 +41,14 @@ function renderMaqManutTable(){
   });
   rows.sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); });
   document.getElementById('maqMtCount').textContent=rows.length+(rows.length===1?' registro':' registros');
+  // Totais ANTES do desenho da tabela: os cards do topo mostram o mesmo que o rodapé
+  // (que só aparece depois de rolar até o fim) e continuam aparecendo com a lista vazia.
+  var totPec=0, totMao=0, totTer=0, totGeral=0;
+  rows.forEach(function(r){ totPec+=num(r.CUSTO_PECAS); totMao+=num(r.CUSTO_MAO_OBRA); totTer+=num(r.CUSTO_TERCEIROS); totGeral+=num(r.CUSTO_TOTAL); });
+  _maqMtKpis(totPec,totMao,totTer,totGeral);
   if(!rows.length){ cont.innerHTML='<div style="padding:30px;text-align:center;color:var(--text2)">Nenhuma manutenção'+((di||df||fMaq||fFl||fTipo)?' no filtro.':'.')+'</div>'; return; }
   var h='<table class="maq-table"><thead><tr><th>Data</th><th>Máquina</th><th>Tipo</th><th>Serviço</th><th>Floresta (auto)</th><th>Peças</th><th>M. obra</th><th>Terceiros</th><th>Total</th><th>Oficina</th><th style="text-align:center">Ações</th></tr></thead><tbody>';
-  var totPec=0, totMao=0, totTer=0, totGeral=0;
   rows.forEach(function(r){
-    totPec+=num(r.CUSTO_PECAS); totMao+=num(r.CUSTO_MAO_OBRA); totTer+=num(r.CUSTO_TERCEIROS); totGeral+=num(r.CUSTO_TOTAL);
     var canEdit=admin||maqEhDono(r), acts='';
     if(canEdit) acts+='<span class="maq-act" title="Editar" onclick="openMaqManutModal(\''+r.ID+'\')">✏️</span> ';
     if(admin) acts+='<span class="maq-act" title="Excluir" onclick="openMaqManutDelete(\''+r.ID+'\')">🗑️</span>';
@@ -57,6 +60,18 @@ function renderMaqManutTable(){
   h+='</tbody><tfoot><tr style="font-weight:700;background:var(--surface2)"><td colspan="5" style="text-align:right">TOTAIS:</td><td class="maq-mono">'+fmtR(Math.round(totPec*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totMao*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totTer*100)/100)+'</td><td class="maq-mono">'+fmtR(Math.round(totGeral*100)/100)+'</td><td colspan="2"></td></tr></tfoot>';
   h+='</table>';
   cont.innerHTML=h;
+}
+
+// Cards de total da aba (mesmos números do rodapé da tabela, só no topo).
+function _maqMtKpis(pec,mao,ter,tot){
+  var el=document.getElementById('maqMtKpis'); if(!el) return;
+  function r2(v){ return Math.round(v*100)/100; }
+  el.innerHTML='<div class="kpi-row kpi-row-mini">'+
+    _maqKpi('🧩',fmtR(r2(pec)),'Peças')+
+    _maqKpi('🔧',fmtR(r2(mao)),'Mão de obra')+
+    _maqKpi('🤝',fmtR(r2(ter)),'Terceiros')+
+    _maqKpi('💰',fmtR(r2(tot)),'Total no filtro')+
+    '</div>';
 }
 
 function _maqMtBuildForm(row){

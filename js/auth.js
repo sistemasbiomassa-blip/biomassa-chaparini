@@ -78,6 +78,7 @@ function carregarPerfilELogar(user){
 
 function enterApp(){
   _comboioAlertDismissed=false;
+  _cnhAlertDismissed=false;
   _alertasDismissed={};
   _alertasBannerVisible=false;
   document.getElementById('loginPage').style.display='none';
@@ -119,6 +120,7 @@ function enterApp(){
   initApp();
   if(!isRh){
     checkComboioAlert();
+    checkCnhAlert();
     renderAlertasBanner();
   }
   // Sempre volta pra uma aba segura ao entrar — sem isso, se alguém logar como
