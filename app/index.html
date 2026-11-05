@@ -982,7 +982,10 @@ el('btnSair').addEventListener('click', function(){
   /* sair significa digitar a senha de novo na proxima vez, e o botao fica a um
      toque do cabecalho — melhor perguntar antes */
   if(!window.confirm('Sair do aplicativo? Na próxima vez você vai precisar digitar o e-mail e a senha outra vez.')) return;
-  sb.auth.signOut().then(function(){
+  /* scope:'local' sai SO deste aparelho. O padrao do supabase-js e 'global',
+     que encerra a sessao da pessoa em todo lugar — sair aqui derrubaria o
+     sistema no computador, e sair no sistema derrubaria este app. */
+  sb.auth.signOut({scope:'local'}).then(function(){
     try{ localStorage.removeItem(CHAVE_CACHE); }catch(e){}
     location.reload();
   });
