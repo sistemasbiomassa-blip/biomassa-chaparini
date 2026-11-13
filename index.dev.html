@@ -402,6 +402,18 @@
   </div>
 </div>
 
+<!-- ===== MODAL MOTORISTA (editar ficha) ===== -->
+<div class="modal-overlay" id="motModalOverlay" onclick="if(event.target===this)closeMotoristaModal()">
+  <div class="modal">
+    <h2>✏️ Editar Motorista</h2>
+    <div class="maq-grid" id="motModalGrid"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn-secondary" onclick="closeMotoristaModal()">Cancelar</button>
+      <button class="btn btn-primary" id="motSalvarBtn" onclick="salvarMotoristaEdit()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL EXCLUIR CAMINHÃO ===== -->
 <div class="modal-overlay" id="cmDelOverlay" onclick="if(event.target===this)closeCaminhaoDelete()">
   <div class="modal" style="max-width:420px">

@@ -52,14 +52,14 @@ function carregarPerfilELogar(user){
     if(res.error || !res.data){
       document.getElementById('loginError').textContent='Não foi possível carregar seu perfil. Contate o administrador.';
       document.getElementById('loginError').style.display='block';
-      sb.auth.signOut();
+      sb.auth.signOut({scope:'local'});
       return;
     }
     var perfil=res.data;
     if(!perfil.ativo){
       document.getElementById('loginError').textContent='Usuário desativado. Contate o administrador.';
       document.getElementById('loginError').style.display='block';
-      sb.auth.signOut();
+      sb.auth.signOut({scope:'local'});
       return;
     }
     currentUser=user.id;
@@ -151,7 +151,10 @@ function doChangePass(){
 }
 
 function doLogout(){
-  sb.auth.signOut();
+  // scope:'local' sai so deste navegador. O padrao do supabase-js e 'global',
+  // que encerra a sessao do usuario em TODOS os aparelhos: sair aqui derrubava
+  // o aplicativo de celular da pessoa, que no dia seguinte pedia a senha de novo.
+  sb.auth.signOut({scope:'local'});
   currentUser=null;
   currentUserData=null;
   dataLoaded=false;

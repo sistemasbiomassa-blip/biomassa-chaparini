@@ -135,7 +135,7 @@ function motoristaModoSelectHtml(stateVar, modoAtual, rebuildFn){
 function renderMotoristasTable(){
   var isAdmin = (currentUserData && currentUserData.perfil === 'ADMIN');
   var syncBox=document.getElementById('motSyncBox'); if(syncBox) syncBox.style.display=isAdmin?'block':'none';
-  var h='<table><thead><tr><th>Nome</th><th>CPF</th><th>CNH</th><th>Validade CNH</th><th>Status</th>'+(isAdmin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
+  var h='<table><thead><tr><th>Nome</th><th>CPF</th><th>CNH</th><th>Validade CNH</th><th>Admissão</th><th>Status</th>'+(isAdmin?'<th>Ações</th>':'')+'</tr></thead><tbody>';
   var listaOrdenada=MOTORISTAS_DATA.slice().sort(function(a,b){
     return String(a.NOME||'').localeCompare(String(b.NOME||''),'pt-BR');
   });
@@ -157,11 +157,17 @@ function renderMotoristasTable(){
     var nomeEsc=(r.NOME||'').replace(/'/g,"\\'");
     var acoesCol='';
     if(isAdmin){
-      acoesCol = inativo
-        ? '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="reativarMotorista(\''+nomeEsc+'\')">↩️ Reativar</button></td>'
-        : '<td><button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="desligarMotorista(\''+nomeEsc+'\')">🔴 Desligar</button></td>';
+      // Editar vem primeiro: completar a ficha é o que se faz todo dia aqui;
+      // desligar é eventual.
+      var btnEditar='<button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" title="Completar CPF, CNH, validade e admissão" onclick="openMotoristaModal(\''+nomeEsc+'\')">✏️ Editar</button>';
+      var btnStatus = inativo
+        ? '<button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="reativarMotorista(\''+nomeEsc+'\')">↩️ Reativar</button>'
+        : '<button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="desligarMotorista(\''+nomeEsc+'\')">🔴 Desligar</button>';
+      acoesCol='<td style="white-space:nowrap">'+btnEditar+' '+btnStatus+'</td>';
     }
-    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?_cnhDataBR(valCNH)+selo:'-')+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
+    var admissao=String(r.DATA_ADMISSAO||'').slice(0,10);
+    var admCol=/^\d{4}-\d{2}-\d{2}$/.test(admissao)?_cnhDataBR(admissao):'-';
+    h+='<tr><td style="font-weight:500">'+(r.NOME||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CPF||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+(r.CNH||'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px;'+valStyle+'">'+(valCNH?_cnhDataBR(valCNH)+selo:'-')+'</td><td style="font-family:JetBrains Mono,monospace;font-size:11px">'+admCol+'</td><td>'+statusCol+'</td>'+acoesCol+'</tr>';
   });
   h+='</tbody></table>';
   document.getElementById('tblMotoristasContainer').innerHTML=h;
@@ -288,4 +294,60 @@ function sincronizarMotoristasDaBase(){
     });
   }
   proximo();
+}
+
+// ---------- Editar a ficha do motorista (só ADMIN) ----------
+// Até aqui só havia "cadastrar novo" + desligar/reativar: a ficha de quem já estava
+// no sistema não tinha como ser completada (cadastrar de novo falha, NOME é único).
+// Era o que travava o aviso de CNH — a maioria das fichas nasceu só com o nome, pelo
+// "Importar motoristas da Base de Dados", e sem validade o aviso não tem o que cobrar.
+var _motEditNome=null;
+
+// Data que o <input type="date"> aceita: só AAAA-MM-DD, qualquer outra coisa vira vazio
+// (campo em branco é melhor do que data silenciosamente errada).
+function _motDataInput(v){ var s=String(v||'').slice(0,10); return /^\d{4}-\d{2}-\d{2}$/.test(s)?s:''; }
+function _motVal(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+
+function _motBuildFormEdit(row){
+  return ''+
+    '<div class="form-group"><label>Nome</label><input type="text" value="'+_motEsc(row.NOME||'')+'" disabled>'+
+      '<div style="font-size:11px;color:var(--text2);margin-top:4px">O nome é o que liga a ficha aos lançamentos — não muda aqui.</div></div>'+
+    '<div class="form-group"><label>CPF</label><input id="mot_cpf" type="text" maxlength="14" placeholder="000.000.000-00" value="'+_motEsc(row.CPF||'')+'"></div>'+
+    '<div class="form-group"><label>CNH</label><input id="mot_cnh" type="text" placeholder="Número da CNH" value="'+_motEsc(row.CNH||'')+'"></div>'+
+    '<div class="form-group"><label>Validade da CNH</label><input id="mot_validade" type="date" value="'+_motDataInput(row.VALIDADE_CNH)+'"></div>'+
+    '<div class="form-group"><label>Data de Admissão</label><input id="mot_admissao" type="date" value="'+_motDataInput(row.DATA_ADMISSAO)+'"></div>';
+}
+
+function openMotoristaModal(nome){
+  if(!currentUserData||currentUserData.perfil!=='ADMIN'){showToast('Apenas ADMIN pode editar motoristas',true);return;}
+  var row=_acharMotoristaPorNome(nome);
+  if(!row){showToast('Motorista não encontrado na ficha',true);return;}
+  _motEditNome=row.NOME; // o nome da ficha, não o do clique: é a chave do update
+  document.getElementById('motModalGrid').innerHTML=_motBuildFormEdit(row);
+  document.getElementById('motModalOverlay').classList.add('show');
+}
+function closeMotoristaModal(){
+  var ov=document.getElementById('motModalOverlay'); if(ov) ov.classList.remove('show');
+  _motEditNome=null;
+}
+
+function salvarMotoristaEdit(){
+  if(!_motEditNome) return;
+  var nome=_motEditNome;
+  var validade=_motVal('mot_validade'), admissao=_motVal('mot_admissao');
+  // Campo esvaziado vai como '' de propósito: o _limparPayload do data.js troca por
+  // null, que é como se apaga uma data no banco (string vazia em coluna date dá erro).
+  var row={ cpf:_motVal('mot_cpf'), cnh:_motVal('mot_cnh'), validade_cnh:validade, data_admissao:admissao };
+  var btn=document.getElementById('motSalvarBtn'); if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  saveToSheets('updateMotorista', {nome:nome, row:row}, function(ok,res){
+    if(btn){btn.disabled=false;btn.textContent='💾 Salvar';}
+    if(!ok){ showToast('❌ Não foi possível salvar: '+((res&&res.error)||'erro desconhecido'),true); return; }
+    // Só mexe na memória depois que o banco confirmou — se gravar antes, uma falha
+    // deixaria a tela mostrando um dado que não existe.
+    var rec=_acharMotoristaPorNome(nome);
+    if(rec){ rec.CPF=row.cpf; rec.CNH=row.cnh; rec.VALIDADE_CNH=validade; rec.DATA_ADMISSAO=admissao; }
+    showToast('✅ Ficha de '+nome+' atualizada');
+    closeMotoristaModal();
+    renderMotoristasTable(); // redesenha a tabela e o bloco de aviso de CNH juntos
+  });
 }
