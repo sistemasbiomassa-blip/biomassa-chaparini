@@ -266,6 +266,24 @@
   </div>
 </div>
 
+<!-- ===== IMPORTAR ROMANEIO DE DESCARGA EM PDF (js/romaneio-ui.js) ===== -->
+<div class="modal-overlay nf-modal" id="romOverlay" onclick="if(event.target===this)closeRomModal()">
+  <div class="modal" style="max-width:980px">
+    <h2>📄 Importar Romaneio de Descarga (PDF)</h2>
+    <div class="nf-intro">
+      Selecione os romaneios do cliente (pode ser vários de uma vez). Por enquanto leio a Ficha de Circulação da Cargill.<br>
+      Motorista, data, placa, nota, peso e horários vêm do papel; a fazenda de carga vem da regra do destino. Confira antes de importar.
+    </div>
+    <input type="file" id="romFiles" accept=".pdf,application/pdf" multiple onchange="romLerArquivos()">
+    <div id="romLista" style="margin-top:14px"></div>
+    <div id="romResumo" class="nf-resumo"></div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeRomModal()">Cancelar</button>
+      <button class="btn btn-primary" id="romImportBtn" onclick="romImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== DETALHE DAS NOTAS DE UM LANÇAMENTO (js/nf-ui.js) ===== -->
 <div class="modal-overlay nf-modal" id="nfDetOverlay" onclick="if(event.target===this)nfFecharDetalhe()">
   <div class="modal" style="max-width:860px">
@@ -576,7 +594,7 @@
         <div class="tab-content active" id="tabProdFin">
           <div class="form-card">
             <div class="form-section">
-              <div class="form-section-title">🚚 Viagem</div>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>🚚 Viagem</span><button class="btn btn-secondary btn-sm" id="romBtn" onclick="openRomModal()" style="display:none">📄 Importar Romaneio (PDF)</button></div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista *</label><select id="fMotorista"></select></div>
                 <div class="form-group"><label>Data *</label><input type="date" id="fData" onchange="checkDuplicadoCadastro()"></div>
@@ -1354,6 +1372,8 @@
 <script src="js/maq-custo.js"></script>
 <script src="js/app-init.js"></script>
 <script src="js/cadastro.js"></script>
+<script src="js/romaneio-parse.js"></script>
+<script src="js/romaneio-ui.js"></script>
 <script src="js/garantia.js"></script>
 <script src="js/pneus.js"></script>
 <script src="js/filters-common.js"></script>

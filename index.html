@@ -958,6 +958,24 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
   </div>
 </div>
 
+<!-- ===== IMPORTAR ROMANEIO DE DESCARGA EM PDF (js/romaneio-ui.js) ===== -->
+<div class="modal-overlay nf-modal" id="romOverlay" onclick="if(event.target===this)closeRomModal()">
+  <div class="modal" style="max-width:980px">
+    <h2>📄 Importar Romaneio de Descarga (PDF)</h2>
+    <div class="nf-intro">
+      Selecione os romaneios do cliente (pode ser vários de uma vez). Por enquanto leio a Ficha de Circulação da Cargill.<br>
+      Motorista, data, placa, nota, peso e horários vêm do papel; a fazenda de carga vem da regra do destino. Confira antes de importar.
+    </div>
+    <input type="file" id="romFiles" accept=".pdf,application/pdf" multiple onchange="romLerArquivos()">
+    <div id="romLista" style="margin-top:14px"></div>
+    <div id="romResumo" class="nf-resumo"></div>
+    <div class="nf-rodape">
+      <button class="btn-secondary" onclick="closeRomModal()">Cancelar</button>
+      <button class="btn btn-primary" id="romImportBtn" onclick="romImportar()" style="display:none">Importar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== DETALHE DAS NOTAS DE UM LANÇAMENTO (js/nf-ui.js) ===== -->
 <div class="modal-overlay nf-modal" id="nfDetOverlay" onclick="if(event.target===this)nfFecharDetalhe()">
   <div class="modal" style="max-width:860px">
@@ -1268,7 +1286,7 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
         <div class="tab-content active" id="tabProdFin">
           <div class="form-card">
             <div class="form-section">
-              <div class="form-section-title">🚚 Viagem</div>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span>🚚 Viagem</span><button class="btn btn-secondary btn-sm" id="romBtn" onclick="openRomModal()" style="display:none">📄 Importar Romaneio (PDF)</button></div>
               <div class="form-row">
                 <div class="form-group"><label>Motorista *</label><select id="fMotorista"></select></div>
                 <div class="form-group"><label>Data *</label><input type="date" id="fData" onchange="checkDuplicadoCadastro()"></div>
@@ -3585,6 +3603,9 @@ function enterApp(){
   var cruz=document.getElementById('freqCruzamentoBloco');
   if(cruz) cruz.style.display=isRh?'none':'';
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
+  // Importar romaneio de descarga (PDF): quem pode lançar viagem pode importar
+  var romBtn=document.getElementById('romBtn');
+  if(romBtn) romBtn.style.display=(typeof _romPodeLancar==='function' && _romPodeLancar())?'inline-flex':'none';
   // Sub-abas de domínio do Cadastro: a gestão delas é só de ADMIN. Exceção:
   // Caminhões, que o DIRETOR abre em modo leitura pra consultar a frota (o RLS
   // já libera o SELECT de caminhoes; o formulário de cadastro e a coluna Ações
@@ -7004,6 +7025,804 @@ function limparFormLocal(){
   document.getElementById('btnSalvarLocal').textContent='💾 SALVAR LOCAL';
 }
 
+</script>
+<script>
+// ============================================================
+// ===== ROMANEIO DE DESCARGA (PDF) — LEITURA =================
+// O cliente entrega a ficha de descarga em PDF (a Cargill chama de "Ficha de Circulação").
+// Esse PDF tem camada de TEXTO — não é imagem escaneada — então dá para ler com o pdf.js
+// dentro do próprio navegador: sem OCR, sem servidor, sem custo. É o mesmo princípio do
+// importador de nota fiscal (js/nf-parse.js), só que a origem é PDF em vez de XML.
+//
+// Aqui fica só a LEITURA e o casamento com o cadastro (nada de DOM, para dar para testar
+// fora do navegador). A tela de conferência e a gravação estão em js/romaneio-ui.js.
+//
+// Para ensinar um modelo novo de romaneio (outro cliente): acrescentar uma entrada em
+// ROM_MODELOS (como reconhecer + como ler) e, se for o caso, em ROM_UNIDADES (de qual
+// local de carga/descarga do sistema aquele papel está falando).
+// ============================================================
+
+// pdf.js é baixado só quando o usuário abre o importador — não pesa no carregamento do
+// sistema para quem nunca usa. Versão UMD (define window.pdfjsLib), fixada de propósito.
+var ROM_PDFJS_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+var ROM_PDFJS_WORKER='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var _romPdfJsProm=null;
+
+function romCarregarPdfJs(){
+  if(_romPdfJsProm) return _romPdfJsProm;
+  _romPdfJsProm=new Promise(function(ok,falhou){
+    if(typeof window!=='undefined' && window.pdfjsLib){ ok(window.pdfjsLib); return; }
+    var s=document.createElement('script');
+    s.src=ROM_PDFJS_URL;
+    s.onload=function(){
+      if(!window.pdfjsLib){ _romPdfJsProm=null; falhou(new Error('o leitor de PDF não carregou')); return; }
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc=ROM_PDFJS_WORKER;
+      ok(window.pdfjsLib);
+    };
+    s.onerror=function(){ _romPdfJsProm=null; falhou(new Error('não consegui baixar o leitor de PDF (verifique a internet)')); };
+    document.head.appendChild(s);
+  });
+  return _romPdfJsProm;
+}
+
+// ==================== TEXTO DO PDF ====================
+function _romNorm(s){ return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase(); }
+function _romDig(s){ return String(s==null?'':s).replace(/\D/g,''); }
+
+// Número do papel em formato brasileiro ("43.940" = 43940, "46,47" = 46,47).
+function _romNum(s){
+  if(s==null||s==='') return null;
+  var t=String(s).replace(/\s|KG/gi,'').replace(/\./g,'').replace(',','.');
+  var v=parseFloat(t);
+  return isNaN(v)?null:v;
+}
+
+// O pdf.js entrega pedaços soltos de texto com a coordenada de cada um. Aqui eles voltam
+// a ser LINHAS: agrupa por altura (Y) e ordena da esquerda para a direita (X), que é o
+// que deixa "Peso Líquido:  43.940 KG" inteiro numa linha só para o regex achar.
+function romLinhasDeItens(itens){
+  var grupos=[];
+  (itens||[]).forEach(function(it){
+    if(!it || !it.str || !it.str.trim()) return;
+    var x=it.transform[4], y=Math.round(it.transform[5]), g=null;
+    for(var i=0;i<grupos.length;i++){ if(Math.abs(grupos[i].y-y)<=2){ g=grupos[i]; break; } }
+    if(!g){ g={y:y,itens:[]}; grupos.push(g); }
+    g.itens.push({x:x,s:it.str});
+  });
+  grupos.sort(function(a,b){ return b.y-a.y; });                       // de cima para baixo
+  return grupos.map(function(g){
+    g.itens.sort(function(a,b){ return a.x-b.x; });
+    return g.itens.map(function(i){ return i.s.trim(); }).filter(Boolean).join('  ');
+  });
+}
+
+// ArrayBuffer do arquivo -> linhas de texto de todas as páginas.
+function romLerPdf(buf){
+  return romCarregarPdfJs().then(function(pdfjsLib){
+    return pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+  }).then(function(doc){
+    var paginas=[];
+    for(var p=1;p<=doc.numPages;p++) paginas.push(p);
+    return paginas.reduce(function(prom,p){
+      return prom.then(function(linhas){
+        return doc.getPage(p).then(function(pg){ return pg.getTextContent(); })
+          .then(function(tc){ return linhas.concat(romLinhasDeItens(tc.items)); });
+      });
+    }, Promise.resolve([]));
+  });
+}
+
+// ==================== DE QUE VIAGEM O PAPEL ESTÁ FALANDO ====================
+// O romaneio diz onde DESCARREGOU, nunca onde carregou. A fazenda de carga é uma regra
+// fixa por unidade de descarga, combinada com o usuário (Cargill Porto Nacional sempre
+// vem da Faz. Novo Acordo). Para outro cliente, acrescentar aqui.
+var ROM_UNIDADES=[
+  { contem:'CARGILL PORTO NACIONAL', descarga:'CARGILL - PORTO NACIONAL', carga:'FAZ. NOVO ACORDO' }
+];
+
+// Fazenda de carga combinada para um destino (usado quando o usuário troca o destino na
+// tela de conferência)
+function romCargaPadraoDoDestino(descarga){
+  for(var i=0;i<ROM_UNIDADES.length;i++){
+    if(ROM_UNIDADES[i].descarga===descarga) return ROM_UNIDADES[i].carga;
+  }
+  return '';
+}
+
+function romLocaisDaUnidade(unidade){
+  var u=_romNorm(unidade).replace(/[^A-Z0-9]+/g,' ').trim();
+  for(var i=0;i<ROM_UNIDADES.length;i++){
+    if(u.indexOf(ROM_UNIDADES[i].contem)>=0) return ROM_UNIDADES[i];
+  }
+  return null;
+}
+
+// ==================== MODELOS DE ROMANEIO ====================
+var ROM_MODELOS=[
+  { id:'cargill', nome:'Ficha de Circulação (Cargill)',
+    inicio:/FICHA DE CIRCULACAO/,                                     // onde começa cada ficha
+    reconhece:function(txtN){ return /FICHA DE CIRCULACAO/.test(txtN); },
+    ler:function(linhas,linhasN){ return _romLerCargill(linhas,linhasN); } }
+];
+
+// Procura um rótulo e devolve a primeira linha seguinte que casa com o padrão
+// (no papel, o valor vem sempre embaixo do rótulo, não ao lado).
+function _romDepoisDe(linhas,testeRotulo,re,limite){
+  for(var i=0;i<linhas.length;i++){
+    if(!testeRotulo(linhas[i])) continue;
+    for(var k=i; k<Math.min(i+(limite||3),linhas.length); k++){
+      var m=linhas[k].match(re);
+      if(m) return m[1].trim();
+    }
+  }
+  return null;
+}
+
+function _romLerCargill(linhas,linhasN){
+  var txtN=linhasN.join('\n');
+  var pega=function(re){ var m=txtN.match(re); return m?m[1].trim():null; };
+
+  // unidade = a linha logo abaixo do título ("CARGILL - PORTO NACIONAL FABRICA")
+  var unidade='';
+  for(var i=0;i<linhasN.length;i++){
+    if(/FICHA DE CIRCULACAO/.test(linhasN[i])){ unidade=(linhas[i+1]||'').trim(); break; }
+  }
+
+  // nota fiscal: vem como "16982/1" (número/série), na linha abaixo do rótulo NF/Série
+  var nota=_romDepoisDe(linhasN,function(l){ return l.indexOf('NF/SERIE')>=0; }, /\b(\d{3,9})\/\d{1,3}\b/, 3)
+        || pega(/\b(\d{3,9})\/\d{1,3}\b/);
+
+  // motorista: linha abaixo do bloco de rótulos "Motorista  CPF  Placa Veículo"
+  // (o rótulo "Motorista" aparece de novo lá embaixo, na assinatura — por isso exijo CPF
+  // na mesma linha). Nome lido da linha ORIGINAL, para não perder o acento de "JOÃO".
+  var motorista=null, cpf=null, iMot=-1;
+  for(var j=0;j<linhasN.length;j++){
+    if(linhasN[j].indexOf('MOTORISTA')>=0 && linhasN[j].indexOf('CPF')>=0){ iMot=j; break; }
+  }
+  if(iMot>=0){
+    for(var k=iMot+1;k<Math.min(iMot+3,linhas.length);k++){
+      var m=linhas[k].match(/^([A-ZÀ-Ÿ][A-ZÀ-Ÿ'´\. ]{4,60}?)\s{2,}(\d{11})\b/);
+      if(m){ motorista=m[1].trim(); cpf=m[2]; break; }
+    }
+  }
+
+  // placa do veículo: Mercosul (RSC4B41) ou antiga (ABC1234). A placa também aparece
+  // colada no LotID ("...004029RSC4B41"), mas ali não há fronteira de palavra antes.
+  var placa=null;
+  if(iMot>=0 && linhasN[iMot+1]){ var mp=linhasN[iMot+1].match(/\b([A-Z]{3}\d[A-Z0-9]\d{2})\b/); if(mp) placa=mp[1]; }
+  if(!placa) placa=pega(/\b([A-Z]{3}\d[A-Z0-9]\d{2})\b/);
+
+  return {
+    unidade: unidade,
+    ticket: _romDepoisDe(linhasN,function(l){ return l.indexOf('TICKET')>=0; }, /\b(\d{4,9})\b/, 2),
+    nota: nota,
+    produto: pega(/\b\d{4,6}\s*-\s*([A-Z][A-Z0-9 \-\/]{3,40}?)\s{2,}/),
+    motorista: motorista,
+    cpf: cpf,
+    placa: placa,
+    pesoLiquidoKg: _romNum(pega(/PESO LIQUIDO:\s*([\d\.,]+)\s*KG/)) ,
+    pesoOrigemKg:  _romNum(pega(/PESO ORIGEM:\s*([\d\.,]+)\s*KG/)),
+    descontoKg:    _romNum(pega(/DESCONTO:\s*([\d\.,]+)\s*KG/)),
+    entrada: pega(/DATA HORA ENTRADA:\s*(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2})/),
+    saida:   pega(/DATA HORA SAIDA:\s*(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2})/),
+    pesagem1: pega(/DATA HORA 1A PESAGEM:\s*(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2})/),
+    pesagem2: pega(/DATA HORA 2A PESAGEM:\s*(\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2})/)
+  };
+}
+
+// linhas -> campos crus do romaneio (ou {erro} quando não reconheço o papel)
+function romParse(linhas,arquivo){
+  var L=linhas||[], LN=L.map(_romNorm), txtN=LN.join('\n'), modelo=null;
+  // PDF escaneado (ou foto salva como PDF) é uma IMAGEM dentro do arquivo: não tem texto
+  // para ler. Vale a pena dizer isso com todas as letras, senão a mensagem genérica de
+  // "não reconheci" manda o usuário procurar erro no lugar errado.
+  if(txtN.replace(/\s+/g,'').length<60)
+    return { arquivo:arquivo, semTexto:true,
+             erro:'este PDF não tem texto dentro — é imagem escaneada ou foto. Para ler um destes eu preciso de OCR; peça o PDF original do cliente, ou digitalize com o texto pesquisável ligado' };
+  for(var i=0;i<ROM_MODELOS.length;i++){ if(ROM_MODELOS[i].reconhece(txtN)){ modelo=ROM_MODELOS[i]; break; } }
+  if(!modelo) return { arquivo:arquivo, erro:'não reconheci este PDF como romaneio (por enquanto leio a Ficha de Circulação da Cargill)' };
+  var cru=modelo.ler(L,LN);
+  cru.arquivo=arquivo; cru.modelo=modelo.id; cru.modeloNome=modelo.nome;
+  return cru;
+}
+
+// Um PDF pode trazer várias fichas juntas (quando alguém junta os romaneios do dia num
+// arquivo só). Corta o documento onde cada ficha começa e lê uma por uma.
+function romFatiarDocumento(linhas){
+  var LN=(linhas||[]).map(_romNorm), cortes=[];
+  for(var i=0;i<LN.length;i++){
+    for(var m=0;m<ROM_MODELOS.length;m++){
+      if(ROM_MODELOS[m].inicio && ROM_MODELOS[m].inicio.test(LN[i])){ cortes.push(i); break; }
+    }
+  }
+  if(cortes.length<2) return [linhas||[]];
+  return cortes.map(function(ini,k){
+    return linhas.slice(ini, k+1<cortes.length?cortes[k+1]:linhas.length);
+  });
+}
+
+// Arquivo inteiro -> uma lista de romaneios crus (um por ficha encontrada)
+function romParseArquivo(linhas,arquivo){
+  var fatias=romFatiarDocumento(linhas);
+  return fatias.map(function(f,i){
+    return romParse(f, arquivo + (fatias.length>1 ? (' — ficha '+(i+1)+'/'+fatias.length) : ''));
+  });
+}
+
+// ==================== CASAR COM O CADASTRO ====================
+function _romBaseMotoristas(){ return (typeof MOTORISTAS_DATA!=='undefined' && MOTORISTAS_DATA) ? MOTORISTAS_DATA : []; }
+function _romBasePlacas(){ return (typeof BASE!=='undefined' && BASE && BASE.placas) ? BASE.placas : []; }
+function _romBaseCadastro(){ return (typeof DB!=='undefined' && DB && DB.cadastro) ? DB.cadastro : []; }
+
+// Palavras úteis de um nome (sem acento, sem "DE"/"DOS"/"DA", que não identificam ninguém)
+function _romPalavras(nome){
+  return _romNorm(nome).replace(/[^A-Z ]+/g,' ').split(/\s+/)
+    .filter(function(p){ return p.length>2 && ['DOS','DAS','DEL'].indexOf(p)<0; });
+}
+function _romAtivo(m){ return !String(m.DATA_DESLIGAMENTO||'').trim(); }
+// escrito errado: usa a mesma régua do importador de nota fiscal quando ela está por perto
+function _romParecido(a,b){
+  if(typeof _nfParecido==='function') return _nfParecido(a,b);
+  if(!a||!b) return false;
+  if(a===b) return true;
+  var curto=a.length<b.length?a:b, longo=a.length<b.length?b:a;
+  return curto.length>=4 && curto.length/longo.length>=0.6 && longo.indexOf(curto)===0;
+}
+// quantas letras separam um nome do outro (para "CLAUDEMIRO" ficar com CLAUDEMIR, e não
+// com CLAUDECI, que também começa com CLAU)
+function _romDistancia(a,b){
+  if(typeof _nfDist==='function') return _nfDist(a,b);
+  a=String(a||''); b=String(b||'');
+  var linha=[], i, j;
+  for(j=0;j<=b.length;j++) linha[j]=j;
+  for(i=1;i<=a.length;i++){
+    var ant=linha[0]; linha[0]=i;
+    for(j=1;j<=b.length;j++){
+      var tmp=linha[j];
+      linha[j]=Math.min(linha[j]+1, linha[j-1]+1, ant+(a.charAt(i-1)===b.charAt(j-1)?0:1));
+      ant=tmp;
+    }
+  }
+  return linha[b.length];
+}
+
+// O romaneio traz o nome COMPLETO ("VALDESON PEREIRA DOS SANTOS"); no cadastro o mesmo
+// motorista pode estar só como "VALDESON". Então:
+//   1) CPF igual  -> certeza
+//   2) nome igual -> certeza
+//   3) todas as palavras do nome cadastrado aparecem no nome do romaneio -> palpite, e
+//      ganha o mais específico ("DIOMAR SOUSA MACIEL" vence "DIOMAR"); empate = não chuto
+//   4) primeiro nome escrito parecido -> palpite, só se for um só
+// Devolve {nome, modo:'cpf'|'exato'|'contido'|'parecido'|'', texto, opcoes:[nomes]}.
+function romCasarMotorista(nomePdf,cpfPdf){
+  var lista=_romBaseMotoristas(), cpf=_romDig(cpfPdf), vazio={nome:'',modo:'',texto:'',opcoes:[]};
+  var preferirAtivos=function(arr){
+    var ativos=arr.filter(function(x){ return _romAtivo(x.m||x); });
+    return ativos.length?ativos:arr;
+  };
+
+  if(cpf.length===11){
+    var porCpf=lista.filter(function(m){ return _romDig(m.CPF)===cpf; });
+    if(porCpf.length===1) return { nome:porCpf[0].NOME, modo:'cpf', texto:'CPF do romaneio bate com a ficha', opcoes:[] };
+  }
+
+  var alvo=_romPalavras(nomePdf);
+  if(!alvo.length) return vazio;
+
+  var iguais=lista.filter(function(m){ return _romPalavras(m.NOME).join(' ')===alvo.join(' '); });
+  if(iguais.length===1) return { nome:iguais[0].NOME, modo:'exato', texto:'nome igual ao do cadastro', opcoes:[] };
+
+  var contidos=[];
+  lista.forEach(function(m){
+    var p=_romPalavras(m.NOME);
+    if(!p.length) return;
+    var todas=p.every(function(w){ return alvo.indexOf(w)>=0; });
+    if(todas) contidos.push({ m:m, n:p.length });
+  });
+  if(contidos.length){
+    contidos=preferirAtivos(contidos);
+    var melhor=Math.max.apply(null, contidos.map(function(c){ return c.n; }));
+    var top=contidos.filter(function(c){ return c.n===melhor; });
+    if(top.length===1){
+      return { nome:top[0].m.NOME, modo:'contido',
+               texto:'o romaneio diz "'+nomePdf+'" — entendi que é este, confira', opcoes:[] };
+    }
+    return { nome:'', modo:'', texto:'"'+nomePdf+'" serve para mais de um motorista — escolha qual',
+             opcoes:top.map(function(c){ return c.m.NOME; }) };
+  }
+
+  var prim=alvo[0], quase=[];
+  lista.forEach(function(m){
+    var p=_romPalavras(m.NOME);
+    if(p.length && _romParecido(p[0],prim)) quase.push(m);
+  });
+  quase=preferirAtivos(quase);
+  if(quase.length){
+    // o mais perto em letras ganha, e só vira palpite se for um só nessa distância
+    var dist=quase.map(function(m){ return _romDistancia(_romPalavras(m.NOME)[0],prim); });
+    var menor=Math.min.apply(null,dist);
+    var top=quase.filter(function(m,i){ return dist[i]===menor; });
+    if(top.length===1){
+      return { nome:top[0].NOME, modo:'parecido',
+               texto:'o romaneio diz "'+nomePdf+'" — o parecido no cadastro é este, confira', opcoes:[] };
+    }
+  }
+  return { nome:'', modo:'', texto:'não achei "'+nomePdf+'" no cadastro — escolha o motorista',
+           opcoes:quase.map(function(m){ return m.NOME; }) };
+}
+
+// "18-11-2026 06:52" -> {data:'2026-11-18', hora:'06:52'}
+function _romDataHora(s){
+  var m=String(s||'').match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}:\d{2})$/);
+  return m ? { data:m[3]+'-'+m[2]+'-'+m[1], hora:m[4] } : null;
+}
+
+// Onde esta nota fiscal já aparece hoje. A coluna NOTA **não é única** no banco (a trava
+// saiu na migration 0003: o mesmo número de nota reaparece em viagens diferentes, e há
+// casos reais disso). Então "já lançado" é nota + placa; a mesma nota em OUTRA placa vira
+// só um aviso, não um bloqueio.
+function romNotaEmUso(nota,placa){
+  var vazio={ mesmaPlaca:[], outras:[] };
+  if(nota==null||nota==='') return vazio;
+  var n=Number(nota);
+  if(!n) return vazio;                                     // nota 0 é lixo antigo, ignora
+  var p=_romNorm(placa).replace(/\s+/g,'');
+  var res={ mesmaPlaca:[], outras:[] };
+  _romBaseCadastro().forEach(function(r){
+    if(r.NOTA==null||r.NOTA===''||Number(r.NOTA)!==n) return;
+    if(p && _romNorm(r.PLACA).replace(/\s+/g,'')===p) res.mesmaPlaca.push(r);
+    else res.outras.push(r);
+  });
+  return res;
+}
+
+// Lançamentos da mesma placa na mesma data (ou na véspera, para a viagem que entrou
+// 23:40 e saiu 00:20) que ainda não têm nota: são os candidatos a "complementar" em vez
+// de virar uma segunda linha da mesma viagem.
+function romCandidatosComplementar(placa,data,dataEntrada){
+  if(!placa||!data) return [];
+  var datas=[data];
+  if(dataEntrada && datas.indexOf(dataEntrada)<0) datas.push(dataEntrada);
+  var p=_romNorm(placa).replace(/\s+/g,'');
+  return _romBaseCadastro().filter(function(r){
+    if(_romNorm(r.PLACA).replace(/\s+/g,'')!==p) return false;
+    if(datas.indexOf(r.DATA)<0) return false;
+    return !(r.NOTA!=null && r.NOTA!=='');
+  });
+}
+
+// Campos crus -> o que vai para a tela de conferência, já casado com o cadastro.
+function romResolver(cru){
+  var g={ arquivo:cru.arquivo, cru:cru, erro:cru.erro||'', semTexto:!!cru.semTexto, avisos:[],
+          data:'', chegada:'', saida:'', nota:'', quantidade:null, placa:'', placaPdf:'',
+          motorista:'', motoristaPdf:'', motModo:'', motTexto:'', motOpcoes:[],
+          localCarga:'', localDescarga:'', destino:'novo', jaLancado:null, notaEmOutra:null,
+          candidatos:[], gravarCpf:false };
+  if(g.erro) return g;
+
+  var loc=romLocaisDaUnidade(cru.unidade);
+  if(loc){ g.localDescarga=loc.descarga; g.localCarga=loc.carga; }
+  else g.avisos.push('não sei a qual local do sistema corresponde "'+(cru.unidade||'?')+'" — escolha o local de descarga e o de carga');
+
+  g.placaPdf=cru.placa||'';
+  g.placa=(cru.placa && _romBasePlacas().indexOf(cru.placa)>=0)?cru.placa:'';
+  if(cru.placa && !g.placa) g.avisos.push('a placa '+cru.placa+' não está cadastrada — escolha a placa');
+  if(!cru.placa) g.avisos.push('não achei a placa no romaneio — escolha a placa');
+
+  g.motoristaPdf=cru.motorista||'';
+  var mt=romCasarMotorista(cru.motorista,cru.cpf);
+  g.motorista=mt.nome; g.motModo=mt.modo; g.motTexto=mt.texto; g.motOpcoes=mt.opcoes||[];
+
+  var ent=_romDataHora(cru.entrada), sai=_romDataHora(cru.saida), p2=_romDataHora(cru.pesagem2);
+  g.data=(sai&&sai.data)||(p2&&p2.data)||(ent&&ent.data)||'';
+  g.dataEntrada=ent?ent.data:'';
+  g.chegada=ent?ent.hora:'';
+  g.saida=sai?sai.hora:'';
+  if(!g.data) g.avisos.push('não achei a data de saída no romaneio — preencha a data');
+
+  g.nota=cru.nota||'';
+  if(!g.nota) g.avisos.push('não achei o número da nota no romaneio — preencha para o sistema travar duplicidade');
+
+  // o sistema guarda tonelada; o romaneio traz quilo
+  var emM3 = (typeof BASE!=='undefined' && BASE && BASE.clientesM3) ? BASE.clientesM3.indexOf(g.localDescarga)>=0 : false;
+  if(cru.pesoLiquidoKg!=null && !emM3) g.quantidade=Math.round(cru.pesoLiquidoKg/10)/100;
+  else if(emM3) g.avisos.push('este destino é medido em M³ e o romaneio traz quilo — preencha a quantidade à mão');
+  else g.avisos.push('não achei o peso líquido no romaneio — preencha a quantidade');
+
+  romAtualizarCruzamentos(g);
+  return g;
+}
+
+// Refaz as checagens que dependem do que já está lançado. Roda de novo sempre que o
+// usuário mexe em nota, placa ou data na tela de conferência.
+function romAtualizarCruzamentos(g){
+  var uso=romNotaEmUso(g.nota,g.placa);
+  g.jaLancado=uso.mesmaPlaca.length?uso.mesmaPlaca[0]:null;
+  g.notaEmOutra=uso.outras.length?uso.outras[0]:null;
+  g.candidatos=romCandidatosComplementar(g.placa,g.data,g.dataEntrada);
+  if(g.destino!=='novo' && !g.candidatos.some(function(r){ return String(r.ID)===String(g.destino); })) g.destino='novo';
+  return g;
+}
+
+// Tudo o que falta preencher antes de deixar importar ('' = pronto)
+function romFaltando(g){
+  if(g.erro) return 'erro';
+  if(g.jaLancado) return 'ja';
+  if(!g.motorista) return 'motorista';
+  if(!g.placa) return 'placa';
+  if(!g.data) return 'data';
+  if(g.quantidade==null||!(g.quantidade>0)) return 'quantidade';
+  if(!g.localDescarga) return 'local de descarga';
+  return '';
+}
+
+// Linha do cadastro (chaves "estilo planilha", as mesmas que o formulário usa)
+function romLinhaCadastro(g){
+  return {
+    'MOTORISTA':g.motorista, 'DATA':g.data, 'PLACA':g.placa,
+    'LOCAL CARGA':g.localCarga||null, 'LOCAL DESCARGA':g.localDescarga||null,
+    'NOTA':g.nota?Number(g.nota):null, 'QUANTIDADE':g.quantidade,
+    'CHEGADA CLIENTE':g.chegada||null, 'SAIDA CLIENTE':g.saida||null
+  };
+}
+
+// Ao COMPLEMENTAR um lançamento que já existe: só preenche o que está vazio lá. O que já
+// foi digitado por alguém nunca é sobrescrito — o que diverge volta em "conflitos" para
+// aparecer na tela.
+function romDiffComplemento(g,reg){
+  var novo=romLinhaCadastro(g), muda={}, conflitos=[];
+  Object.keys(novo).forEach(function(k){
+    var v=novo[k];
+    if(v===null||v===''||v===undefined) return;
+    var atual=reg[k];
+    var vazio=(atual===null||atual===''||atual===undefined);
+    if(vazio){ muda[k]=v; return; }
+    var igual = (k==='NOTA'||k==='QUANTIDADE') ? Number(atual)===Number(v) : String(atual)===String(v);
+    if(!igual) conflitos.push({campo:k, atual:atual, romaneio:v});
+  });
+  return { muda:muda, conflitos:conflitos };
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ romLinhasDeItens:romLinhasDeItens, romParse:romParse, romResolver:romResolver,
+                   romParseArquivo:romParseArquivo, romFatiarDocumento:romFatiarDocumento,
+                   romCasarMotorista:romCasarMotorista, romLocaisDaUnidade:romLocaisDaUnidade,
+                   romFaltando:romFaltando, romLinhaCadastro:romLinhaCadastro,
+                   romDiffComplemento:romDiffComplemento, romCandidatosComplementar:romCandidatosComplementar,
+                   romNotaEmUso:romNotaEmUso, romAtualizarCruzamentos:romAtualizarCruzamentos,
+                   _romNum:_romNum, _romDataHora:_romDataHora };
+}
+</script>
+<script>
+// ============================================================
+// ===== IMPORTAR ROMANEIO DE DESCARGA (PDF) — TELA ===========
+// Lê os PDFs (js/romaneio-parse.js), mostra um cartão por romaneio para conferência e
+// grava em cadastro. Nada entra sem o usuário ver antes: o que o sistema deduziu aparece
+// em verde (certeza) ou amarelo (palpite), e o que falta trava a importação.
+//
+// Dois cuidados que o romaneio exige e o XML da nota não tinha:
+//  - a mesma nota pode existir em outra viagem (a trava única saiu na migration 0003),
+//    então "já lançado" é nota + placa;
+//  - a viagem pode já ter sido lançada à mão (muitas vezes só com o diesel), e aí o certo
+//    é COMPLEMENTAR aquela linha em vez de criar uma segunda linha da mesma viagem.
+// ============================================================
+var _rom={ grupos:[], lendo:false };
+
+function _romPodeLancar(){
+  if(typeof podeEditarCadastro==='function') return podeEditarCadastro();
+  return !!(currentUserData && ['ADMIN','ANALISTA'].indexOf(currentUserData.perfil)>=0);
+}
+
+function openRomModal(){
+  if(!_romPodeLancar()){ showToast('Sem permissão',true); return; }
+  _rom={ grupos:[], lendo:false };
+  document.getElementById('romFiles').value='';
+  document.getElementById('romLista').innerHTML='';
+  document.getElementById('romResumo').innerHTML='';
+  document.getElementById('romImportBtn').style.display='none';
+  document.getElementById('romOverlay').classList.add('show');
+}
+function closeRomModal(){
+  document.getElementById('romOverlay').classList.remove('show');
+  _rom={ grupos:[], lendo:false };
+}
+
+// ==================== LEITURA DOS ARQUIVOS ====================
+function _romBytes(file){
+  return new Promise(function(ok,erro){
+    var fr=new FileReader();
+    fr.onload=function(e){ ok(e.target.result); };
+    fr.onerror=function(){ erro(new Error('não consegui abrir '+file.name)); };
+    fr.readAsArrayBuffer(file);
+  });
+}
+
+function _romLerArquivo(file){
+  return _romBytes(file)
+    .then(romLerPdf)
+    .then(function(linhas){ return romParseArquivo(linhas,file.name).map(romResolver); })
+    .catch(function(err){
+      return [{ arquivo:file.name, erro:(err&&err.message)||String(err), avisos:[],
+                candidatos:[], motOpcoes:[], destino:'novo' }];
+    });
+}
+
+function romLerArquivos(){
+  var arquivos=Array.prototype.slice.call(document.getElementById('romFiles').files||[]);
+  if(!arquivos.length) return;
+  _rom.lendo=true;
+  document.getElementById('romLista').innerHTML='<div class="nf-intro">⏳ Lendo '+arquivos.length+' arquivo(s)…</div>';
+  arquivos.reduce(function(prom,f){
+    return prom.then(function(acc){ return _romLerArquivo(f).then(function(gs){ return acc.concat(gs); }); });
+  }, Promise.resolve([])).then(function(gs){
+    _rom.lendo=false;
+    _rom.grupos=gs;
+    _romRender();
+    var fora=gs.filter(function(g){ return g.erro; }).length;
+    var ok=gs.length-fora;
+    if(fora && !ok) showToast('⚠️ Não consegui ler nenhum dos arquivos — veja o motivo na tela',true);
+    else if(fora) showToast('⚠️ '+ok+' romaneio(s) lido(s), '+fora+' com problema — veja na tela',true);
+    else showToast('✅ '+ok+' romaneio(s) lido(s) — confira antes de importar');
+  });
+}
+
+// ==================== TELA ====================
+function _romEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _romOpcoes(lista,sel,vazio){
+  var h='<option value="">'+(vazio||'— escolher —')+'</option>';
+  (lista||[]).forEach(function(v){
+    h+='<option value="'+_romEsc(v)+'"'+(String(v)===String(sel)?' selected':'')+'>'+_romEsc(v)+'</option>';
+  });
+  return h;
+}
+function _romResumoLinha(r){
+  var p=[];
+  if(r['CHEGADA CLIENTE']) p.push('cheg. '+r['CHEGADA CLIENTE']);
+  if(r['SAIDA CLIENTE']) p.push('saída '+r['SAIDA CLIENTE']);
+  if(r.QUANTIDADE) p.push('qtd '+(typeof fmt==='function'?fmt(r.QUANTIDADE):r.QUANTIDADE));
+  if(r['QTDADE LITROS']) p.push('diesel '+(typeof fmt==='function'?fmt(r['QTDADE LITROS']):r['QTDADE LITROS'])+' L');
+  if(r.NOTA) p.push('nota '+r.NOTA);
+  return (r.MOTORISTA||'sem motorista')+(p.length?(' · '+p.join(' · ')):' · linha sem dados');
+}
+
+function _romRender(){
+  var box=document.getElementById('romLista'), h='';
+  if(!_rom.grupos.length){ box.innerHTML=''; document.getElementById('romResumo').innerHTML=''; document.getElementById('romImportBtn').style.display='none'; return; }
+
+  _rom.grupos.forEach(function(g,i){
+    h+='<div class="nf-card">';
+    h+='<div class="nf-card-cab"><div><strong>'+_romEsc(g.arquivo||'arquivo')+'</strong>';
+    if(g.cru&&g.cru.modeloNome) h+='<div style="font-size:11px;color:var(--text2);margin-top:2px">'+_romEsc(g.cru.modeloNome)+(g.cru.ticket?(' · ticket '+_romEsc(g.cru.ticket)):'')+(g.cru.produto?(' · '+_romEsc(g.cru.produto)):'')+'</div>';
+    h+='</div></div>';
+
+    if(g.erro){
+      h+='<div class="nf-card-anexo" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)">❌ '+_romEsc(g.erro)+'</div></div>';
+      return;
+    }
+
+    if(g.jaLancado){
+      h+='<div class="nf-card-anexo" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)">'+
+         '⛔ <strong>Já lançado.</strong> A nota '+_romEsc(g.nota)+' da placa '+_romEsc(g.placa)+' já está no sistema: '+
+         _romEsc(_romResumoLinha(g.jaLancado))+' ('+_romEsc(typeof formatDateBR==='function'?formatDateBR(g.jaLancado.DATA):g.jaLancado.DATA)+'). Este romaneio não será importado.</div>';
+    } else if(g.notaEmOutra){
+      h+='<div class="nf-card-anexo">⚠️ A nota '+_romEsc(g.nota)+' já aparece em outra viagem ('+_romEsc(g.notaEmOutra.PLACA)+', '+
+         _romEsc(typeof formatDateBR==='function'?formatDateBR(g.notaEmOutra.DATA):g.notaEmOutra.DATA)+'). Acontece, mas confira.</div>';
+    }
+
+    (g.avisos||[]).forEach(function(a){ h+='<div class="nf-alerta" style="margin:6px 0">⚠️ '+_romEsc(a)+'</div>'; });
+
+    // ---- campos conferíveis ----
+    var motLista=(typeof BASE!=='undefined'&&BASE.motoristas)?BASE.motoristas:[];
+    var plLista=(typeof BASE!=='undefined'&&BASE.placas)?BASE.placas:[];
+    var cgLista=(typeof BASE!=='undefined'&&BASE.localCarga)?BASE.localCarga:[];
+    var ddLista=(typeof BASE!=='undefined'&&BASE.localDescarga)?BASE.localDescarga:[];
+    var unidade=(typeof getUnit==='function')?getUnit(g.localDescarga):'TON';
+
+    h+='<div class="nf-card-campos">';
+    h+='<div><label>Motorista</label><select onchange="romSet('+i+',\'motorista\',this.value)">'+_romOpcoes(motLista,g.motorista)+'</select>';
+    if(g.motorista && (g.motModo==='cpf'||g.motModo==='exato')) h+='<span class="nf-lido">✓ '+_romEsc(g.motTexto)+'</span>';
+    else if(g.motTexto) h+='<span class="nf-alerta">⚠️ '+_romEsc(g.motTexto)+'</span>';
+    if(g.motorista && g.cru && g.cru.cpf && _romFichaSemCpf(g.motorista)){
+      h+='<label style="text-transform:none;letter-spacing:0;font-weight:400;margin-top:6px;display:flex;gap:6px;align-items:center;color:var(--text2)">'+
+         '<input type="checkbox" '+(g.gravarCpf?'checked':'')+' onchange="romSet('+i+',\'gravarCpf\',this.checked)"> '+
+         'gravar o CPF '+_romEsc(_romCpfBonito(g.cru.cpf))+' na ficha dele</label>';
+    }
+    h+='</div>';
+    h+='<div><label>Data</label><input type="date" value="'+_romEsc(g.data)+'" onchange="romSet('+i+',\'data\',this.value)"></div>';
+    h+='<div><label>Placa</label><select onchange="romSet('+i+',\'placa\',this.value)">'+_romOpcoes(plLista,g.placa)+'</select>'+
+       (g.placa&&g.placaPdf===g.placa?'<span class="nf-lido">✓ lida do romaneio</span>':'')+'</div>';
+    h+='<div><label>Nota fiscal</label><input type="number" value="'+_romEsc(g.nota)+'" onchange="romSet('+i+',\'nota\',this.value)"></div>';
+    h+='<div><label>Quantidade ('+_romEsc(unidade)+')</label><input type="text" inputmode="decimal" value="'+
+       _romEsc(g.quantidade==null?'':(typeof fmt==='function'?fmt(g.quantidade):g.quantidade))+'" onchange="romSet('+i+',\'quantidade\',this.value)">'+
+       (g.cru&&g.cru.pesoLiquidoKg!=null?'<span class="nf-lido">✓ '+_romEsc(typeof fmt==='function'?fmt(g.cru.pesoLiquidoKg,0):g.cru.pesoLiquidoKg)+' kg no romaneio</span>':'')+'</div>';
+    h+='<div><label>Local de carga</label><select onchange="romSet('+i+',\'localCarga\',this.value)">'+_romOpcoes(cgLista,g.localCarga)+'</select>'+
+       (g.localCarga?'<span class="nf-lido">✓ regra: descarga na '+_romEsc(g.localDescarga)+' carrega aqui</span>':'')+'</div>';
+    h+='<div><label>Local de descarga</label><select onchange="romSet('+i+',\'localDescarga\',this.value)">'+_romOpcoes(ddLista,g.localDescarga)+'</select></div>';
+    h+='<div><label>Chegada no cliente</label><input type="time" value="'+_romEsc(g.chegada)+'" onchange="romSet('+i+',\'chegada\',this.value)"></div>';
+    h+='<div><label>Saída do cliente</label><input type="time" value="'+_romEsc(g.saida)+'" onchange="romSet('+i+',\'saida\',this.value)"></div>';
+    h+='</div>';
+
+    // ---- nova viagem x complementar lançamento existente ----
+    if(!g.jaLancado && g.candidatos && g.candidatos.length){
+      h+='<div class="nf-card-anexo"><div style="margin-bottom:6px">Esta placa já tem lançamento sem nota nesta data. É a mesma viagem?</div>';
+      h+='<select onchange="romSet('+i+',\'destino\',this.value)" style="width:100%">';
+      h+='<option value="novo"'+(g.destino==='novo'?' selected':'')+'>🆕 Lançar como viagem nova</option>';
+      g.candidatos.forEach(function(r){
+        // o RLS só deixa o ANALISTA/DIRETOR mexer no próprio lançamento: melhor a opção
+        // vir travada aqui do que a gravação ser recusada lá no banco
+        var meu=(typeof ehDonoLancamento==='function')?ehDonoLancamento(r.USUARIO):true;
+        h+='<option value="'+_romEsc(r.ID)+'"'+(String(g.destino)===String(r.ID)?' selected':'')+(meu?'':' disabled')+'>'+
+           (meu?'➕ Complementar: ':'🔒 ')+_romEsc(_romResumoLinha(r))+(meu?'':' — lançado por '+_romEsc(r.USUARIO||'outro usuário'))+'</option>';
+      });
+      h+='</select>';
+      if(g.destino!=='novo'){
+        var reg=_romRegistro(g.destino);
+        if(reg){
+          var d=romDiffComplemento(g,reg);
+          var campos=Object.keys(d.muda);
+          h+='<div style="font-size:11.5px;margin-top:8px;line-height:1.6">'+
+             (campos.length?('preenche o que está em branco lá: <strong>'+_romEsc(campos.join(', '))+'</strong>'):'não há nada em branco para preencher nessa linha');
+          d.conflitos.forEach(function(c){
+            h+='<br><span class="nf-alerta">⚠️ '+_romEsc(c.campo)+': a linha tem "'+_romEsc(c.atual)+'" e o romaneio diz "'+_romEsc(c.romaneio)+'" — mantenho o que já está lá</span>';
+          });
+          h+='</div>';
+        }
+      }
+      h+='</div>';
+    }
+
+    var falta=romFaltando(g);
+    if(falta && falta!=='ja' && falta!=='erro') h+='<div class="nf-alerta" style="margin-top:8px">⚠️ falta preencher: '+_romEsc(falta)+'</div>';
+    h+='</div>';
+  });
+
+  box.innerHTML=h;
+  _romResumo();
+}
+
+function _romResumo(){
+  var prontos=0, jaLancados=0, faltando=0, erros=0, complementos=0;
+  _rom.grupos.forEach(function(g){
+    var f=romFaltando(g);
+    if(f==='erro') erros++;
+    else if(f==='ja') jaLancados++;
+    else if(f) faltando++;
+    else { prontos++; if(g.destino!=='novo') complementos++; }
+  });
+  var p=[];
+  if(prontos) p.push('<strong>'+prontos+'</strong> pronto(s) para importar'+(complementos?(' — '+complementos+' complementando lançamento existente'):''));
+  if(faltando) p.push(faltando+' esperando conferência');
+  if(jaLancados) p.push(jaLancados+' já lançado(s)');
+  if(erros) p.push(erros+' não lido(s)');
+  document.getElementById('romResumo').innerHTML=p.join(' · ');
+  document.getElementById('romImportBtn').style.display=prontos?'':'none';
+  document.getElementById('romImportBtn').textContent='Importar '+prontos+' romaneio(s)';
+}
+
+function _romRegistro(id){
+  var lista=(typeof DB!=='undefined'&&DB.cadastro)?DB.cadastro:[];
+  for(var i=0;i<lista.length;i++){ if(String(lista[i].ID)===String(id)) return lista[i]; }
+  return null;
+}
+function _romFichaSemCpf(nome){
+  var lista=(typeof MOTORISTAS_DATA!=='undefined'&&MOTORISTAS_DATA)?MOTORISTAS_DATA:[];
+  for(var i=0;i<lista.length;i++){
+    if(String(lista[i].NOME)===String(nome)) return !String(lista[i].CPF||'').trim();
+  }
+  return false;
+}
+function _romCpfBonito(cpf){
+  var d=String(cpf||'').replace(/\D/g,'');
+  return d.length===11 ? d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9) : cpf;
+}
+
+// Um ponto só de alteração: muda o campo, refaz os cruzamentos e redesenha.
+function romSet(i,campo,valor){
+  var g=_rom.grupos[i];
+  if(!g) return;
+  if(campo==='quantidade'){
+    g.quantidade=(valor==='')?null:(typeof num==='function'?num(valor):parseFloat(valor));
+  } else if(campo==='gravarCpf'){
+    g.gravarCpf=!!valor;
+  } else if(campo==='localDescarga'){
+    g.localDescarga=valor;
+    var padrao=romCargaPadraoDoDestino(valor);                 // destino conhecido traz a fazenda junto
+    if(padrao && !g.localCarga) g.localCarga=padrao;
+  } else if(campo==='motorista'){
+    g.motorista=valor;
+    g.motModo=valor?'manual':'';
+    g.motTexto=valor?'escolhido por você':('o romaneio diz "'+(g.motoristaPdf||'?')+'"');
+    g.gravarCpf=false;                                         // outro motorista, outro CPF
+  } else {
+    g[campo]=valor;
+  }
+  romAtualizarCruzamentos(g);
+  _romRender();
+}
+
+// ==================== GRAVAÇÃO ====================
+function _romGravar(action,dados){
+  return new Promise(function(ok,erro){
+    saveToSheets(action,dados,function(bom,res){
+      if(bom) ok(res); else erro(new Error((res&&res.error)||'erro desconhecido'));
+    });
+  });
+}
+
+function romImportar(){
+  if(!_romPodeLancar()){ showToast('Sem permissão',true); return; }
+  var prontos=_rom.grupos.filter(function(g){ return !romFaltando(g); });
+  if(!prontos.length){ showToast('Nada pronto para importar',true); return; }
+  var btn=document.getElementById('romImportBtn');
+  btn.disabled=true; btn.textContent='Importando…';
+
+  var ok=0, falhas=[];
+  prontos.reduce(function(prom,g){
+    return prom.then(function(){
+      var passo = (g.destino==='novo') ? _romGravarNovo(g) : _romGravarComplemento(g);
+      return passo.then(function(){ ok++; return _romGravarCpf(g); })
+        .catch(function(err){ falhas.push({ arquivo:g.arquivo, motivo:err.message||String(err) }); });
+    });
+  }, Promise.resolve()).then(function(){
+    btn.disabled=false;
+    loadFromSheets(function(){
+      _romDepoisDeImportar();
+      if(!falhas.length){ showToast('✅ '+ok+' romaneio(s) importado(s)!'); closeRomModal(); return; }
+      console.warn('Romaneios recusados:',falhas);
+      showToast('⚠️ '+ok+' importado(s), '+falhas.length+' com erro: '+falhas[0].motivo,true);
+      _rom.grupos=_rom.grupos.filter(function(g){
+        return falhas.some(function(f){ return f.arquivo===g.arquivo; });
+      });
+      _rom.grupos.forEach(function(g){
+        var f=falhas.filter(function(x){ return x.arquivo===g.arquivo; })[0];
+        g.erro='não gravou: '+f.motivo;
+      });
+      _romRender();
+    });
+  });
+}
+
+function _romGravarNovo(g){
+  var rec=romLinhaCadastro(g);
+  rec['USUARIO']=currentUserData?currentUserData.nome:currentUser;
+  rec['DATA_REGISTRO']=new Date().toLocaleString('pt-BR');
+  return _romGravar('addCadastro',rec).then(function(res){
+    var salvo=res&&res[0];
+    if(salvo) rec.ID=salvo.id;
+    if(typeof DB!=='undefined'&&DB.cadastro) DB.cadastro.push(rec);
+  });
+}
+
+function _romGravarComplemento(g){
+  var reg=_romRegistro(g.destino);
+  if(!reg) return Promise.reject(new Error('o lançamento a complementar sumiu da lista — recarregue a página'));
+  if(typeof ehDonoLancamento==='function' && !ehDonoLancamento(reg.USUARIO))
+    return Promise.reject(new Error('este lançamento é de '+(reg.USUARIO||'outro usuário')+' — só o ADMIN pode complementar'));
+  var d=romDiffComplemento(g,reg);
+  if(!Object.keys(d.muda).length) return Promise.resolve();            // nada a fazer
+  return _romGravar('updateCadastro',{ id:reg.ID, row:d.muda }).then(function(){
+    Object.keys(d.muda).forEach(function(k){ reg[k]=d.muda[k]; });
+  });
+}
+
+// CPF do romaneio vai para a ficha do motorista quando ela está sem — o cadastro vai se
+// completando sozinho, e o próximo romaneio dele casa por CPF, sem palpite de nome.
+function _romGravarCpf(g){
+  if(!g.gravarCpf || !g.motorista || !(g.cru&&g.cru.cpf)) return Promise.resolve();
+  var cpf=_romCpfBonito(g.cru.cpf);
+  return _romGravar('updateMotorista',{ nome:g.motorista, row:{ CPF:cpf } }).then(function(){
+    (MOTORISTAS_DATA||[]).forEach(function(m){ if(m.NOME===g.motorista) m.CPF=cpf; });
+  }).catch(function(err){ console.warn('não gravei o CPF de',g.motorista,err); });
+}
+
+function _romDepoisDeImportar(){
+  var ativo=document.querySelector('.nav-item.active');
+  var pg=ativo?ativo.getAttribute('data-page'):'';
+  if(pg==='producao'&&typeof buildProducao==='function') buildProducao();
+  else if(pg==='financeiro'&&typeof buildFinanceiro==='function') buildFinanceiro();
+  else if(pg==='historico'&&typeof buildHistorico==='function') buildHistorico();
+  else if(pg==='tempoespera'&&typeof buildTempoEspera==='function') buildTempoEspera();
+}
 </script>
 <script>
 // ==================== GARANTIA (Cadastro) ====================

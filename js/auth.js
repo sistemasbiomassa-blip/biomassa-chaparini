@@ -103,6 +103,9 @@ function enterApp(){
   var cruz=document.getElementById('freqCruzamentoBloco');
   if(cruz) cruz.style.display=isRh?'none':'';
   document.getElementById('btnImport').style.display=isAdmin?'inline-flex':'none';
+  // Importar romaneio de descarga (PDF): quem pode lançar viagem pode importar
+  var romBtn=document.getElementById('romBtn');
+  if(romBtn) romBtn.style.display=(typeof _romPodeLancar==='function' && _romPodeLancar())?'inline-flex':'none';
   // Sub-abas de domínio do Cadastro: a gestão delas é só de ADMIN. Exceção:
   // Caminhões, que o DIRETOR abre em modo leitura pra consultar a frota (o RLS
   // já libera o SELECT de caminhoes; o formulário de cadastro e a coluna Ações
