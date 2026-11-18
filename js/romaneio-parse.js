@@ -654,9 +654,14 @@ function romModelosConhecidos(){
 }
 
 // Linha do cadastro (chaves "estilo planilha", as mesmas que o formulário usa)
+// ENTREGA = 1: a aba Produção só conta a viagem que tem ENTREGA **e** QUANTIDADE
+// (js/producao.js: `r.ENTREGA && r.QUANTIDADE>0`). Cada romaneio é uma descarga, ou seja,
+// uma entrega — e é assim que o campo vem preenchido em todos os lançamentos feitos à mão
+// (1.012 de 1.012 com quantidade desde setembro). Sem isso o lançamento existe, aparece no
+// Histórico, mas some da Produção.
 function romLinhaCadastro(g){
   return {
-    'MOTORISTA':g.motorista, 'DATA':g.data, 'PLACA':g.placa,
+    'MOTORISTA':g.motorista, 'DATA':g.data, 'PLACA':g.placa, 'ENTREGA':1,
     'LOCAL CARGA':g.localCarga||null, 'LOCAL DESCARGA':g.localDescarga||null,
     'NOTA':g.nota?Number(g.nota):null, 'QUANTIDADE':g.quantidade,
     'CHEGADA CLIENTE':g.chegada||null, 'SAIDA CLIENTE':g.saida||null

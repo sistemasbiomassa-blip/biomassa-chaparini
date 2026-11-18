@@ -272,7 +272,8 @@
     <h2>📄 Importar Romaneio de Descarga (PDF)</h2>
     <div class="nf-intro">
       Selecione os romaneios do cliente (pode ser vários de uma vez). <span id="romModelos"></span><br>
-      Motorista, data, placa, nota, peso e horários vêm do papel. A fazenda de carga vem da regra do destino quando ela é sempre a mesma; senão, é um palpite pelo histórico da placa. Confira antes de importar.
+      Motorista, data, placa, nota, peso e horários vêm do papel. A fazenda de carga vem da regra do destino quando ela é sempre a mesma; senão, é um palpite pelo histórico da placa. Confira antes de importar.<br>
+      Cada romaneio entra como <strong>1 entrega</strong>, que é o que faz a viagem aparecer na aba Produção.
     </div>
     <input type="file" id="romFiles" accept=".pdf,application/pdf" multiple onchange="romLerArquivos()">
     <div id="romLista" style="margin-top:14px"></div>
