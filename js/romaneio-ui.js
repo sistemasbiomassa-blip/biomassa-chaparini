@@ -24,6 +24,10 @@ function openRomModal(){
   document.getElementById('romLista').innerHTML='';
   document.getElementById('romResumo').innerHTML='';
   document.getElementById('romImportBtn').style.display='none';
+  // a lista de modelos sai da própria tabela de modelos: ensinar um cliente novo não
+  // deixa o texto da tela desatualizado
+  var mods=document.getElementById('romModelos');
+  if(mods) mods.textContent='Sei ler: '+romModelosConhecidos().join(' · ')+'.';
   document.getElementById('romOverlay').classList.add('show');
 }
 function closeRomModal(){
@@ -139,8 +143,11 @@ function _romRender(){
     h+='<div><label>Quantidade ('+_romEsc(unidade)+')</label><input type="text" inputmode="decimal" value="'+
        _romEsc(g.quantidade==null?'':(typeof fmt==='function'?fmt(g.quantidade):g.quantidade))+'" onchange="romSet('+i+',\'quantidade\',this.value)">'+
        (g.cru&&g.cru.pesoLiquidoKg!=null?'<span class="nf-lido">✓ '+_romEsc(typeof fmt==='function'?fmt(g.cru.pesoLiquidoKg,0):g.cru.pesoLiquidoKg)+' kg no romaneio</span>':'')+'</div>';
-    h+='<div><label>Local de carga</label><select onchange="romSet('+i+',\'localCarga\',this.value)">'+_romOpcoes(cgLista,g.localCarga)+'</select>'+
-       (g.localCarga?'<span class="nf-lido">✓ regra: descarga na '+_romEsc(g.localDescarga)+' carrega aqui</span>':'')+'</div>';
+    // o aviso manda: regra que briga com o histórico deixa de ser selo verde
+    var cargaNota='';
+    if(g.localCarga && g.cargaTexto) cargaNota='<span class="nf-alerta">⚠️ '+_romEsc(g.cargaTexto)+'</span>';
+    else if(g.localCarga && g.cargaFixa) cargaNota='<span class="nf-lido">✓ regra: descarga na '+_romEsc(g.localDescarga)+' carrega aqui</span>';
+    h+='<div><label>Local de carga</label><select onchange="romSet('+i+',\'localCarga\',this.value)">'+_romOpcoes(cgLista,g.localCarga)+'</select>'+cargaNota+'</div>';
     h+='<div><label>Local de descarga</label><select onchange="romSet('+i+',\'localDescarga\',this.value)">'+_romOpcoes(ddLista,g.localDescarga)+'</select></div>';
     h+='<div><label>Chegada no cliente</label><input type="time" value="'+_romEsc(g.chegada)+'" onchange="romSet('+i+',\'chegada\',this.value)"></div>';
     h+='<div><label>Saída do cliente</label><input type="time" value="'+_romEsc(g.saida)+'" onchange="romSet('+i+',\'saida\',this.value)"></div>';
@@ -230,8 +237,17 @@ function romSet(i,campo,valor){
     g.gravarCpf=!!valor;
   } else if(campo==='localDescarga'){
     g.localDescarga=valor;
-    var padrao=romCargaPadraoDoDestino(valor);                 // destino conhecido traz a fazenda junto
-    if(padrao && !g.localCarga) g.localCarga=padrao;
+    var padrao=romCargaPadraoDoDestino(valor);                 // destino com fazenda fixa
+    g.cargaFixa=!!padrao;
+    if(padrao){ g.localCarga=padrao; g.cargaTexto=''; }
+    else if(!g.localCarga){                                     // senão, palpite pelo histórico
+      var sug=romSugerirCarga(g.placa,valor,g.data);
+      if(sug){ g.localCarga=sug.carga; g.cargaTexto=sug.texto; }
+    }
+  } else if(campo==='localCarga'){
+    g.localCarga=valor;
+    g.cargaTexto=valor?'':g.cargaTexto;                         // escolha do usuário não é palpite
+    g.cargaFixa=false;
   } else if(campo==='motorista'){
     g.motorista=valor;
     g.motModo=valor?'manual':'';

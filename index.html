@@ -963,8 +963,8 @@ table.ger-tab .num{font-family:'JetBrains Mono',monospace;font-variant-numeric:t
   <div class="modal" style="max-width:980px">
     <h2>📄 Importar Romaneio de Descarga (PDF)</h2>
     <div class="nf-intro">
-      Selecione os romaneios do cliente (pode ser vários de uma vez). Por enquanto leio a Ficha de Circulação da Cargill.<br>
-      Motorista, data, placa, nota, peso e horários vêm do papel; a fazenda de carga vem da regra do destino. Confira antes de importar.
+      Selecione os romaneios do cliente (pode ser vários de uma vez). <span id="romModelos"></span><br>
+      Motorista, data, placa, nota, peso e horários vêm do papel. A fazenda de carga vem da regra do destino quando ela é sempre a mesma; senão, é um palpite pelo histórico da placa. Confira antes de importar.
     </div>
     <input type="file" id="romFiles" accept=".pdf,application/pdf" multiple onchange="romLerArquivos()">
     <div id="romLista" style="margin-top:14px"></div>
@@ -7113,11 +7113,15 @@ function romLerPdf(buf){
 }
 
 // ==================== DE QUE VIAGEM O PAPEL ESTÁ FALANDO ====================
-// O romaneio diz onde DESCARREGOU, nunca onde carregou. A fazenda de carga é uma regra
-// fixa por unidade de descarga, combinada com o usuário (Cargill Porto Nacional sempre
-// vem da Faz. Novo Acordo). Para outro cliente, acrescentar aqui.
+// O romaneio diz onde DESCARREGOU, nunca onde carregou.
+// `carga` é a fazenda de origem quando ela é SEMPRE a mesma para aquele destino (regra
+// combinada com o usuário: o que descarrega na Cargill Porto Nacional saiu da Faz. Novo
+// Acordo). Destino que recebe de várias fazendas fica com `carga` vazia — aí a origem é
+// sugerida pelo histórico da placa (romSugerirCarga) e entra como palpite, não como
+// certeza. O Fazendão recebe de Santiago, Alvorada, Bacaba, Casa de Tábua e Depósito.
 var ROM_UNIDADES=[
-  { contem:'CARGILL PORTO NACIONAL', descarga:'CARGILL - PORTO NACIONAL', carga:'FAZ. NOVO ACORDO' }
+  { contem:'CARGILL PORTO NACIONAL',  descarga:'CARGILL - PORTO NACIONAL', carga:'FAZ. NOVO ACORDO' },
+  { contem:'FAZENDAO LUZIMANGUES',    descarga:'FAZENDÃO - PNL',           carga:'' }
 ];
 
 // Fazenda de carga combinada para um destino (usado quando o usuário troca o destino na
@@ -7142,8 +7146,26 @@ var ROM_MODELOS=[
   { id:'cargill', nome:'Ficha de Circulação (Cargill)',
     inicio:/FICHA DE CIRCULACAO/,                                     // onde começa cada ficha
     reconhece:function(txtN){ return /FICHA DE CIRCULACAO/.test(txtN); },
-    ler:function(linhas,linhasN){ return _romLerCargill(linhas,linhasN); } }
+    ler:function(linhas,linhasN){ return _romLerCargill(linhas,linhasN); } },
+  { id:'fazendao', nome:'Romaneio de Recebimento (Fazendão)',
+    inicio:/ROMANEIO DE RECEBIMENTO/,
+    reconhece:function(txtN){ return /ROMANEIO DE RECEBIMENTO/.test(txtN); },
+    ler:function(linhas,linhasN){ return _romLerFazendao(linhas,linhasN); } }
 ];
+
+// Números de uma linha, separados por colunas (o PDF separa coluna com 2+ espaços).
+// Só o que é número puro: "Total de 593 SACAS de 60kg" não é peso.
+function _romNumsDaLinha(linha){
+  return String(linha||'').split(/\s{2,}/)
+    .map(function(t){ return t.trim(); })
+    .filter(function(t){ return /^\d{1,3}(\.\d{3})*(,\d+)?$|^\d+$/.test(t); })
+    .map(_romNum);
+}
+// Índice da linha de rótulos (o valor vem na linha de baixo)
+function _romIdxRotulo(linhasN,teste){
+  for(var i=0;i<linhasN.length;i++){ if(teste(linhasN[i])) return i; }
+  return -1;
+}
 
 // Procura um rótulo e devolve a primeira linha seguinte que casa com o padrão
 // (no papel, o valor vem sempre embaixo do rótulo, não ao lado).
@@ -7210,6 +7232,100 @@ function _romLerCargill(linhas,linhasN){
   };
 }
 
+// ---- Fazendão: "Romaneio de Recebimento" ----
+// Diferenças que importam em relação à Cargill:
+//  - três horários no cabeçalho (Chegada na portaria, Entrada na balança, Saída). O que
+//    vai para CHEGADA CLIENTE é a **Chegada** — é ela que mede a espera, e é o que o
+//    pessoal já digitava à mão (lançamento 51342: chegada 09:43, não a entrada 09:50);
+//  - o peso que vale é o Total Corrigido (líquido menos desconto); quando não há desconto
+//    o papel imprime só dois números na linha, em vez de três;
+//  - o destino recebe de várias fazendas, então não há regra fixa de local de carga.
+function _romLerFazendao(linhas,linhasN){
+  // unidade: no cabeçalho, a linha toda em maiúsculas com hífen (o endereço tem vírgula
+  // e a cidade tem minúsculas)
+  var unidade='';
+  for(var i=0;i<Math.min(8,linhas.length);i++){
+    var L=linhas[i].trim();
+    if(!L || /ROMANEIO|RECEBIMENTO/i.test(L) || /[a-zà-ÿ]/.test(L) || L.indexOf(',')>=0) continue;
+    if(/^[A-ZÀ-Ÿ0-9][A-ZÀ-Ÿ0-9 .\/]*-[A-ZÀ-Ÿ0-9 .\/]+$/.test(L)){ unidade=L; break; }
+  }
+
+  // Romaneio · Depósito · Chegada · Entrada · Saída (valores na linha de baixo)
+  var numero=null, chegada=null, entradaBalanca=null, saida=null;
+  var iCab=_romIdxRotulo(linhasN,function(l){ return l.indexOf('ROMANEIO')>=0 && l.indexOf('CHEGADA')>=0; });
+  if(iCab>=0 && linhasN[iCab+1]){
+    var dts=linhasN[iCab+1].match(/\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}/g)||[];
+    saida          = dts.length>=1 ? dts[dts.length-1] : null;
+    entradaBalanca = dts.length>=2 ? dts[dts.length-2] : null;
+    chegada        = dts.length>=3 ? dts[dts.length-3] : entradaBalanca;
+    var mn=linhasN[iCab+1].match(/^\s*(\d{3,9})\b/);
+    numero=mn?mn[1]:null;
+  }
+
+  // Transportadora: Nome · Placa do Veículo
+  var motorista=null, placa=null;
+  var iT=_romIdxRotulo(linhasN,function(l){ return l.indexOf('NOME')>=0 && l.indexOf('PLACA')>=0; });
+  if(iT>=0 && linhas[iT+1]){
+    var partes=linhas[iT+1].split(/\s{2,}/);
+    if(partes[0] && /[A-ZÀ-Ÿ]{3}/.test(partes[0])) motorista=partes[0].trim();
+    var mp=linhasN[iT+1].match(/\b([A-Z]{3}\d[A-Z0-9]\d{2})\b/);
+    if(mp) placa=mp[1];
+  }
+
+  // Parceiros: Nome · Fazenda/Endereço · N.F. · Contrato · Peso (Kg) · P. Corrigido (Kg)
+  var nota=null, pesoOrigem=null;
+  var iP=_romIdxRotulo(linhasN,function(l){ return l.indexOf('N.F.')>=0 && l.indexOf('PESO')>=0; });
+  if(iP>=0 && linhas[iP+1]){
+    var vp=_romNumsDaLinha(linhas[iP+1]);
+    if(vp.length){ nota=String(vp[0]); if(vp.length>=2) pesoOrigem=vp[1]; }
+  }
+
+  // Resumo (kg): Peso Bruto − Peso Tara = Total Líquido
+  var bruto=null, tara=null, liquido=null;
+  var iL=_romIdxRotulo(linhasN,function(l){ return l.indexOf('PESO BRUTO')>=0; });
+  if(iL>=0 && linhas[iL+1]){
+    var vl=_romNumsDaLinha(linhas[iL+1]);
+    if(vl.length>=3){ bruto=vl[0]; tara=vl[1]; liquido=vl[2]; }
+    else if(vl.length===1){ liquido=vl[0]; }
+  }
+  // Peso Oficial − Total Desconto = Total Corrigido (sem desconto, o papel imprime 2)
+  var corrigido=null, desconto=null;
+  var iC=_romIdxRotulo(linhasN,function(l){ return l.indexOf('TOTAL CORRIGIDO')>=0; });
+  if(iC>=0 && linhas[iC+1]){
+    var vc=_romNumsDaLinha(linhas[iC+1]);
+    if(vc.length>=3){ desconto=vc[1]; corrigido=vc[2]; }
+    else if(vc.length===2){ desconto=0; corrigido=vc[1]; }
+  }
+
+  // produto: o título pode quebrar em duas linhas ("...CAVACO DE MADEIRA PARA" / "QUEIMA"),
+  // e logo abaixo vem a unidade — que não faz parte do nome do produto
+  var produto=null;
+  var mprod=linhasN.slice(0,2).join(' ').match(/ROMANEIO DE RECEBIMENTO\s+(.+)/);
+  if(mprod){
+    produto=mprod[1].trim();
+    var uN=_romNorm(unidade).trim();
+    if(uN && produto.indexOf(uN)>=0) produto=produto.slice(0,produto.indexOf(uN)).trim();
+  }
+
+  return {
+    unidade: unidade,
+    ticket: numero,                       // nº do romaneio do cliente
+    nota: nota,
+    produto: produto,
+    motorista: motorista,
+    cpf: null,                            // este modelo não traz CPF
+    placa: placa,
+    pesoLiquidoKg: (corrigido!=null?corrigido:liquido),
+    pesoBrutoKg: bruto, pesoTaraKg: tara, pesoLiquidoBalancaKg: liquido,
+    pesoOrigemKg: pesoOrigem,
+    descontoKg: desconto,
+    entrada: chegada,                     // "chegou no cliente" = Chegada na portaria
+    entradaBalanca: entradaBalanca,
+    saida: saida,
+    pesagem2: null
+  };
+}
+
 // linhas -> campos crus do romaneio (ou {erro} quando não reconheço o papel)
 function romParse(linhas,arquivo){
   var L=linhas||[], LN=L.map(_romNorm), txtN=LN.join('\n'), modelo=null;
@@ -7220,7 +7336,7 @@ function romParse(linhas,arquivo){
     return { arquivo:arquivo, semTexto:true,
              erro:'este PDF não tem texto dentro — é imagem escaneada ou foto. Para ler um destes eu preciso de OCR; peça o PDF original do cliente, ou digitalize com o texto pesquisável ligado' };
   for(var i=0;i<ROM_MODELOS.length;i++){ if(ROM_MODELOS[i].reconhece(txtN)){ modelo=ROM_MODELOS[i]; break; } }
-  if(!modelo) return { arquivo:arquivo, erro:'não reconheci este PDF como romaneio (por enquanto leio a Ficha de Circulação da Cargill)' };
+  if(!modelo) return { arquivo:arquivo, erro:'não reconheci este PDF como romaneio (sei ler: '+romModelosConhecidos().join(' · ')+')' };
   var cru=modelo.ler(L,LN);
   cru.arquivo=arquivo; cru.modelo=modelo.id; cru.modeloNome=modelo.nome;
   return cru;
@@ -7351,10 +7467,91 @@ function romCasarMotorista(nomePdf,cpfPdf){
            opcoes:quase.map(function(m){ return m.NOME; }) };
 }
 
-// "18-11-2026 06:52" -> {data:'2026-11-18', hora:'06:52'}
+// "18-11-2026 06:52" ou "01/11/2026 09:43" -> {data:'2026-11-18', hora:'06:52'}
 function _romDataHora(s){
-  var m=String(s||'').match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}:\d{2})$/);
+  var m=String(s||'').trim().match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})\s+(\d{2}:\d{2})/);
   return m ? { data:m[3]+'-'+m[2]+'-'+m[1], hora:m[4] } : null;
+}
+
+// Fazenda de origem quando o destino não tem regra fixa (o Fazendão recebe de cinco).
+// O que mais indica a origem é o que a operação estava carregando NAQUELES DIAS — a frota
+// costuma estar na mesma fazenda num período —, então a busca começa por uma janela de
+// 10 dias em volta da data do romaneio e só depois cai para "as últimas viagens". Em cada
+// etapa a mesma placa vale mais que a frota toda.
+// É palpite, nunca certeza: entra em amarelo na tela dizendo em que se baseou, e o campo
+// continua aberto para trocar quando a carga saiu de outro lugar.
+var ROM_JANELA_DIAS=10;
+
+function _romDiasEntre(a,b){
+  if(!a||!b) return 1e9;
+  var da=new Date(a+'T00:00:00'), db=new Date(b+'T00:00:00');
+  if(isNaN(da)||isNaN(db)) return 1e9;
+  return Math.abs((da-db)/86400000);
+}
+
+// A regra fixa de origem (ROM_UNIDADES) foi combinada com o usuário, mas a operação muda
+// sem avisar: as viagens para a Cargill saem da FAZ. NOVO ACORDO **e** do DEPÓSITO - NOVO
+// ACORDO, que é outro local. Aqui a regra se confere contra o que foi lançado por volta
+// daquela data: se outra origem aparece de verdade, o campo deixa de ser "certeza" e vira
+// palpite amarelo, com os números na tela. Devolve o texto do aviso, ou '' quando a regra
+// está de acordo com o histórico.
+var ROM_DIVERGENCIA_MIN=0.10;          // 10% das viagens já pedem conferência
+
+function romDivergenciaRegraCarga(carga,descarga,data){
+  if(!carga||!descarga) return '';
+  var base=_romBaseCadastro().filter(function(r){
+    return r['LOCAL DESCARGA']===descarga && r['LOCAL CARGA'];
+  });
+  var perto=base.filter(function(r){ return data && _romDiasEntre(r.DATA,data)<=45; });
+  var lista=perto.length>=10 ? perto : base.slice(-100);
+  if(lista.length<10) return '';
+  var contagem={};
+  lista.forEach(function(r){ contagem[r['LOCAL CARGA']]=(contagem[r['LOCAL CARGA']]||0)+1; });
+  var outras=Object.keys(contagem).filter(function(k){ return k!==carga; })
+    .sort(function(a,b){ return contagem[b]-contagem[a]; });
+  if(!outras.length) return '';
+  var rival=outras[0], nRival=contagem[rival], nRegra=contagem[carga]||0;
+  if(nRival>nRegra)
+    return 'atenção: a regra diz '+carga+', mas por esta época '+nRival+' de '+lista.length+' viagens para este destino saíram da '+rival+' — confira';
+  if(nRival/lista.length>=ROM_DIVERGENCIA_MIN)
+    return 'a regra diz '+carga+', mas '+nRival+' de '+lista.length+' viagens para este destino por esta época saíram da '+rival+' — confira';
+  return '';
+}
+
+function romSugerirCarga(placa,descarga,data){
+  if(!descarga) return null;
+  var p=_romNorm(placa||'').replace(/\s+/g,'');
+  var candidatas=_romBaseCadastro().filter(function(r){
+    return r['LOCAL DESCARGA']===descarga && r['LOCAL CARGA'];
+  });
+  if(!candidatas.length) return null;
+
+  var maisVotada=function(lista){
+    var contagem={}, melhor='', n=0;
+    lista.forEach(function(r){ contagem[r['LOCAL CARGA']]=(contagem[r['LOCAL CARGA']]||0)+1; });
+    Object.keys(contagem).forEach(function(k){ if(contagem[k]>n){ melhor=k; n=contagem[k]; } });
+    return melhor?{ carga:melhor, n:n, total:lista.length }:null;
+  };
+  var daPlaca=function(r){ return p && _romNorm(r.PLACA).replace(/\s+/g,'')===p; };
+  var naJanela=function(r){ return data && _romDiasEntre(r.DATA,data)<=ROM_JANELA_DIAS; };
+  var recentes=function(lista){
+    return lista.slice().sort(function(a,b){ return String(b.DATA||'').localeCompare(String(a.DATA||'')); }).slice(0,10);
+  };
+
+  var tentativas=[
+    { lista:candidatas.filter(function(r){ return daPlaca(r)&&naJanela(r); }), texto:'viagens desta placa para este destino por volta desta data' },
+    { lista:candidatas.filter(naJanela),                                       texto:'viagens para este destino por volta desta data' },
+    { lista:recentes(candidatas.filter(daPlaca)),                              texto:'últimas viagens desta placa para este destino' },
+    { lista:recentes(candidatas),                                              texto:'últimas viagens para este destino' }
+  ];
+  for(var i=0;i<tentativas.length;i++){
+    if(!tentativas[i].lista.length) continue;
+    var v=maisVotada(tentativas[i].lista);
+    if(!v) continue;
+    return { carga:v.carga,
+             texto:'palpite: '+v.n+' de '+v.total+' '+tentativas[i].texto+' carregaram na '+v.carga+' — confira' };
+  }
+  return null;
 }
 
 // Onde esta nota fiscal já aparece hoje. A coluna NOTA **não é única** no banco (a trava
@@ -7401,8 +7598,13 @@ function romResolver(cru){
   if(g.erro) return g;
 
   var loc=romLocaisDaUnidade(cru.unidade);
-  if(loc){ g.localDescarga=loc.descarga; g.localCarga=loc.carga; }
-  else g.avisos.push('não sei a qual local do sistema corresponde "'+(cru.unidade||'?')+'" — escolha o local de descarga e o de carga');
+  if(loc){
+    g.localDescarga=loc.descarga;
+    g.localCarga=loc.carga||'';
+    g.cargaFixa=!!loc.carga;                 // regra do destino (verde) x palpite (amarelo)
+  } else {
+    g.avisos.push('não sei a qual local do sistema corresponde "'+(cru.unidade||'?')+'" — escolha o local de descarga e o de carga');
+  }
 
   g.placaPdf=cru.placa||'';
   g.placa=(cru.placa && _romBasePlacas().indexOf(cru.placa)>=0)?cru.placa:'';
@@ -7429,6 +7631,23 @@ function romResolver(cru){
   else if(emM3) g.avisos.push('este destino é medido em M³ e o romaneio traz quilo — preencha a quantidade à mão');
   else g.avisos.push('não achei o peso líquido no romaneio — preencha a quantidade');
 
+  // desconto na balança: o que vale é o corrigido, mas o usuário precisa ver que houve
+  if(cru.descontoKg && cru.pesoLiquidoBalancaKg && cru.descontoKg>0)
+    g.avisos.push('o romaneio tem desconto de '+cru.descontoKg+' kg: líquido na balança '+cru.pesoLiquidoBalancaKg+' kg, corrigido '+cru.pesoLiquidoKg+' kg — usei o corrigido');
+
+  // regra fixa: só continua "certeza" se o histórico daquela época concordar
+  if(g.cargaFixa && g.localCarga){
+    var div=romDivergenciaRegraCarga(g.localCarga,g.localDescarga,g.data);
+    if(div) g.cargaTexto=div;
+  }
+
+  // destino sem fazenda fixa: sugere pelo histórico da placa, como palpite
+  if(!g.cargaFixa && !g.localCarga && g.localDescarga){
+    var sug=romSugerirCarga(g.placa,g.localDescarga,g.data);
+    if(sug){ g.localCarga=sug.carga; g.cargaTexto=sug.texto; }
+    else g.avisos.push('este destino recebe de mais de uma fazenda e não achei histórico desta placa — escolha o local de carga');
+  }
+
   romAtualizarCruzamentos(g);
   return g;
 }
@@ -7453,7 +7672,14 @@ function romFaltando(g){
   if(!g.data) return 'data';
   if(g.quantidade==null||!(g.quantidade>0)) return 'quantidade';
   if(!g.localDescarga) return 'local de descarga';
+  // origem em branco estraga o custo por fazenda, e todo romaneio veio de algum lugar
+  if(!g.localCarga) return 'local de carga';
   return '';
+}
+
+// Nomes dos modelos que sei ler, para a tela e para as mensagens
+function romModelosConhecidos(){
+  return ROM_MODELOS.map(function(m){ return m.nome; });
 }
 
 // Linha do cadastro (chaves "estilo planilha", as mesmas que o formulário usa)
@@ -7520,6 +7746,10 @@ function openRomModal(){
   document.getElementById('romLista').innerHTML='';
   document.getElementById('romResumo').innerHTML='';
   document.getElementById('romImportBtn').style.display='none';
+  // a lista de modelos sai da própria tabela de modelos: ensinar um cliente novo não
+  // deixa o texto da tela desatualizado
+  var mods=document.getElementById('romModelos');
+  if(mods) mods.textContent='Sei ler: '+romModelosConhecidos().join(' · ')+'.';
   document.getElementById('romOverlay').classList.add('show');
 }
 function closeRomModal(){
@@ -7635,8 +7865,11 @@ function _romRender(){
     h+='<div><label>Quantidade ('+_romEsc(unidade)+')</label><input type="text" inputmode="decimal" value="'+
        _romEsc(g.quantidade==null?'':(typeof fmt==='function'?fmt(g.quantidade):g.quantidade))+'" onchange="romSet('+i+',\'quantidade\',this.value)">'+
        (g.cru&&g.cru.pesoLiquidoKg!=null?'<span class="nf-lido">✓ '+_romEsc(typeof fmt==='function'?fmt(g.cru.pesoLiquidoKg,0):g.cru.pesoLiquidoKg)+' kg no romaneio</span>':'')+'</div>';
-    h+='<div><label>Local de carga</label><select onchange="romSet('+i+',\'localCarga\',this.value)">'+_romOpcoes(cgLista,g.localCarga)+'</select>'+
-       (g.localCarga?'<span class="nf-lido">✓ regra: descarga na '+_romEsc(g.localDescarga)+' carrega aqui</span>':'')+'</div>';
+    // o aviso manda: regra que briga com o histórico deixa de ser selo verde
+    var cargaNota='';
+    if(g.localCarga && g.cargaTexto) cargaNota='<span class="nf-alerta">⚠️ '+_romEsc(g.cargaTexto)+'</span>';
+    else if(g.localCarga && g.cargaFixa) cargaNota='<span class="nf-lido">✓ regra: descarga na '+_romEsc(g.localDescarga)+' carrega aqui</span>';
+    h+='<div><label>Local de carga</label><select onchange="romSet('+i+',\'localCarga\',this.value)">'+_romOpcoes(cgLista,g.localCarga)+'</select>'+cargaNota+'</div>';
     h+='<div><label>Local de descarga</label><select onchange="romSet('+i+',\'localDescarga\',this.value)">'+_romOpcoes(ddLista,g.localDescarga)+'</select></div>';
     h+='<div><label>Chegada no cliente</label><input type="time" value="'+_romEsc(g.chegada)+'" onchange="romSet('+i+',\'chegada\',this.value)"></div>';
     h+='<div><label>Saída do cliente</label><input type="time" value="'+_romEsc(g.saida)+'" onchange="romSet('+i+',\'saida\',this.value)"></div>';
@@ -7726,8 +7959,17 @@ function romSet(i,campo,valor){
     g.gravarCpf=!!valor;
   } else if(campo==='localDescarga'){
     g.localDescarga=valor;
-    var padrao=romCargaPadraoDoDestino(valor);                 // destino conhecido traz a fazenda junto
-    if(padrao && !g.localCarga) g.localCarga=padrao;
+    var padrao=romCargaPadraoDoDestino(valor);                 // destino com fazenda fixa
+    g.cargaFixa=!!padrao;
+    if(padrao){ g.localCarga=padrao; g.cargaTexto=''; }
+    else if(!g.localCarga){                                     // senão, palpite pelo histórico
+      var sug=romSugerirCarga(g.placa,valor,g.data);
+      if(sug){ g.localCarga=sug.carga; g.cargaTexto=sug.texto; }
+    }
+  } else if(campo==='localCarga'){
+    g.localCarga=valor;
+    g.cargaTexto=valor?'':g.cargaTexto;                         // escolha do usuário não é palpite
+    g.cargaFixa=false;
   } else if(campo==='motorista'){
     g.motorista=valor;
     g.motModo=valor?'manual':'';
