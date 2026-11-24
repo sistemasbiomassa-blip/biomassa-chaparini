@@ -7411,7 +7411,48 @@ function _romDistancia(a,b){
 //      ganha o mais específico ("DIOMAR SOUSA MACIEL" vence "DIOMAR"); empate = não chuto
 //   4) primeiro nome escrito parecido -> palpite, só se for um só
 // Devolve {nome, modo:'cpf'|'exato'|'contido'|'parecido'|'', texto, opcoes:[nomes]}.
+// A mesma pessoa pode ter DOIS cadastros — um só com o primeiro nome e outro completo
+// ("DIOMAR" e "DIOMAR SOUSA MACIEL"). Quem vale é o que está ATIVO: é nele que a operação
+// lança (DIOMAR tem 289 lançamentos; DIOMAR SOUSA MACIEL, desligado, tinha zero antes do
+// importador). Note que o curto nem sempre é o certo: em REGINALDO x REGINALDO DIAS, o
+// ativo é o completo. Por isso a regra é "o ativo manda", nunca "o nome mais curto".
+function _romMesmaPessoa(a,b){
+  var pa=_romPalavras(a), pb=_romPalavras(b);
+  if(!pa.length||!pb.length) return false;
+  var curto=pa.length<pb.length?pa:pb, longo=pa.length<pb.length?pb:pa;
+  return longo.slice(0,curto.length).join(' ')===curto.join(' ');
+}
+function _romFichaMotorista(nome){
+  var lista=_romBaseMotoristas();
+  for(var i=0;i<lista.length;i++){ if(String(lista[i].NOME)===String(nome)) return lista[i]; }
+  return null;
+}
+function _romAtivoEquivalente(nome){
+  var achados=_romBaseMotoristas().filter(function(m){
+    return m.NOME!==nome && _romAtivo(m) && _romMesmaPessoa(m.NOME,nome);
+  });
+  return achados.length===1 ? achados[0].NOME : null;    // dois equivalentes: não arrisco
+}
+
+// Último filtro, aplicado a qualquer casamento (CPF e nome exato inclusive): se o cadastro
+// escolhido está desligado, troca pelo cadastro ativo da mesma pessoa, e isso vira palpite
+// amarelo — nunca selo verde, porque é uma substituição e o usuário tem de ver.
+function _romPreferirCadastroAtivo(res,nomePdf){
+  if(!res || !res.nome) return res;
+  var ficha=_romFichaMotorista(res.nome);
+  if(!ficha || _romAtivo(ficha)) return res;
+  var ativo=_romAtivoEquivalente(res.nome);
+  if(ativo) return { nome:ativo, modo:'ativo', opcoes:[],
+    texto:'o romaneio diz "'+nomePdf+'", que no cadastro está desligado — usei '+ativo+', que é o cadastro ativo da mesma pessoa; confira' };
+  return { nome:res.nome, modo:'desligado', opcoes:res.opcoes||[],
+    texto:(res.texto?res.texto+'. ':'')+'atenção: este motorista está marcado como desligado no cadastro' };
+}
+
 function romCasarMotorista(nomePdf,cpfPdf){
+  return _romPreferirCadastroAtivo(_romCasarMotoristaBruto(nomePdf,cpfPdf),nomePdf);
+}
+
+function _romCasarMotoristaBruto(nomePdf,cpfPdf){
   var lista=_romBaseMotoristas(), cpf=_romDig(cpfPdf), vazio={nome:'',modo:'',texto:'',opcoes:[]};
   var preferirAtivos=function(arr){
     var ativos=arr.filter(function(x){ return _romAtivo(x.m||x); });
